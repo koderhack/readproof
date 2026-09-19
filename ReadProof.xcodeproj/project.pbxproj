@@ -10,8 +10,10 @@
 		0D60B05787CE3A7DD70795AE /* treasure.txt in Resources */ = {isa = PBXBuildFile; fileRef = A164649654C6D62DEF6AE4E5 /* treasure.txt */; };
 		2D2A1D801723FC44CC2D0B5B /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 924A5091CF6C655D4DDC88BB /* ResultView.swift */; };
 		2ECD70E50EBE575A485B49B8 /* ChapterIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7DF9E4129DC367A4FF64AAC /* ChapterIntroView.swift */; };
+		3514D22B212D2CD53A2D9967 /* ReadingSessionActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38245A384BCFB955A4554FD8 /* ReadingSessionActivity.swift */; };
 		39890C2415E8FA3B19CE19CD /* RemoteCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */; };
 		432D793DC26CD28AA747B601 /* SolanaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */; };
+		56AC2FA163F30F38BAFA803B /* ReadingSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */; };
 		5B3A556D09EEA33151C0966C /* JevService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BE56E9607E388F080843460 /* JevService.swift */; };
 		6D341BC4239F6E1E2BCF61B0 /* BackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EEE97D6F3B69846E2EC3B37 /* BackendService.swift */; };
 		768477365407FCD6A841F450 /* ChallengeFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A59B218590383061311CF2D0 /* ChallengeFlowView.swift */; };
@@ -41,6 +43,7 @@
 		2537A234633EACF3EEF5704C /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
 		25B99A87961FBD405CCD90D2 /* challenges.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = challenges.json; sourceTree = "<group>"; };
 		355BAEA9789B21E13D526CC9 /* LocalizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationService.swift; sourceTree = "<group>"; };
+		38245A384BCFB955A4554FD8 /* ReadingSessionActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionActivity.swift; sourceTree = "<group>"; };
 		3AA4F1F11B5752458A77E427 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		44BCF0641B2AE08BC58FF5D6 /* ReadProof.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ReadProof.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		55782CFF806899E9249400C7 /* Design.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
@@ -60,6 +63,7 @@
 		C0B26A94B5446D3F167F13D6 /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
 		CD18CF24BC398A3882AAA87F /* ChallengeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeStore.swift; sourceTree = "<group>"; };
 		CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCoverView.swift; sourceTree = "<group>"; };
+		D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionView.swift; sourceTree = "<group>"; };
 		DDFF13E36EC9FD9E67F7DDB6 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		E7DF9E4129DC367A4FF64AAC /* ChapterIntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterIntroView.swift; sourceTree = "<group>"; };
 		EE3B65320B168EBF0FB84EEB /* tomsawyer.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = tomsawyer.txt; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 				9893A8AB5A6DB805DC1C427C /* LLMService.swift */,
 				355BAEA9789B21E13D526CC9 /* LocalizationService.swift */,
 				721E7288DDEB71158DCB35F8 /* PhantomService.swift */,
+				38245A384BCFB955A4554FD8 /* ReadingSessionActivity.swift */,
 				AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */,
 			);
 			path = Services;
@@ -144,6 +149,7 @@
 				E7DF9E4129DC367A4FF64AAC /* ChapterIntroView.swift */,
 				55782CFF806899E9249400C7 /* Design.swift */,
 				EFC70B9AF8F834E5600A1DC4 /* HomeView.swift */,
+				D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */,
 				CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */,
 				924A5091CF6C655D4DDC88BB /* ResultView.swift */,
 				2537A234633EACF3EEF5704C /* WalletView.swift */,
@@ -256,6 +262,8 @@
 				D925C27BA4D60FC1EFC323E6 /* Models.swift in Sources */,
 				C6C94FD58A890B43E12DD2DD /* PhantomService.swift in Sources */,
 				9536DF0DC3064FAB7BD52303 /* ReadProofApp.swift in Sources */,
+				3514D22B212D2CD53A2D9967 /* ReadingSessionActivity.swift in Sources */,
+				56AC2FA163F30F38BAFA803B /* ReadingSessionView.swift in Sources */,
 				39890C2415E8FA3B19CE19CD /* RemoteCoverView.swift in Sources */,
 				2D2A1D801723FC44CC2D0B5B /* ResultView.swift in Sources */,
 				432D793DC26CD28AA747B601 /* SolanaService.swift in Sources */,
