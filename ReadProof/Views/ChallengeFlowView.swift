@@ -143,7 +143,7 @@ struct ChallengeFlowView: View {
         let hash=SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: wallet, timestamp: now, score: score)
         var sig:String?=nil; var explorer:String?=nil; var reward:String?=nil
         if Scoring.isPassing(score: score){ reward=chapter.reward }
-        let newProof=ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: score, total: challenges.count, status: status, walletAddress: wallet, timestamp: now, proofHash: hash, txSignature: sig, explorerUrl: explorer, reward: reward)
+        let newProof=ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: score, total: challenges.count, status: status, walletAddress: wallet, timestamp: now, proofHash: hash, txSignature: sig, explorerUrl: explorer, reward: reward, verificationVersion: "readproof-v1", durationSec: nil)
         if status != .failed{ appState.saveProof(newProof)}
         results=res; proof=newProof; evaluating=false; showResult=true
     }

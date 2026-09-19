@@ -192,7 +192,7 @@ struct ReadingSessionView: View {
         } else {
             let now2 = Date()
             let hash = SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: appState.wallet.address ?? "no-wallet", timestamp: now2, score: completed.count)
-            let pf = ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: completed.count, total: challenges.count, status: .failed, walletAddress: appState.wallet.address ?? "no-wallet", timestamp: now2, proofHash: hash, txSignature: nil, explorerUrl: nil, reward: nil)
+            let pf = ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: completed.count, total: challenges.count, status: .failed, walletAddress: appState.wallet.address ?? "no-wallet", timestamp: now2, proofHash: hash, txSignature: nil, explorerUrl: nil, reward: nil, verificationVersion: "readproof-v1", durationSec: nil)
             proof = pf; showResult = true
         }
     }

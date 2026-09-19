@@ -19,7 +19,7 @@ struct ResultMinimalView: View {
     var header: some View {
         VStack(spacing:8){
             Text("Dowód Zrozumienia\nZatwierdzony").font(.system(size:24, weight:.bold, design:.rounded)).multilineTextAlignment(.center)
-            Text("Twój test lektury został zweryfikowany kryptograficznie w sieci Base zk-Rollup.").font(.system(size:13)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+            Text("Verification Engine zweryfikował sesję, proofHash zapisany w Solana Devnet (niezmienny dowód, treść i odpowiedzi nie trafiają on-chain).").font(.system(size:13)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
         }.padding(.vertical,8)
     }
     var rewardCard: some View {
@@ -36,21 +36,27 @@ struct ResultMinimalView: View {
     }
     var attestation: some View {
         VStack(alignment:.leading, spacing:12){
-            HStack{ Text("ATESTATACJA ZK-SNARK").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(RPColor.muted); Spacer(); Text(isVerified ? "Zweryfikowano" : "Nie powiodło się").font(.system(size:13, weight:.semibold)).foregroundStyle(isVerified ? RPColor.primary : RPColor.muted)}
+            HStack{ Text("DOWÓD READING PROOF (SOLANA)").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(RPColor.muted); Spacer(); Text(isVerified ? "Zweryfikowano" : "Nie powiodło się").font(.system(size:13, weight:.semibold)).foregroundStyle(isVerified ? RPColor.primary : RPColor.muted)}
             row(icon:"books.vertical", title:"Publikacja", value: book.title, sub: book.author)
             Divider().opacity(0.5)
             row(icon:"checkmark.shield", title:"Wynik egzaminu", value:"\(proof.score)/\(proof.total) \(isVerified ? "100% poprawnych" : "spróbuj ponownie")", sub: "\(proof.status.rawValue)")
             Divider().opacity(0.5)
-            rowCopy(icon:"number", title:"Skrót dowodu (ZK Hash)", value: String(proof.proofHash.prefix(10))+"…\(proof.proofHash.suffix(4))")
+            rowCopy(icon:"number", title:"Skrót dowodu (proofHash)", value: String(proof.proofHash.prefix(10))+"…\(proof.proofHash.suffix(4))")
             Divider().opacity(0.5)
-            row(icon:"chart.line.uptrend.xyaxis", title:"Percentyl zrozumienia", value: isVerified ? "Światowa czołówka" : "Poniżej progu", sub: isVerified ? "98. percentyl" : "\(proof.score)/\(proof.total)")
+            row(icon:"chart.line.uptrend.xyaxis", title:"Czas trwania sesji", value: duration(proof.durationSec ?? 0), sub: proof.durationSec == nil ? "Solana Devnet" : "licznik zatrzymany przy screenshot")
+            Divider().opacity(0.5)
+            row(icon:"checkmark.shield.fill", title:"Wersja reguł (Verification Engine)", value: proof.verificationVersion ?? "readproof-v1", sub: "proof = hash(wallet+book+chapter+session+results+ts)")
             if let s=proof.txSignature{
                 Divider().opacity(0.5)
                 row(icon:"link", title:"Tx Signature", value: String(s.prefix(12))+"…", sub: "Solana Devnet")
             }
             Divider().opacity(0.5)
-            HStack{ HStack(spacing:12){ SoftIcon(system:"banknote"); VStack(alignment:.leading){ Text("Opłata sieciowa zk-Rollup").font(.system(size:11)).foregroundStyle(RPColor.muted); Text("Sponsorowana przez ReadProof").font(.system(size:13, weight:.medium))}} ; Spacer(); Text("0.00 zł").font(.system(size:16, weight:.semibold)).foregroundStyle(RPColor.primary)}
+            HStack{ HStack(spacing:12){ SoftIcon(system:"banknote"); VStack(alignment:.leading){ Text("Opłata sieciowa Solana Devnet").font(.system(size:11)).foregroundStyle(RPColor.muted); Text("Sponsorowana przez ReadProof").font(.system(size:13, weight:.medium))}} ; Spacer(); Text("0.00").font(.system(size:16, weight:.semibold)).foregroundStyle(RPColor.primary)}
         }.padding(16).card()
+    }
+    func duration(_ sec: Int) -> String {
+        let m = sec / 60, s = sec % 60
+        return String(format: "%d:%02d min", m, s)
     }
     func row(icon:String, title:String, value:String, sub:String?=nil) -> some View {
         HStack(alignment:.top, spacing:12){
@@ -72,9 +78,9 @@ struct ResultMinimalView: View {
             Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName:"wallet.pass"); Text("Wypłać \(proof.reward ?? "$15.00") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.inkFixed).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
             HStack(spacing:10){
                 Button{} label:{ HStack{ Image(systemName:"square.and.arrow.up"); Text("Udostępnij").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
-                Button{} label:{ HStack{ Image(systemName:"doc.text"); Text("Certyfikat ZK").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
+                Button{} label:{ HStack{ Image(systemName:"doc.text"); Text("Dowód").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
             }
-            Label("Poufność tożsamości chroniona dowodami Zero-Knowledge", systemImage:"lock").font(.system(size:11)).foregroundStyle(RPColor.muted)
+            Label("Zapisano w Solana Devnet: wallet, book, chapter, session, score, duration, verificationVersion, proofHash, timestamp", systemImage:"lock").font(.system(size:11)).foregroundStyle(RPColor.muted)
         }
     }
 }

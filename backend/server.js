@@ -7,6 +7,7 @@ import sqlite3 from 'sqlite3';
 import https from 'https';
 import http from 'http';
 import mysql from 'mysql2/promise';
+import { runVerification } from './verification.js';
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 32288;
@@ -117,8 +118,12 @@ db.serialize(() => {
     id TEXT PRIMARY KEY,
     bookId TEXT, chapterId TEXT, score INTEGER, total INTEGER, status TEXT,
     walletAddress TEXT, timestamp TEXT, proofHash TEXT, txSignature TEXT, explorerUrl TEXT, reward TEXT,
-    detail TEXT
+    detail TEXT,
+    verificationVersion TEXT,
+    durationSec INTEGER
   )`);
+  db.run(`ALTER TABLE proofs ADD COLUMN verificationVersion TEXT`, ()=>{});
+  db.run(`ALTER TABLE proofs ADD COLUMN durationSec INTEGER`, ()=>{});
   db.run(`CREATE TABLE IF NOT EXISTS reading_sessions (
     id TEXT PRIMARY KEY,
     walletAddress TEXT, bookId TEXT, chapterId TEXT,
@@ -154,19 +159,19 @@ if (useMySQL) {
   db = {
     run(sql, params, cb){
       // konwersja ? -> ? dla MySQL (to samo)
-      // mapuj nazwy tabel: proofs -> readproof_proofs, reading_sessions -> readproof_sessions
-      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`');
+      // mapuj nazwy tabel: proofs -> readproof_proofs, reading_sessions -> readproof_sessions (też bez backticków)
+      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`').replace(/\bproofs\b/g,'`readproof_proofs`').replace(/\breading_sessions\b/g,'`readproof_sessions`');
       // CREATE TABLE IF NOT EXISTS — MySQL potrzebuje VARCHAR/DATETIME zamiast TEXT
       q = q.replace(/TEXT PRIMARY KEY/g,'VARCHAR(64) PRIMARY KEY').replace(/TEXT,/g,'VARCHAR(64),').replace(/TEXT\)/g,'VARCHAR(64))');
       q = q.replace(/DATETIME/g,'DATETIME').replace(/JSON/g,'JSON');
       mysqlPool.query(q, params).then(()=> cb&&cb(null)).catch(e=> cb&&cb(e));
     },
     all(sql, params, cb){
-      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`');
+      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`').replace(/\bproofs\b/g,'`readproof_proofs`').replace(/\breading_sessions\b/g,'`readproof_sessions`');
       mysqlPool.query(q, params).then(([rows])=> cb(null, rows)).catch(e=> cb(e));
     },
     get(sql, params, cb){
-      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`');
+      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`').replace(/\bproofs\b/g,'`readproof_proofs`').replace(/\breading_sessions\b/g,'`readproof_sessions`');
       mysqlPool.query(q, params).then(([rows])=> cb(null, rows[0]||null)).catch(e=> cb(e));
     },
     serialize(fn){ fn(); }
@@ -174,7 +179,7 @@ if (useMySQL) {
   // init MySQL tables async
   (async()=>{
     try{
-      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_proofs (id VARCHAR(64) PRIMARY KEY, bookId VARCHAR(64), chapterId VARCHAR(64), score INT, total INT, status VARCHAR(32), walletAddress VARCHAR(64), timestamp DATETIME, proofHash VARCHAR(32), txSignature VARCHAR(128), explorerUrl VARCHAR(256), reward VARCHAR(32), detail JSON)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_proofs (id VARCHAR(64) PRIMARY KEY, bookId VARCHAR(64), chapterId VARCHAR(64), score INT, total INT, status VARCHAR(32), walletAddress VARCHAR(64), timestamp DATETIME, proofHash VARCHAR(32), txSignature VARCHAR(128), explorerUrl VARCHAR(256), reward VARCHAR(32), detail JSON, verificationVersion VARCHAR(32), durationSec INT)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_sessions (id VARCHAR(64) PRIMARY KEY, walletAddress VARCHAR(64), bookId VARCHAR(64), chapterId VARCHAR(64), startAt DATETIME, endAt DATETIME, status VARCHAR(32), challengeIds JSON, answers JSON, readingDurationSec INT, lang VARCHAR(8), expectedReadingMin INT, suspicious TINYINT DEFAULT 0, suspiciousReason VARCHAR(256), createdAt DATETIME)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_books (id VARCHAR(64) PRIMARY KEY, data JSON)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_challenges (chapterId VARCHAR(64) PRIMARY KEY, data JSON)`);
@@ -357,6 +362,7 @@ app.post('/api/sessions/start', async (req,res)=>{
     return {...c, locked:false};
   });
   res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, isDevBypass, lang, timing: isDevBypass ? SESSION_TIMING_DEV : (isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL), challenges: masked, poolSize: (challengesByChapter[chapterId]||[]).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
+  console.log(`[start] ${wallet?.slice(0,6)}.. ${bookId}/${chapterId} lang=${lang} demo=${isDemo} dev=${isDevBypass} pool=${(challengesByChapter[chapterId]||[]).length} session=${id.slice(0,8)}`);
 });
 
 app.get('/api/sessions/:id', (req,res)=>{
@@ -422,6 +428,7 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
   s.readingDurationSec = Math.floor((Date.now() - new Date(s.startAt).getTime())/1000);
   db.run(`UPDATE reading_sessions SET answers=?, readingDurationSec=? WHERE id=?`, [JSON.stringify(s.answers), s.readingDurationSec, s.id]);
   res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec});
+  console.log(`[answer] ${s.walletAddress?.slice(0,6)}.. ${challengeId.slice(0,8)} correct=${correct} type=${ch.type} elapsed=${elapsed}s${jev?` jev=${jev.correct?1:0} conf=${(jev.confidence??0).toFixed(2)}`:''}`);
 });
 
 // iOS: screenshot / screenRecording → oznacz sesję jako podejrzaną
@@ -471,47 +478,46 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   const total = s.challenges.length;
   const answered = Object.keys(s.answers).length;
   if(!failEarly && answered < total) return res.status(400).json({error:`Not all challenges answered: ${answered}/${total}`});
-  let score = Object.values(s.answers).filter((a)=>a.correct).length;
-  let status='Failed'; if(!failEarly && score===5) status='Reading Verified'; else if(!failEarly && score>=3) status='Try Again';
-  const endAt = new Date().toISOString();
-  s.endAt = endAt; s.status = status;
-  const readingDurationSec = Math.floor((new Date(endAt).getTime() - new Date(s.startAt).getTime())/1000);
-  s.readingDurationSec = readingDurationSec;
-  // Limit czasu — sygnał podejrzany, nie twardy reject (ale bez reward jeśli zbyt szybko)
-  const isDev = s.suspiciousReason && s.suspiciousReason.includes('devBypass');
-  const minimalSec = s.isDemo ? 60 : Math.floor((s.expectedReadingMin||12)*60*0.66);
-  // dev bypass nie oznacza suspicious za too_fast
-  if(s.challengeIds && s.challengeIds[0] && s.challengeIds[0].includes('dev')){} // demo: 60s, real: ~8min dla 12min
-  if(!s.isDevBypass && readingDurationSec < minimalSec){
-    s.suspicious = 1;
-    s.suspiciousReason = `too_fast: ${readingDurationSec}s < minimal ${minimalSec}s`;
-    db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=? WHERE id=?`, [s.suspiciousReason, s.id]);
+
+  // ── 1. WERYFIKACJA — Verification Engine (anti-cheat, score, czas, proofHash) ──
+  const endAtDate = new Date();
+  const endAt = endAtDate.toISOString();
+  s.endAt = endAt;
+  s.readingDurationSec = Math.floor((endAtDate.getTime() - new Date(s.startAt).getTime())/1000);
+  const verdict = runVerification(s, endAtDate); // { verified, status, score, total, durationSec, verificationVersion, proofHash, checks }
+
+  // dev bypass nie trafia do suspicious za too_fast
+  if(s.isDevBypass){
+    s.suspicious = 0;
+    const safe = verdict.checks.filter((c)=>c.name==='not_suspicious');
   }
-  // jeśli oznaczona jako podejrzana (screenshot/recording/too_fast) — nawet 5/5 nie dostaje rewardu, status Try Again
-  if(s.suspicious && score===5){
-    status = 'Try Again';
-  }
+  // po weryfikacji: failEarly zawsze kończy jako Failed (błędna odpowiedź / oszustwo)
+  const finalStatus = failEarly ? 'Failed' : verdict.status;
+  s.status = finalStatus;
+
+  // ── 2. ZAPIS WYNIKU — deciduj nagrodę tylko gdy weryfikacja przeszła ──
   const proofId = crypto.randomUUID();
-  const hashInput = `${s.bookId}|${s.chapterId}|${s.walletAddress}|${s.startAt}|${score}|${readingDurationSec}|${s.suspicious||0}`;
-  const proofHash = crypto.createHash('sha256').update(hashInput).digest('hex').slice(0,16);
+  const proofHash = verdict.proofHash;
+  const verificationVersion = verdict.verificationVersion;
   let tx=null, explorer=null, reward=null;
-  // nagroda tylko gdy 5/5 i nie suspicious — błędna odpowiedź = zero
-  if(score===5 && !s.suspicious){
+  if(verdict.verified && !failEarly){
     const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===s.chapterId);
     reward = chapter?.reward || '5 USDC';
     const real = await tryRealSolanaReward(s.walletAddress, reward);
     if(real){ tx=real.signature; explorer=real.explorer; } else { tx=null; explorer=null; }
-  } else if(s.suspicious && score===5){
+  } else {
     reward = null;
   }
   const detail = s.challenges.map(c=>({challengeId:c.id, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null}));
-  db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [proofId, s.bookId, s.chapterId, score, total, status, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail)]);
-  db.run(`UPDATE reading_sessions SET endAt=?, status=?, readingDurationSec=? WHERE id=?`, [endAt, status, readingDurationSec, s.id]);
+  db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail, verificationVersion, durationSec) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [proofId, s.bookId, s.chapterId, verdict.score, total, finalStatus, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail), verificationVersion, verdict.durationSec]);
+  db.run(`UPDATE reading_sessions SET endAt=?, status=?, readingDurationSec=? WHERE id=?`, [endAt, finalStatus, s.readingDurationSec, s.id]);
+  console.log(`[complete] ${s.walletAddress?.slice(0,6)}.. ${s.chapterId} score=${verdict.score}/${total} status=${finalStatus} version=${verificationVersion} proof=${proofHash} verified=${verdict.verified} checks=${verdict.checks.filter(c=>!c.passed).map(c=>c.name).join(',')||'ALL PASS'}`);
   res.json({
-    sessionId: s.id, proof: {id: proofId, bookId:s.bookId, chapterId:s.chapterId, score, total, status, walletAddress:s.walletAddress, timestamp:endAt, proofHash, txSignature:tx, explorerUrl: explorer, reward},
-    readingDurationSec, startAt: s.startAt, endAt, lang: s.lang,
-    results: s.challenges.map(c=>({challengeId:c.id, type:c.type, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null})),
+    sessionId: s.id, proof: {id: proofId, bookId:s.bookId, chapterId:s.chapterId, score: verdict.score, total, status: finalStatus, walletAddress:s.walletAddress, timestamp:endAt, proofHash, txSignature:tx, explorerUrl: explorer, reward, verificationVersion, durationSec: verdict.durationSec},
+    readingDurationSec: verdict.durationSec, startAt: s.startAt, endAt, lang: s.lang,
+    verification: { verified: verdict.verified, version: verificationVersion, checks: verdict.checks },
+    results: detail,
     note: s.lang==='en' ? 'Comprehension verified — not physical reading. Stored: wallet, book, chapter, session_start/end, reading_duration, proof_hash.' : 'Comprehension verified — nie fizyczne czytanie. Zapisano: wallet, book, chapter, session_start/end, reading_duration, proof_hash.'
   });
 });
@@ -748,10 +754,10 @@ app.get('/api/solana/config', (req,res)=>{
 });
 
 // Try real Devnet USDC transfer if payer configured, else mock — called inside /api/proofs
-async function tryRealSolanaReward(toAddress, amountUSDC='5'){
+async function tryRealSolanaReward(toAddress, amountUSDC='5', meta={}){
   if(!SOLANA_PAYER_PRIVATE_KEY) return null;
   try{
-    const {Connection, Keypair, PublicKey, Transaction, sendAndConfirmTransaction} = await import('@solana/web3.js');
+    const {Connection, Keypair, PublicKey, Transaction, sendAndConfirmTransaction, TransactionInstruction} = await import('@solana/web3.js');
     const {createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, createTransferInstruction} = await import('@solana/spl-token');
     const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(SOLANA_PAYER_PRIVATE_KEY)));
     const connection = new Connection(SOLANA_RPC, 'confirmed');
@@ -767,6 +773,15 @@ async function tryRealSolanaReward(toAddress, amountUSDC='5'){
     const amount = BigInt(Math.round(Number(amountUSDC.replace(/[^0-9.]/g,''))*1_000_000));
     const ixTransfer = createTransferInstruction(ataFrom, ataTo, payer.publicKey, amount);
     const tx = new Transaction().add(ixTransfer);
+    // ── On-chain READING PROOF (Memo) — niezmienny zapis, bez treści/odpowiedzi ──
+    // readproof-v1|book|chapter|session|score/total|duration|proofHash|timestamp
+    if(meta.sessionId){
+      const memo = `${meta.verificationVersion||'readproof-v1'}|${meta.bookId||''}|${meta.chapterId||''}|${meta.sessionId}|${meta.score||0}/${meta.total||0}|${meta.durationSec||0}s|${meta.proofHash||''}|${new Date(meta.timestamp||Date.now()).toISOString()}`;
+      const MEMO_V2 = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
+      const memoIx = new TransactionInstruction({keys:[], programId:new PublicKey(MEMO_V2), data:Buffer.from(memo,'utf8')});
+      tx.add(memoIx);
+      console.log(`[solana-memo] ${memo}`);
+    }
     const sig = await sendAndConfirmTransaction(connection, tx, [payer], {commitment:'confirmed'});
     return {signature:sig, explorer:`https://explorer.solana.com/tx/${sig}?cluster=devnet`};
   }catch(e){ console.error('real solana reward failed, fallback mock', e.message); return null; }

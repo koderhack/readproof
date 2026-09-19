@@ -153,6 +153,8 @@ struct ReadingProof: Identifiable, Codable, Hashable {
     let txSignature: String?
     let explorerUrl: String?
     let reward: String?
+    let verificationVersion: String? // np. "readproof-v1"
+    let durationSec: Int? // czas sesji (dowód na Solanie)
 }
 
 // MARK: - Wallet
