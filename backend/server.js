@@ -168,6 +168,7 @@ if (useMySQL) {
     user: process.env.MYSQL_USER,
     password: process.env.MYSQL_PASSWORD,
     database: process.env.MYSQL_DATABASE,
+    timezone: 'Z', // nasze timestampy są zapisywane jako UTC-naive — bez przesunięcia serwera (CEST)
     waitForConnections: true, connectionLimit: 5
   });
   // proxy db.* na MySQL z zachowaniem callback API sqlite
@@ -388,7 +389,7 @@ app.post('/api/sessions/start', async (req,res)=>{
   const wallet = walletAddress;
   // cooldown 30 min po błędnej/oszukanej sesji
   const cooldownRows = await new Promise((res,rej)=>{
-    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
+    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
     const cb=(e,rows)=> e?rej(e):res(rows);
     if(useMySQL) mysqlPool.query(sql, [wallet, chapterId]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.all(sql, [wallet, chapterId], cb);
   }).catch(()=>[]);
@@ -640,7 +641,7 @@ app.post('/api/proofs', async (req,res)=>{
   const wallet = walletAddress;
   // cooldown 30 min po błędnej/oszukanej sesji
   const cooldownRows = await new Promise((res,rej)=>{
-    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
+    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
     const cb=(e,rows)=> e?rej(e):res(rows);
     if(useMySQL) mysqlPool.query(sql, [wallet, chapterId]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.all(sql, [wallet, chapterId], cb);
   }).catch(()=>[]);
