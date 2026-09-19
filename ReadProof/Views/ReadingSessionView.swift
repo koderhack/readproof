@@ -19,6 +19,7 @@ struct ReadingSessionView: View {
     @State private var showResult = false
     @State private var proof: ReadingProof?
     @State private var starting = true
+    @State private var lastResult: (challengeId: String, correct: Bool)?
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -38,53 +39,50 @@ struct ReadingSessionView: View {
                         Label(loc.t("Sesja oznaczona jako podejrzana — screenshot/screen recording wykryty. Możesz spróbować ponownie.","Session flagged suspicious — screenshot detected. You can retry."), systemImage: "exclamationmark.triangle.fill")
                             .font(.caption).foregroundStyle(.white).padding(10).background(Color.red).clipShape(RoundedRectangle(cornerRadius:10))
                     }
-                    ForEach(challenges, id: \.id) { ch in
-                        let locked = isLocked(ch)
-                        let done = completed.contains(ch.id)
-                        VStack(alignment: .leading, spacing: 10) {
+                    // 1 pytanie na ekran — jak Duolingo, nie lista
+                    if let active = challenges.first(where: { !isLocked($0) && !completed.contains($0.id) }) {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Text(ch.type?.displayName ?? "Challenge").font(.caption.weight(.bold)).foregroundStyle(locked ? RPColor.muted2 : RPColor.primary)
+                                Text(active.type?.displayName ?? "Challenge").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
                                 Spacer()
-                                if done {
-                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(RPColor.success)
-                                } else if locked {
-                                    Text(countdown(ch)).font(.caption.monospaced()).foregroundStyle(RPColor.muted)
-                                } else {
-                                    Text("ODKRYTE").font(.caption2.weight(.bold)).foregroundStyle(.white).padding(.horizontal,8).padding(.vertical,4).background(RPColor.success).clipShape(Capsule())
-                                }
+                                Text("Pytanie \(completed.count+1)/\(challenges.count)").font(.caption2.weight(.bold)).foregroundStyle(RPColor.muted)
                             }
-                            if locked {
+                            if let q = active.question {
+                                Text(q).font(.headline).foregroundStyle(RPColor.ink).textSelection(.disabled)
+                                if let ctx = active.context { Text(ctx).font(.caption).foregroundStyle(RPColor.muted).textSelection(.disabled) }
+                            }
+                            // natychmiastowy wynik — jak Duolingo
+                            if let fb = lastResult, fb.challengeId == active.id {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "book.fill").foregroundStyle(RPColor.muted2)
-                                    Text(ch.hint ?? loc.t("Czytaj dalej…","Keep reading…")).font(.subheadline).foregroundStyle(RPColor.muted)
+                                    Image(systemName: fb.correct ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
+                                    VStack(alignment:.leading, spacing:2){
+                                        Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t("Źle","Wrong")).font(.headline.weight(.bold))
+                                        if !fb.correct { Text(loc.t("Sesja zakończona — spróbuj ponownie za 30 min","Session ended — retry in 30 min")).font(.caption2) }
+                                    }
+                                    Spacer()
                                 }
-                                .padding(12).background(Color(hex:"#F9FAFB")).clipShape(RoundedRectangle(cornerRadius:12))
-                                .textSelection(.disabled)
-                            } else {
-                                if let q = ch.question {
-                                    Text(q).font(.headline).foregroundStyle(RPColor.ink).textSelection(.disabled)
-                                    if let ctx = ch.context { Text(ctx).font(.caption).foregroundStyle(RPColor.muted).textSelection(.disabled) }
-                                } else {
-                                    Text("Ładowanie…").foregroundStyle(RPColor.muted)
-                                }
-                                if !done {
-                                    UnlockCard(challenge: ch, onSubmit: { ans in
-                                        answers[ch.id] = ans
-                                        Task {
-                                            _ = await BackendService.shared.answerSession(sessionId: sessionId ?? "", challengeId: ch.id, answer: ans)
-                                            completed.insert(ch.id)
-                                            updateLive()
-                                        }
-                                    })
-                                } else {
-                                    Text(loc.t("Odpowiedź wysłana","Answer sent")).font(.caption).foregroundStyle(RPColor.success)
-                                }
+                                .foregroundStyle(.white).padding(12).background(fb.correct ? RPColor.success : Color.red).clipShape(RoundedRectangle(cornerRadius:10))
                             }
+                            UnlockCard(challenge: active, onSubmit: { ans in
+                                answers[active.id] = ans
+                                Task {
+                                    let ok = await BackendService.shared.answerSessionDetailed(sessionId: sessionId ?? "", challengeId: active.id, answer: ans)
+                                    let correct = ok?.correct ?? false
+                                    lastResult = (active.id, correct)
+                                    if correct {
+                                        try? await Task.sleep(nanoseconds: 900_000_000)
+                                        completed.insert(active.id)
+                                        lastResult = nil
+                                        updateLive()
+                                    } else {
+                                        // zła odpowiedź — pokaż, potem natychmiast zamknij sesję (blokada 30 min)
+                                        try? await Task.sleep(nanoseconds: 1_200_000_000)
+                                        await completeWithWrong()
+                                    }
+                                }
+                            })
                         }
-                        .padding(14)
-                        .background(RPColor.card)
-                        .clipShape(RoundedRectangle(cornerRadius:14))
-                        .overlay(RoundedRectangle(cornerRadius:14).stroke(locked ? RPColor.line : RPColor.primary, lineWidth: locked ? 1 : 1.5))
+                        .padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.primary, lineWidth: 1.5))
                         .blur(radius: isCaptured ? 16 : 0)
                         .privacySensitive()
                         .overlay {
@@ -96,10 +94,15 @@ struct ReadingSessionView: View {
                                         Text("Treść ukryta — nagrywanie ekranu").font(.caption.weight(.bold)).foregroundStyle(.white)
                                         Text("Jak w banku").font(.caption2).foregroundStyle(.white.opacity(0.8))
                                     }
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius:14))
+                                }.clipShape(RoundedRectangle(cornerRadius:14))
                             }
                         }
+                    } else if let next = challenges.filter({ isLocked($0) && !completed.contains($0.id) }).sorted(by: { ($0.releaseAt ?? "") < ($1.releaseAt ?? "") }).first {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack { Image(systemName: "book.fill").foregroundStyle(RPColor.muted2); Text(next.hint ?? loc.t("Czytaj dalej…","Keep reading…")).font(.subheadline).foregroundStyle(RPColor.muted) }
+                                .padding(12).background(Color(hex:"#F9FAFB")).clipShape(RoundedRectangle(cornerRadius:12)).textSelection(.disabled)
+                            HStack { Spacer(); Text(loc.t("Następne za","Next in") + " \(countdown(next))").font(.caption.monospaced()).foregroundStyle(RPColor.muted) }
+                        }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
                     }
                     if challenges.allSatisfy({ completed.contains($0.id) }) {
                         Button {
@@ -179,18 +182,18 @@ struct ReadingSessionView: View {
         ReadingSessionActivityManager.shared.update(completed: completed.count, total: challenges.count, nextUnlockIn: next, status: completed.count==challenges.count ? "verifying" : "reading")
     }
     func stopLive(){ ReadingSessionActivityManager.shared.end(status: proof?.status.rawValue ?? "ended") }
-    func completeWithWrong(failedId: String) async {
+    func completeWithWrong() async {
         guard let id=sessionId else { return }
-        // oznacz jako błędną i zakończ natychmiast
-        _ = try? await BackendService.shared.flagSession(sessionId: id, type: "wrong_answer")
-        if let p = await BackendService.shared.completeSession(sessionId: id) {
-            proof = p; showResult = true; stopLive()
+        suspicious=true
+        stopLive()
+        // zakończ od razu (fail=1) — status Failed, blokada 30 min na ponowne podejście
+        if let p = await BackendService.shared.completeSession(sessionId: id, endEarly: true) {
+            proof = p; showResult = true
         } else {
-            // fallback lokalny proof failed
             let now2 = Date()
             let hash = SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: appState.wallet.address ?? "no-wallet", timestamp: now2, score: completed.count)
             let pf = ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: completed.count, total: challenges.count, status: .failed, walletAddress: appState.wallet.address ?? "no-wallet", timestamp: now2, proofHash: hash, txSignature: nil, explorerUrl: nil, reward: nil)
-            proof = pf; showResult = true; stopLive()
+            proof = pf; showResult = true
         }
     }
     func complete() async {
@@ -201,19 +204,26 @@ struct ReadingSessionView: View {
             stopLive()
         } else { error="Nie udało się zakończyć — sprawdź Jev/TYPESAFE_API_KEY" }
     }
+    func failOnSuspicion(type: String) {
+        suspicious=true
+        stopLive()
+        guard let id=sessionId else { return }
+        Task {
+            _ = await BackendService.shared.flagSession(sessionId: id, type: type)
+            // natychmiast kończymy sesję i pokazujemy wynik — brak nagrody, blokada 30 min
+            if let p = await BackendService.shared.completeSession(sessionId: id, endEarly: true) {
+                proof = p; showResult = true
+            }
+        }
+    }
     func observeScreenshots(){
         isCaptured = UIScreen.main.isCaptured
         NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object:nil, queue:.main){ _ in
-            suspicious=true
-            if let id=sessionId{ Task{ await BackendService.shared.flagSession(sessionId:id, type:"screenshot") } }
+            failOnSuspicion(type: "screenshot")
         }
         NotificationCenter.default.addObserver(forName: UIScreen.capturedDidChangeNotification, object:nil, queue:.main){ _ in
-            let captured = UIScreen.main.isCaptured
-            isCaptured = captured
-            if captured{
-                suspicious=true
-                if let id=sessionId{ Task{ await BackendService.shared.flagSession(sessionId:id, type:"screenRecording") } }
-            }
+            isCaptured = UIScreen.main.isCaptured
+            if UIScreen.main.isCaptured { failOnSuspicion(type: "screenRecording") }
         }
     }
 }

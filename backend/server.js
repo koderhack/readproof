@@ -466,11 +466,13 @@ app.post('/api/sessions/:id/flag', (req,res)=>{
 app.post('/api/sessions/:id/complete', async (req,res)=>{
   const s = sessionsMem.get(req.params.id);
   if(!s) return res.status(404).json({error:'session not found'});
+  // fail=1 → zakończ od razu (błędna odpowiedź / screenshot), nawet gdy nie wszystkie odpowiedziane
+  const failEarly = req.query.fail === '1' || req.body?.fail === true || req.body?.endEarly === true;
   const total = s.challenges.length;
   const answered = Object.keys(s.answers).length;
-  if(answered < total) return res.status(400).json({error:`Not all challenges answered: ${answered}/${total}`});
+  if(!failEarly && answered < total) return res.status(400).json({error:`Not all challenges answered: ${answered}/${total}`});
   let score = Object.values(s.answers).filter((a)=>a.correct).length;
-  let status='Failed'; if(score===5) status='Reading Verified'; else if(score>=3) status='Try Again';
+  let status='Failed'; if(!failEarly && score===5) status='Reading Verified'; else if(!failEarly && score>=3) status='Try Again';
   const endAt = new Date().toISOString();
   s.endAt = endAt; s.status = status;
   const readingDurationSec = Math.floor((new Date(endAt).getTime() - new Date(s.startAt).getTime())/1000);

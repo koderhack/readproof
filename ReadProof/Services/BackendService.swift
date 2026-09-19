@@ -172,8 +172,14 @@ final class BackendService: ObservableObject {
         let context: String?
         let options: [String]?
         let correctAnswer: Int?
+        let correctAnswers: [Int]?
         let expectedMeaning: String?
-        // full Challenge fields when unlocked
+        let items: [String]?
+        let correctOrder: [Int]?
+        let pairs: [MatchPair]?
+        let statements: [String]?
+        let errorIndex: Int?
+        let difficulty: String?
         let hint: String?
     }
     func startSession(bookId: String, chapterId: String, walletAddress: String) async throws -> SessionStartResponse {
@@ -191,10 +197,14 @@ final class BackendService: ObservableObject {
         do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; return try JSONDecoder().decode(SessionStartResponse.self, from:d)}catch{return nil}
     }
     func answerSession(sessionId: String, challengeId: String, answer: Any) async -> Bool {
-        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return false }
+        (await answerSessionDetailed(sessionId: sessionId, challengeId: challengeId, answer: answer)) != nil
+    }
+    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict? }
+    func answerSessionDetailed(sessionId: String, challengeId: String, answer: Any) async -> AnswerResult? {
+        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
         req.httpBody = try? JSONSerialization.data(withJSONObject:["challengeId":challengeId,"answer":answer])
-        do{ let (_,r)=try await data(for:req); return (r as? HTTPURLResponse)?.statusCode==200 }catch{return false}
+        do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; return try JSONDecoder().decode(AnswerResult.self, from:d) }catch{return nil}
     }
     func flagSession(sessionId: String, type: String) async {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/flag") else { return }
@@ -202,8 +212,8 @@ final class BackendService: ObservableObject {
         req.httpBody = try? JSONSerialization.data(withJSONObject:["type":type])
         _ = try? await data(for:req)
     }
-    func completeSession(sessionId: String) async -> ReadingProof? {
-        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/complete") else { return nil }
+    func completeSession(sessionId: String, endEarly: Bool = false) async -> ReadingProof? {
+        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/complete?fail=\(endEarly ? 1 : 0)") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
         do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; let j = try JSONSerialization.jsonObject(with:d) as? [String:Any]; if let p = j?["proof"] as? [String:Any]{ let data = try JSONSerialization.data(withJSONObject:p); return try JSONDecoder().decode(ReadingProof.self, from:data)}; return nil }catch{return nil}
     }
