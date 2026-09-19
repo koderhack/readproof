@@ -13,7 +13,7 @@ dotenv.config();
 const PORT = Number(process.env.PORT) || 32288;
 const JEV_THRESHOLD = Number(process.env.JEV_THRESHOLD) || 0.80;
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.2-3b-instruct:free';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free';
 // Jev — TypeSafe https://docs.typesafe.ai/api  (POST https://api.typesafe.ai/v1/systemone)
 const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY || process.env.JEV_API_KEY || '';
 const TYPESAFE_MODEL = process.env.TYPESAFE_MODEL || 'jev-latest';
@@ -26,6 +26,14 @@ const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '1mb' }));
+// live request log — każde zapytanie (pomija /health)
+app.use((req, res, next) => {
+  const t0 = Date.now();
+  res.on('finish', () => {
+    if (req.path !== '/health') console.log(`[http] ${req.method} ${req.path} ${res.statusCode} ${Date.now()-t0}ms`);
+  });
+  next();
+});
 
 // --- Load bundled challenges ---
 let bundled = JSON.parse(fs.readFileSync('./challenges.json', 'utf8'));
@@ -59,20 +67,28 @@ function pickFive(chapterId) {
 async function ensurePoolAtLeast20(chapterId, lang='pl'){
   let pool = challengesByChapter[chapterId] || [];
   if(pool.length >= 30) return pool;
-  // live generowanie brakujących challenge'y via LLM OpenRouter free w języku urządzenia
+  // live generowanie missingów via LLM OpenRouter free w języku urządzenia
   if(OPENROUTER_KEY){
-    try{
-      const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
-      if(chapter){
-        const need = 30 - pool.length;
-        const generated = await callOpenRouterGenerate(chapter, need, lang);
-        pool = pool.concat(generated);
-        challengesByChapter[chapterId]=pool;
-        // persist
-        try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
-        console.log(`Live LLM: wygenerowano ${generated.length} dla ${chapterId} (${lang}) — pool ${pool.length}`);
+    const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
+    if(chapter){
+      const generate = async ()=>{
+        try{
+          const need = 30 - pool.length;
+          const generated = await callOpenRouterGenerate(chapter, need, lang);
+          pool = pool.concat(generated);
+          challengesByChapter[chapterId]=pool;
+          try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+          console.log(`[pool-bg] +${generated.length} → pool ${pool.length} (${chapterId})`);
+        }catch(e){ console.error(`[pool-bg] fail: ${e.message}`); }
+      };
+      if(pool.length >= 5){
+        // wystarczająco na tę sesję — uzupełnij pulę w TLE, nie blokuj startu
+        generate();
+        return pool;
       }
-    }catch(e){ console.error('Live gen failed, używam istniejącej puli', e.message); }
+      // zimny start — mało pytań, czekamy na generację
+      await generate();
+    }
   }
   if(pool.length < 5) throw new Error(`Pula pytań dla ${chapterId} za mała (${pool.length}) — wygeneruj via POST /api/generate`);
   return pool;
@@ -156,6 +172,11 @@ if (useMySQL) {
   });
   // proxy db.* na MySQL z zachowaniem callback API sqlite
   const origDb = db;
+  // MySQL DATETIME nie przyjmuje ISO 'T'/'Z' — konwertuj parametry timestampów
+  const M = (params) => (params||[]).map(v =>
+    typeof v==='string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)
+      ? v.replace('T',' ').replace(/\.\d+Z?$/, '')
+      : v);
   db = {
     run(sql, params, cb){
       // konwersja ? -> ? dla MySQL (to samo)
@@ -164,15 +185,15 @@ if (useMySQL) {
       // CREATE TABLE IF NOT EXISTS — MySQL potrzebuje VARCHAR/DATETIME zamiast TEXT
       q = q.replace(/TEXT PRIMARY KEY/g,'VARCHAR(64) PRIMARY KEY').replace(/TEXT,/g,'VARCHAR(64),').replace(/TEXT\)/g,'VARCHAR(64))');
       q = q.replace(/DATETIME/g,'DATETIME').replace(/JSON/g,'JSON');
-      mysqlPool.query(q, params).then(()=> cb&&cb(null)).catch(e=> cb&&cb(e));
+      mysqlPool.query(q, M(params)).then(()=> cb&&cb(null)).catch(e=>{ console.error('[db:run]', e.message); cb&&cb(e); });
     },
     all(sql, params, cb){
       let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`').replace(/\bproofs\b/g,'`readproof_proofs`').replace(/\breading_sessions\b/g,'`readproof_sessions`');
-      mysqlPool.query(q, params).then(([rows])=> cb(null, rows)).catch(e=> cb(e));
+      mysqlPool.query(q, M(params)).then(([rows])=> cb(null, rows)).catch(e=>{ console.error('[db:all]', e.message); cb(e); });
     },
     get(sql, params, cb){
       let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`').replace(/\bproofs\b/g,'`readproof_proofs`').replace(/\breading_sessions\b/g,'`readproof_sessions`');
-      mysqlPool.query(q, params).then(([rows])=> cb(null, rows[0]||null)).catch(e=> cb(e));
+      mysqlPool.query(q, M(params)).then(([rows])=> cb(null, rows[0]||null)).catch(e=>{ console.error('[db:get]', e.message); cb(e); });
     },
     serialize(fn){ fn(); }
   };
@@ -242,6 +263,26 @@ async function callJev({question, expectedMeaning, userAnswer, context, lang='pl
 }
 
 // --- LLM generate challenges — NA ŻYWO w języku urządzenia/nastawionym, nawet gdy tekst książki EN ---
+// Solidny extractor JSON — LLM (OpenRouter free) potrafi dodać fenced code, smy poza {} i zepsuć parsowanie
+function extractJSON(text){
+  let t = String(text||'').replace(/```(?:json)?/gi,'').trim();
+  const first = t.indexOf('{');
+  if(first<0) throw new Error('Brak { w odpowiedzi LLM');
+  // od ostatniego } w dół — pierwsza parsowalna sekcja wygrywa
+  let end = t.lastIndexOf('}');
+  let lastErr=null;
+  while(end>=first){
+    try{
+      const parsed=JSON.parse(t.slice(first,end+1));
+      return parsed;
+    }catch(e){ lastErr=e; end = t.lastIndexOf('}', end-1); }
+  }
+  // ostateczność: napraw trailing commas
+  try{ return JSON.parse(t.slice(first, t.lastIndexOf('}')+1).replace(/,\s*([\]}])/g,'$1')); }
+  catch(e){ lastErr=e; }
+  throw lastErr || new Error('Nieprawidłowy JSON od LLM');
+}
+
 async function callOpenRouterGenerate(chapter, count=10, lang='pl'){
   if(!OPENROUTER_KEY) throw new Error('Brak OPENROUTER_API_KEY — ustaw w .env');
   const targetLang = lang==='en' ? 'ENGLISH' : 'POLISH';
@@ -252,6 +293,8 @@ Book: ${chapter.bookId}, chapter ${chapter.index} — ${chapter.title}
 Original excerpt language: often ENGLISH (Gutenberg). IMPORTANT: you MUST output ALL questions, options, expectedMeaning, statements, pairs in ENGLISH, regardless of source language.
 Context: ${chapter.contextExcerpt}
 Summary: ${chapter.summary}
+Source fragment (REAL full book text on server — base your questions ONLY on it):
+${chapterFragment(chapter)}
 Requirements:
 - Use DIVERSE types from: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
 - At least 1 open_question or why_question with expectedMeaning (in ENGLISH)
@@ -266,6 +309,8 @@ Książka: ${chapter.bookId}, rozdział ${chapter.index} — ${chapter.title}
 Język oryginalnego fragmentu: często ANGIELSKI (Gutenberg). WAŻNE: MUSISZ wygenerować WSZYSTKIE pytania, opcje, expectedMeaning, statements, pary w języku POLSKIM, niezależnie od języka źródła.
 Kontekst: ${chapter.contextExcerpt}
 Streszczenie: ${chapter.summary}
+Fragment źródłowy (REALNY pełny tekst książki na serwerze — pytania tylko na jego podstawie):
+${chapterFragment(chapter)}
 Wymagania:
 - Używaj RÓŻNYCH typów z: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
 - Co najmniej 1 open_question lub why_question z polem expectedMeaning (po POLSKU)
@@ -278,19 +323,48 @@ Wymagania:
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST',
     headers:{'Authorization':`Bearer ${OPENROUTER_KEY}`,'Content-Type':'application/json','HTTP-Referer':'https://readproof.app'},
-    body: JSON.stringify({model: OPENROUTER_MODEL, messages:[{role:'user',content:prompt}], temperature:0.7, max_tokens:2500})
+    body: JSON.stringify({model: OPENROUTER_MODEL, messages:[{role:'user',content:prompt}], temperature:0.7, max_tokens:4000}),
+    signal: AbortSignal.timeout(120000) // free LLM bywa wolny (~1min) — cut 120s, potem fallback do puli
   });
   if(!res.ok) throw new Error('OpenRouter error '+res.status);
   const j=await res.json();
   const content=j.choices?.[0]?.message?.content;
   if(!content) throw new Error('Brak content od LLM');
-  // extract JSON
-  const start=content.indexOf('{'); const end=content.lastIndexOf('}');
-  const slice=content.slice(start, end+1);
-  const parsed=JSON.parse(slice);
+  const parsed = extractJSON(content);
   const challenges=parsed.challenges || parsed;
   if(!Array.isArray(challenges)) throw new Error('Niepoprawny JSON challenges');
-  return challenges;
+  // upewnij się, że każde ma id (LLM potrafi pominąć)
+  return challenges.map(c=>({...c, id: c.id && String(c.id) ? String(c.id) : crypto.randomUUID(), chapterId: chapter.id}));
+}
+
+// --- Pełne teksty książek na serwerze — AI korzysta z realnego fragmentu (nie tylko streszczenia) ---
+const bookTexts = {};
+function loadTexts(){
+  for(const b of books){
+    if(!b.fullTextFile) continue;
+    for(const cand of ['./texts/'+b.fullTextFile, './'+b.fullTextFile]){
+      try{ if(fs.existsSync(cand)){ bookTexts[b.id]=fs.readFileSync(cand,'utf8'); break; } }catch(e){}
+    }
+  }
+  console.log(`[texts] ${Object.keys(bookTexts).length} książek załadowanych (${Object.entries(bookTexts).map(([k,v])=>k+'='+Math.round(v.length/1024)+'KB').join(', ')||'—'})`);
+}
+loadTexts();
+
+// fragment książki okolony excerptu rozdziału — LLM ma kontekst z pełnego tekstu
+function chapterFragment(chapter){
+  const text = bookTexts[chapter.bookId];
+  if(!text) return '';
+  const anchor = chapter.contextExcerpt ? String(chapter.contextExcerpt).replace(/\s+/g,' ').slice(0,60).trim() : '';
+  let pos = anchor ? text.indexOf(anchor) : -1;
+  if(pos<0 && anchor){ pos = text.toLowerCase().indexOf(anchor.toLowerCase()); }
+  if(pos<0){
+    // approx: równomierny podział na wykryte "'CHAPTER" albo na index
+    const parts = text.split(/\bCHAPTER\b/i);
+    if(parts.length>1){ const k=Math.min(chapter.index||1, parts.length-1); pos = text.indexOf(parts[k]||parts[1]); }
+    if(pos<0){ const per=Math.floor(text.length/10); pos=Math.min(text.length-1,(chapter.index-1||0)*per); }
+  }
+  const start = Math.max(0, pos-600);
+  return text.slice(start, Math.min(text.length, start+4200));
 }
 
 function langOf(req){
@@ -327,19 +401,27 @@ app.post('/api/sessions/start', async (req,res)=>{
   const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
   if(!chapter) return res.status(404).json({error:'chapter not found'});
   const isDemo = req.query.demo === '1' || req.body.demo === true || true;
+  // ADMIN DEV MODE — X-Dev-Mode:1 z aplikacji (toggle w Paszporcie) → natychmiastowe odblokowanie
+  const isDevBypass = req.headers['x-dev-mode'] === '1' || req.body.devBypass === true;
   let picked;
   try{
-    // każda sesja — zupełnie nowe 5 pytań live w języku urządzenia (nie z tej samej puli)
+    // każda sesja — zupełnie nowe 5 pytań live w języku urządzenia (pełny tekst książki na serwerze)
     const chapterForGen = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
     if(chapterForGen && OPENROUTER_KEY){
-      const fresh = await callOpenRouterGenerate(chapterForGen, 5, lang);
-      picked = fresh;
-      challengesByChapter[chapterId] = (challengesByChapter[chapterId]||[]).concat(fresh);
-      try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
-    } else {
-      picked = await pickForSession(chapterId, lang);
+      // FIRE-AND-FORGET: start wraca natychmiast z puli; LLM (wolny free tier, ~1min) zasila pulę
+      // pytaniami z realnego tekstu na NASTĘPNE sesje. Nigdy nie blokuje startu.
+      callOpenRouterGenerate(chapterForGen, 5, lang).then(async (fresh)=>{
+        challengesByChapter[chapterId] = (challengesByChapter[chapterId]||[]).concat(fresh);
+        try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+        console.log(`[llm-bg] +${fresh.length} nowych pytań (pełny tekst) dla ${chapterId} — następna sesja dostanie świeże`);
+      }).catch(e=>console.error(`[llm-bg] fail: ${e.message}`));
     }
-  }catch(e){ return res.status(500).json({error:e.message}); }
+    picked = await pickForSession(chapterId, lang);
+  }catch(e){
+    // LLM padł / zły JSON → sesja WCIĄŻ startuje z puli (nigdy nie wiesza się "loading")
+    console.error(`[start] fallback do puli: ${e.message}`);
+    picked = await pickForSession(chapterId, lang).catch(()=>pickFive(chapterId));
+  }
   const startAt = new Date().toISOString();
   const sessionChallenges = isDevBypass ? buildSessionChallenges(picked, startAt, false).map(c=>({...c, releaseAt: startAt})) : buildSessionChallenges(picked, startAt, isDemo);
   const id = crypto.randomUUID();
@@ -419,8 +501,8 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     correct = false;
     jev = jev ? {...jev, reason: (jev.reason||"") + " | overtime (>90s)"} : jev;
   }
-  // bardzo szybka odpowiedź (<3s) na trudne — sygnał suspicious
-  if(elapsed < 3 && (ch.type==='open_question'||ch.type==='why_question')){
+  // bardzo szybka odpowiedź (<3s) na trudne — sygnał suspicious (nie dotyczy dev/demo — insta-test)
+  if(elapsed < 3 && (ch.type==='open_question'||ch.type==='why_question') && !s.isDevBypass){
     s.suspicious = 1;
     s.suspiciousReason = `too_fast_answer: ${ch.id} ${elapsed}s`;
   }
@@ -486,11 +568,6 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   s.readingDurationSec = Math.floor((endAtDate.getTime() - new Date(s.startAt).getTime())/1000);
   const verdict = runVerification(s, endAtDate); // { verified, status, score, total, durationSec, verificationVersion, proofHash, checks }
 
-  // dev bypass nie trafia do suspicious za too_fast
-  if(s.isDevBypass){
-    s.suspicious = 0;
-    const safe = verdict.checks.filter((c)=>c.name==='not_suspicious');
-  }
   // po weryfikacji: failEarly zawsze kończy jako Failed (błędna odpowiedź / oszustwo)
   const finalStatus = failEarly ? 'Failed' : verdict.status;
   s.status = finalStatus;

@@ -317,6 +317,72 @@
           }
         ],
         "difficulty": "easy"
+      },
+      {
+        "id": "ch1_multiple_choice",
+        "type": "multiple_choice",
+        "question": "Co zrobiła Alicja z pustym słoikiem po pomarańczowej marmoladzie podczas spadania?",
+        "difficulty": "łatwy",
+        "options": [
+          "Wyrzuciła go w dół, żeby sprawdzić, jak jest głęboko.",
+          "Włożyła go do jednej z szafek, obok których spadała.",
+          "Zatrzymała go i zabrała ze sobą na dno studni.",
+          "Rozbiła go o ścianę studni."
+        ],
+        "correct_answer": "Włożyła go do jednej z szafek, obok których spadała.",
+        "chapterId": "alice-ch1"
+      },
+      {
+        "id": "ch2_true_false",
+        "type": "true_false",
+        "question": "Biały Królik miał różowe oczy i wyjął zegarek z kieszeni kamizelki.",
+        "difficulty": "łatwy",
+        "correct_answer": true,
+        "chapterId": "alice-ch1"
+      },
+      {
+        "id": "ch3_who_said",
+        "type": "who_said",
+        "question": "Kto wypowiedział słowa: „Oh dear! Oh dear! I shall be late!”?",
+        "difficulty": "łatwy",
+        "quote": "Oh dear! Oh dear! I shall be late!",
+        "options": [
+          "Alicja",
+          "Biały Królik",
+          "Siostra Alicji",
+          "Narrator"
+        ],
+        "correct_answer": "Biały Królik",
+        "chapterId": "alice-ch1"
+      },
+      {
+        "id": "ch4_ordering",
+        "type": "ordering",
+        "question": "Uporządkuj wydarzenia w kolejności, w jakiej występują we fragmencie.",
+        "difficulty": "średni",
+        "items": [
+          "Alicja widzi szafki i półki w studni.",
+          "Alicja rozważa robienie łańcuszka ze stokrotek.",
+          "Biały Królik biegnie blisko Alicji.",
+          "Alicja wpada do króliczej nory.",
+          "Królik wyjmuje zegarek z kieszeni kamizelki."
+        ],
+        "correct_order": [
+          1,
+          2,
+          4,
+          3,
+          0
+        ],
+        "chapterId": "alice-ch1"
+      },
+      {
+        "id": "ch5_why_question",
+        "type": "why_question",
+        "question": "Dlaczego Alicja nie upuściła słoika z pomarańczową marmoladą, gdy spadała?",
+        "difficulty": "średni",
+        "expectedMeaning": "Alicja bała się, że jeśli upuści słoik, może kogoś zabić, kto znajduje się pod nią w studni.",
+        "chapterId": "alice-ch1"
       }
     ],
     "alice-ch2": [

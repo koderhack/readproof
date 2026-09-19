@@ -14,21 +14,22 @@ import { createHash } from 'crypto';
 const VERIFICATION_VERSION = 'readproof-v1';
 
 // Reguły weryfikacji (anti-cheat).
-function runChecks(s, now) {
+function runChecks(s, now, isDev) {
   const checks = [];
   const fail = (name, detail) => checks.push({ name, passed: false, detail });
 
   const allAnswered = Object.keys(s.answers || {}).length >= s.challenges.length;
-  if (!allAnswered) fail(checks, 'all_answered', 'nie wszystkie odpowiedzi');
+  if (!allAnswered) fail('all_answered', 'nie wszystkie odpowiedzi');
 
   const score = Object.values(s.answers || {}).filter((a) => a && a.correct).length;
 
-  if (s.suspicious) fail(checks, 'not_suspicious', s.suspiciousReason || 'suspicious');
+  if (s.suspicious) fail('not_suspicious', s.suspiciousReason || 'suspicious');
   else checks.push({ name: 'not_suspicious', passed: true });
 
   const dur = Math.floor((now - new Date(s.startAt).getTime()) / 1000);
   const minimalSec = s.isDemo ? 60 : Math.floor((s.expectedReadingMin || 12) * 60 * 0.66);
-  checks.push({ name: 'min_duration', passed: dur >= minimalSec, detail: `${dur}s >= ${minimalSec}s` });
+  // dev bypass + demo: limit czasu nie dotyczy (natychmiastowe odblokowanie)
+  checks.push({ name: 'min_duration', passed: isDev || dur >= minimalSec, detail: isDev ? 'dev bypass' : `${dur}s >= ${minimalSec}s` });
 
   return {
     checks,
@@ -54,7 +55,7 @@ function hashSession(s, correctFlags, now) {
 }
 
 function runVerification(s, now = new Date()) {
-  const { checks, score, durationSec, correctFlags } = runChecks(s, now);
+  const { checks, score, durationSec, correctFlags } = runChecks(s, now, s.isDevBypass);
   const allPassed = checks.filter((c) => !c.passed).length === 0;
   const verified = allPassed && score === s.challenges.length;
 
