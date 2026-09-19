@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import sqlite3 from 'sqlite3';
 import https from 'https';
 import http from 'http';
+import mysql from 'mysql2/promise';
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 32288;
@@ -93,8 +94,8 @@ function buildSessionChallenges(picked, startAt, isDemo){
 // in-memory sessions cache (also persisted in DB)
 const sessionsMem = new Map();
 
-// --- SQLite for proofs + sessions ---
-const db = new sqlite3.Database('./readproof.db');
+// --- SQLite for proofs + sessions (fallback) ---
+let db = new sqlite3.Database('./readproof.db');
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS proofs (
     id TEXT PRIMARY KEY,
@@ -113,10 +114,59 @@ db.serialize(() => {
     suspiciousReason TEXT,
     createdAt TEXT
   )`);
-  // migracja kolumn jeśli brak
   db.run(`ALTER TABLE reading_sessions ADD COLUMN suspicious INTEGER DEFAULT 0`, ()=>{});
   db.run(`ALTER TABLE reading_sessions ADD COLUMN suspiciousReason TEXT`, ()=>{});
 });
+// MySQL mikrus (db_f22287) — jeśli MYSQL_HOST ustawiony, nadpisuje db.* na MySQL (prefix readproof_)
+let useMySQL = !!(process.env.MYSQL_HOST && process.env.MYSQL_USER);
+let mysqlPool = null;
+if (useMySQL) {
+  mysqlPool = mysql.createPool({
+    host: process.env.MYSQL_HOST,
+    port: Number(process.env.MYSQL_PORT||3306),
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_DATABASE,
+    waitForConnections: true, connectionLimit: 5
+  });
+  // proxy db.* na MySQL z zachowaniem callback API sqlite
+  const origDb = db;
+  db = {
+    run(sql, params, cb){
+      // konwersja ? -> ? dla MySQL (to samo)
+      // mapuj nazwy tabel: proofs -> readproof_proofs, reading_sessions -> readproof_sessions
+      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`');
+      // CREATE TABLE IF NOT EXISTS — MySQL potrzebuje VARCHAR/DATETIME zamiast TEXT
+      q = q.replace(/TEXT PRIMARY KEY/g,'VARCHAR(64) PRIMARY KEY').replace(/TEXT,/g,'VARCHAR(64),').replace(/TEXT\)/g,'VARCHAR(64))');
+      q = q.replace(/DATETIME/g,'DATETIME').replace(/JSON/g,'JSON');
+      mysqlPool.query(q, params).then(()=> cb&&cb(null)).catch(e=> cb&&cb(e));
+    },
+    all(sql, params, cb){
+      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`');
+      mysqlPool.query(q, params).then(([rows])=> cb(null, rows)).catch(e=> cb(e));
+    },
+    get(sql, params, cb){
+      let q = sql.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`');
+      mysqlPool.query(q, params).then(([rows])=> cb(null, rows[0]||null)).catch(e=> cb(e));
+    },
+    serialize(fn){ fn(); }
+  };
+  // init MySQL tables async
+  (async()=>{
+    try{
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_proofs (id VARCHAR(64) PRIMARY KEY, bookId VARCHAR(64), chapterId VARCHAR(64), score INT, total INT, status VARCHAR(32), walletAddress VARCHAR(64), timestamp DATETIME, proofHash VARCHAR(32), txSignature VARCHAR(128), explorerUrl VARCHAR(256), reward VARCHAR(32), detail JSON)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_sessions (id VARCHAR(64) PRIMARY KEY, walletAddress VARCHAR(64), bookId VARCHAR(64), chapterId VARCHAR(64), startAt DATETIME, endAt DATETIME, status VARCHAR(32), challengeIds JSON, answers JSON, readingDurationSec INT, lang VARCHAR(8), expectedReadingMin INT, suspicious TINYINT DEFAULT 0, suspiciousReason VARCHAR(256), createdAt DATETIME)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_books (id VARCHAR(64) PRIMARY KEY, data JSON)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_challenges (chapterId VARCHAR(64) PRIMARY KEY, data JSON)`);
+      const [rows] = await mysqlPool.query(`SELECT COUNT(*) as c FROM readproof_books`);
+      if(rows[0].c===0){
+        for(const b of books) await mysqlPool.query(`INSERT IGNORE INTO readproof_books (id, data) VALUES (?,?)`, [b.id, JSON.stringify(b)]);
+        for(const [cid, arr] of Object.entries(challengesByChapter)) await mysqlPool.query(`INSERT IGNORE INTO readproof_challenges (chapterId, data) VALUES (?,?)`, [cid, JSON.stringify(arr)]);
+      }
+      console.log(`MySQL ready: ${process.env.MYSQL_DATABASE}@${process.env.MYSQL_HOST} (readproof_*) — dostępne w https://frog02.mikr.us/pma/`);
+    }catch(e){ console.error('MySQL init failed, zostaje SQLite', e.message); }
+  })();
+}
 
 function proofHash(bookId, chapterId, wallet, ts, score) {
   const input = `${bookId}|${chapterId}|${wallet}|${new Date(ts).getTime()}|${score}`;
