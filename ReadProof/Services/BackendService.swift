@@ -15,7 +15,15 @@ final class BackendService: ObservableObject {
     var baseURL: String {
         get {
             let stored = UserDefaults.standard.string(forKey: "backend_url") ?? ""
-            if !stored.isEmpty { return stored.trimmingCharacters(in: .whitespacesAndNewlines) }
+            if !stored.isEmpty {
+                let s = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+                // migracja: stary http://127.0.0.1:32288 → https (teraz TLS), oraz http fallback na :32289
+                if s == "http://127.0.0.1:32288" {
+                    UserDefaults.standard.set("https://127.0.0.1:32288", forKey: "backend_url")
+                    return "https://127.0.0.1:32288"
+                }
+                return s
+            }
             return "https://127.0.0.1:32288"
         }
         set { UserDefaults.standard.set(newValue, forKey: "backend_url") }
@@ -40,20 +48,31 @@ final class BackendService: ObservableObject {
         return try await data(for: req)
     }
 
-    // MARK: - Health
+    // MARK: - Health — zaszyfrowane https, fallback http :32289 dla self-signed/dev
     func checkHealth() async -> Bool {
-        guard let url = URL(string: "\(api)/health") else { return false }
+        // próba 1: aktualny baseURL (https)
+        if await _checkHealth(urlString: "\(api)/health") { return true }
+        // próba 2: fallback http na :32289 jeśli https nieosiągalne (dev cert mismatch)
+        let fallback = api.replacingOccurrences(of: "https://127.0.0.1:32288", with: "http://127.0.0.1:32289")
+        if fallback != api, await _checkHealth(urlString: "\(fallback)/health") {
+            await MainActor.run { self.lastError = "Używam fallback http :32289 (szyfrowanie na :32288 chwilowo niedostępne)" }
+            return true
+        }
+        await MainActor.run { self.isReachable = false }
+        return false
+    }
+    private func _checkHealth(urlString: String) async -> Bool {
+        guard let url = URL(string: urlString) else { return false }
         var req = URLRequest(url: url); req.timeoutInterval = 4
         req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
         do {
             let (d, r) = try await data(for: req)
             let ok = (r as? HTTPURLResponse)?.statusCode == 200
-            if ok, let j = try? JSONSerialization.jsonObject(with: d) as? [String:Any] {
+            if ok, let j = try? JSONSerialization.jsonObject(with: d) as? [String:Any], j["status"] as? String == "ok" {
                 await MainActor.run { self.isReachable = true; self.lastError = nil }
-                return j["status"] as? String == "ok"
+                return true
             }
         } catch { await MainActor.run { self.lastError = error.localizedDescription } }
-        await MainActor.run { self.isReachable = false }
         return false
     }
 
