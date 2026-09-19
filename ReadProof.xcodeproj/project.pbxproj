@@ -24,9 +24,9 @@
 		BB6792CA89AFE82B0B5D201A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E432DC9DCD34C4BE2525539 /* Assets.xcassets */; };
 		BE26B4FC6D5A8B30547470DD /* sherlock.txt in Resources */ = {isa = PBXBuildFile; fileRef = 78868261F5650E1B23869229 /* sherlock.txt */; };
 		C59A84DA862F874E100D4E20 /* ChallengeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18CF24BC398A3882AAA87F /* ChallengeStore.swift */; };
+		C6C94FD58A890B43E12DD2DD /* PhantomService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721E7288DDEB71158DCB35F8 /* PhantomService.swift */; };
 		C83CB7F34086ABF8B898B5C7 /* challenges.json in Resources */ = {isa = PBXBuildFile; fileRef = 25B99A87961FBD405CCD90D2 /* challenges.json */; };
 		D925C27BA4D60FC1EFC323E6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDFF13E36EC9FD9E67F7DDB6 /* Models.swift */; };
-		D96B0D8948F8EBA3D5C0C842 /* pride.txt in Resources */ = {isa = PBXBuildFile; fileRef = 01660B04F46B4CDA5E9A3DE3 /* pride.txt */; };
 		DF98118C87C5C9092BD34F78 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC70B9AF8F834E5600A1DC4 /* HomeView.swift */; };
 		E2B6D5613EAED406E2A450ED /* BackendHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B74584A24F8974F8B260413 /* BackendHealthView.swift */; };
 		E36862EF32868BFD909C8B79 /* Design.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55782CFF806899E9249400C7 /* Design.swift */; };
@@ -36,7 +36,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		01660B04F46B4CDA5E9A3DE3 /* pride.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = pride.txt; sourceTree = "<group>"; };
 		0BE56E9607E388F080843460 /* JevService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevService.swift; sourceTree = "<group>"; };
 		0EC99363F7DB05EF8F7DA307 /* ReadProofApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadProofApp.swift; sourceTree = "<group>"; };
 		2537A234633EACF3EEF5704C /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
@@ -47,6 +46,7 @@
 		55782CFF806899E9249400C7 /* Design.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
 		577EDC5369023B55091DAD3C /* alice.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = alice.txt; sourceTree = "<group>"; };
 		6EEE97D6F3B69846E2EC3B37 /* BackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendService.swift; sourceTree = "<group>"; };
+		721E7288DDEB71158DCB35F8 /* PhantomService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhantomService.swift; sourceTree = "<group>"; };
 		78868261F5650E1B23869229 /* sherlock.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = sherlock.txt; sourceTree = "<group>"; };
 		7B74584A24F8974F8B260413 /* BackendHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendHealthView.swift; sourceTree = "<group>"; };
 		8E432DC9DCD34C4BE2525539 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -72,7 +72,6 @@
 			children = (
 				577EDC5369023B55091DAD3C /* alice.txt */,
 				AEB8F5A8E3CC735FFF20ACA9 /* around.txt */,
-				01660B04F46B4CDA5E9A3DE3 /* pride.txt */,
 				78868261F5650E1B23869229 /* sherlock.txt */,
 				EE3B65320B168EBF0FB84EEB /* tomsawyer.txt */,
 				A164649654C6D62DEF6AE4E5 /* treasure.txt */,
@@ -122,6 +121,7 @@
 				0BE56E9607E388F080843460 /* JevService.swift */,
 				9893A8AB5A6DB805DC1C427C /* LLMService.swift */,
 				355BAEA9789B21E13D526CC9 /* LocalizationService.swift */,
+				721E7288DDEB71158DCB35F8 /* PhantomService.swift */,
 				AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */,
 			);
 			path = Services;
@@ -228,7 +228,6 @@
 				FBC8CBD778F40779898918DC /* alice.txt in Resources */,
 				860337F40D777678BC95EC28 /* around.txt in Resources */,
 				C83CB7F34086ABF8B898B5C7 /* challenges.json in Resources */,
-				D96B0D8948F8EBA3D5C0C842 /* pride.txt in Resources */,
 				BE26B4FC6D5A8B30547470DD /* sherlock.txt in Resources */,
 				7F82B3A10225CFD77E354D5C /* tomsawyer.txt in Resources */,
 				0D60B05787CE3A7DD70795AE /* treasure.txt in Resources */,
@@ -255,6 +254,7 @@
 				B95C0108A73DD1C87B7B3A73 /* LLMService.swift in Sources */,
 				A3C5146B25D6776FE4CC82D8 /* LocalizationService.swift in Sources */,
 				D925C27BA4D60FC1EFC323E6 /* Models.swift in Sources */,
+				C6C94FD58A890B43E12DD2DD /* PhantomService.swift in Sources */,
 				9536DF0DC3064FAB7BD52303 /* ReadProofApp.swift in Sources */,
 				39890C2415E8FA3B19CE19CD /* RemoteCoverView.swift in Sources */,
 				2D2A1D801723FC44CC2D0B5B /* ResultView.swift in Sources */,

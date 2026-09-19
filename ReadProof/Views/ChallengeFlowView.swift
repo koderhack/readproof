@@ -135,17 +135,13 @@ struct ChallengeFlowView: View {
         }
         let score=res.filter{$0.isCorrect}.count
         let status=Scoring.status(for: score)
-        guard let wallet = appState.wallet.address else {
-            // brak portfela — nie można wypłacić, ale dowód lokalny bez tx
-            let now2=Date(); let hash2=SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: "no-wallet", timestamp: now2, score: score)
-            let p=ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: score, total: challenges.count, status: status, walletAddress: "no-wallet", timestamp: now2, proofHash: hash2, txSignature: nil, explorerUrl: nil, reward: nil)
-            if status != .failed{ appState.saveProof(p)}
-            results=res; proof=p; evaluating=false; showResult=true; return
+        guard let wallet = appState.wallet.address, PhantomService.isValidSolanaAddress(wallet) else {
+            evaluating=false
+            return
         }
         let now=Date()
         let hash=SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: wallet, timestamp: now, score: score)
         var sig:String?=nil; var explorer:String?=nil; var reward:String?=nil
-        // wypłata tylko przez backend — bez mocka, jeśli backend nie skonfigurowany to brak tx
         if Scoring.isPassing(score: score){ reward=chapter.reward }
         let newProof=ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: score, total: challenges.count, status: status, walletAddress: wallet, timestamp: now, proofHash: hash, txSignature: sig, explorerUrl: explorer, reward: reward)
         if status != .failed{ appState.saveProof(newProof)}

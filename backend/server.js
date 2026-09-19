@@ -55,13 +55,8 @@ function pickFive(chapterId) {
 }
 
 function ensurePoolAtLeast20(chapterId){
-  let pool = challengesByChapter[chapterId] || [];
-  // if less than 20, duplicate with new ids to reach 20 (LLM can generate more via /api/generate)
-  while(pool.length < 20){
-    const extra = pool.map(c=>({...c, id: c.id+'-x'+Math.random().toString(36).slice(2,6)}));
-    pool = pool.concat(extra).slice(0,20);
-  }
-  challengesByChapter[chapterId]=pool;
+  const pool = challengesByChapter[chapterId] || [];
+  if(pool.length < 5) throw new Error(`Pula pytań dla ${chapterId} za mała (${pool.length}) — wygeneruj via POST /api/generate (LLM OpenRouter free, live w języku urządzenia)`);
   return pool;
 }
 function pickForSession(chapterId){
@@ -121,29 +116,6 @@ db.serialize(() => {
 function proofHash(bookId, chapterId, wallet, ts, score) {
   const input = `${bookId}|${chapterId}|${wallet}|${new Date(ts).getTime()}|${score}`;
   return crypto.createHash('sha256').update(input).digest('hex').slice(0,16);
-}
-function mockSignature(hash) {
-  const chars='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let sig=''; let seed=hash.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  for(let i=0;i<88;i++){ seed=(seed*1103515245+12345)&0x7fffffff; sig+=chars[seed % chars.length]; }
-  return sig;
-}
-
-// --- Jev ---
-function keywords(text) {
-  const stop=new Set(["i","w","z","na","do","że","to","się","jest","by","być","nie","tak","jak","co","dla","ale","oraz","przez","po","o","a","u","za","od","te","ten","ta","the","a","an","is","are","was","be","to","of","in","it","you","and"]);
-  return new Set(text.toLowerCase().split(/[^a-z0-9ąćęłńóśźż]+/).filter(w=>w.length>2 && !stop.has(w)));
-}
-function mockJev(expected, answer) {
-  const exp=keywords(expected); const ans=keywords(answer);
-  if(!exp.size) return {correct: answer.length>10, confidence:0.55, reason:"Mock: brak słów kluczowych"};
-  const inter=[...exp].filter(w=>ans.has(w)).length;
-  const recall=inter/exp.size;
-  let conf, ok;
-  if(recall>=0.5){ conf=Math.min(0.95,0.7+recall*0.3+Math.min(answer.length,100)/400); ok=conf>=JEV_THRESHOLD; }
-  else if(recall>=0.3){ conf=0.55+recall*0.3; ok=false; }
-  else { conf=0.25+recall; ok=false; }
-  return {correct:ok, confidence:conf, reason: ok? `Mock: zgodność recall ${Math.round(recall*100)}%`:`Mock: za mało zgodności recall ${Math.round(recall*100)}% próg ${Math.round(JEV_THRESHOLD*100)}%`};
 }
 async function callJev({question, expectedMeaning, userAnswer, context, lang='pl'}) {
   // TypeSafe Jev — POST https://api.typesafe.ai/v1/systemone (docs https://docs.typesafe.ai/api)
@@ -252,7 +224,8 @@ app.post('/api/sessions/start', (req,res)=>{
   const {walletAddress, bookId, chapterId, expectedReadingMin} = req.body;
   const lang = langOf(req);
   if(!bookId || !chapterId) return res.status(400).json({error:'bookId and chapterId required'});
-  const wallet = walletAddress || `DemoWallet-${crypto.randomBytes(3).toString('hex')}`;
+  if(!walletAddress) return res.status(400).json({error:'walletAddress required — connect Phantom Devnet'});
+  const wallet = walletAddress;
   const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
   if(!chapter) return res.status(404).json({error:'chapter not found'});
   const isDemo = req.query.demo === '1' || req.body.demo === true || true; // default demo fast for hackathon
@@ -320,9 +293,8 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     case 'open_question': case 'why_question': {
       if(typeof answer==='string'){
         const j = await callJev({question:ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: answer, context: ch.context||'', lang: s.lang});
-        jev = j || mockJev(ch.expectedMeaning||'', answer);
-        if(!jev.source) jev.source = j ? 'jev' : 'mock';
-        correct = jev.correct && jev.confidence >= JEV_THRESHOLD;
+        if(!j) return res.status(503).json({error: s.lang==='en'?'Jev unavailable':'Jev niedostępny — ustaw TYPESAFE_API_KEY'});
+        jev = j; correct = jev.correct && jev.confidence >= JEV_THRESHOLD;
       }
       break;
     }
@@ -354,7 +326,7 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
     const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===s.chapterId);
     reward = chapter?.reward || '5 USDC';
     const real = await tryRealSolanaReward(s.walletAddress, reward);
-    if(real){ tx=real.signature; explorer=real.explorer; } else { const sig=mockSignature(proofHash); tx=sig; explorer=`https://explorer.solana.com/tx/${sig}?cluster=devnet`; }
+    if(real){ tx=real.signature; explorer=real.explorer; } else { tx=null; explorer=null; }
   }
   const detail = s.challenges.map(c=>({challengeId:c.id, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null}));
   db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -396,18 +368,17 @@ app.post('/api/evaluate', async (req,res)=>{
   const lang=langOf(req);
   if(!question || !expectedMeaning || !userAnswer) return res.status(400).json({error:'question, expectedMeaning, userAnswer required'});
   const trimmed=String(userAnswer).trim();
-  if(trimmed.length<3) return res.json({correct:false, confidence:0.15, reason: lang==='en'?'Too short':'Za krótka odpowiedź', source:'mock', lang});
-  // Oficjalne Jev API (nie OpenRouter) — LLM NIE jest używany do oceny
+  if(trimmed.length<3) return res.status(400).json({error: lang==='en'?'Too short':'Za krótka odpowiedź'});
   const fromJev=await callJev({question, expectedMeaning, userAnswer:trimmed, context: context||'', lang});
-  if(fromJev) return res.json({...fromJev, source:'jev', lang});
-  const mock=mockJev(expectedMeaning, trimmed);
-  res.json({...mock, source:'mock', lang});
+  if(!fromJev) return res.status(503).json({error: lang==='en'?'Jev unavailable — set TYPESAFE_API_KEY in backend/.env':'Jev niedostępny — ustaw TYPESAFE_API_KEY w backend/.env', lang});
+  res.json({...fromJev, source:'jev', lang});
 });
 
 app.post('/api/proofs', async (req,res)=>{
   const {bookId, chapterId, answers, walletAddress} = req.body; // answers: {challengeId: answer}
   if(!bookId || !chapterId || !answers) return res.status(400).json({error:'bookId, chapterId, answers required'});
-  const wallet = walletAddress || `DemoWallet-${crypto.randomBytes(3).toString('hex')}`;
+  if(!walletAddress) return res.status(400).json({error:'walletAddress required — connect Phantom (Devnet)'});
+  const wallet = walletAddress;
   const pool=challengesByChapter[chapterId] || [];
   // we expect answers is either map or array of {challengeId, answer}
   let results=[];
@@ -440,9 +411,8 @@ app.post('/api/proofs', async (req,res)=>{
       case 'open_question': case 'why_question': {
         if(typeof ans==='string'){
           const j = await callJev({question: ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: ans, context: ch.context||'', lang: langOf(req)});
-          jev = j || mockJev(ch.expectedMeaning||'', ans);
-          if (!jev.source) jev.source = j ? 'jev' : 'mock';
-          correct = jev.correct && jev.confidence>=JEV_THRESHOLD;
+          if(!j) return res.status(503).json({error:'Jev unavailable — set TYPESAFE_API_KEY'});
+          jev = j; correct = jev.correct && jev.confidence>=JEV_THRESHOLD;
         }
         break;
       }
@@ -461,10 +431,8 @@ app.post('/api/proofs', async (req,res)=>{
   if(score>=4){
     const chapter=books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
     reward=chapter?.reward || '5 USDC';
-    // per Solana docs: real Devnet USDC transfer via ATA if payer key set, else mock (deterministyczny)
     const real = await tryRealSolanaReward(wallet, reward);
-    if(real){ tx=real.signature; explorer=real.explorer; }
-    else { const sig=mockSignature(hash); tx=sig; explorer=`https://explorer.solana.com/tx/${sig}?cluster=devnet`; }
+    if(real){ tx=real.signature; explorer=real.explorer; } else { tx=null; explorer=null; }
   }
   const id=crypto.randomUUID();
   const detail=JSON.stringify(results);
