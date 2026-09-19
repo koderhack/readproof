@@ -16,3 +16,4 @@ backend/readproof.db
 .DS_Store
 /tmp/
 .env.local
+backend/certs/key.pem

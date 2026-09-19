@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import crypto from 'crypto';
 import sqlite3 from 'sqlite3';
+import https from 'https';
+import http from 'http';
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 32288;
@@ -52,7 +54,51 @@ function pickFive(chapterId) {
   return picked.slice(0,5);
 }
 
-// --- SQLite for proofs ---
+function ensurePoolAtLeast20(chapterId){
+  let pool = challengesByChapter[chapterId] || [];
+  // if less than 20, duplicate with new ids to reach 20 (LLM can generate more via /api/generate)
+  while(pool.length < 20){
+    const extra = pool.map(c=>({...c, id: c.id+'-x'+Math.random().toString(36).slice(2,6)}));
+    pool = pool.concat(extra).slice(0,20);
+  }
+  challengesByChapter[chapterId]=pool;
+  return pool;
+}
+function pickForSession(chapterId){
+  ensurePoolAtLeast20(chapterId);
+  const pool = challengesByChapter[chapterId];
+  let shuffled = [...pool].sort(()=>Math.random()-0.5);
+  let picked=[];
+  let used=new Set();
+  for(const c of shuffled){
+    if(picked.length>=5) break;
+    if(!used.has(c.type) || picked.length>=3){ picked.push(c); used.add(c.type); }
+  }
+  if(picked.length<5) for(const c of shuffled) if(!picked.find(p=>p.id===c.id) && picked.length<5) picked.push(c);
+  if(!picked.some(c=>c.type==='open_question'||c.type==='why_question')){
+    const jev=pool.find(c=>c.type==='open_question'||c.type==='why_question');
+    if(jev) picked[4]=jev;
+  }
+  return picked.slice(0,5);
+}
+const SESSION_TIMING_DEMO = [0, 20, 45, 70, 90]; // seconds from start — fast demo, prevents copy-all-to-AI
+const SESSION_TIMING_REAL = [0, 5*60, 8*60, 12*60, 14*60]; // ~14 min total, per spec
+
+function buildSessionChallenges(picked, startAt, isDemo){
+  const timing = isDemo ? SESSION_TIMING_DEMO : SESSION_TIMING_REAL;
+  const startMs = new Date(startAt).getTime();
+  return picked.map((c,i)=>({
+    ...c,
+    releaseAt: new Date(startMs + timing[i]*1000).toISOString(),
+    releaseAfterSec: timing[i],
+    locked: false // computed on fetch
+  }));
+}
+
+// in-memory sessions cache (also persisted in DB)
+const sessionsMem = new Map();
+
+// --- SQLite for proofs + sessions ---
 const db = new sqlite3.Database('./readproof.db');
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS proofs (
@@ -60,6 +106,15 @@ db.serialize(() => {
     bookId TEXT, chapterId TEXT, score INTEGER, total INTEGER, status TEXT,
     walletAddress TEXT, timestamp TEXT, proofHash TEXT, txSignature TEXT, explorerUrl TEXT, reward TEXT,
     detail TEXT
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS reading_sessions (
+    id TEXT PRIMARY KEY,
+    walletAddress TEXT, bookId TEXT, chapterId TEXT,
+    startAt TEXT, endAt TEXT, status TEXT,
+    challengeIds TEXT, answers TEXT,
+    readingDurationSec INTEGER,
+    lang TEXT, expectedReadingMin INTEGER,
+    createdAt TEXT
   )`);
 });
 
@@ -190,7 +245,128 @@ function langOf(req){
 }
 
 // --- Routes ---
-app.get('/health', (req,res)=>res.json({status:'ok', service:'readproof-backend', port:PORT, books: books.length, chapters: books.reduce((a,b)=>a+b.chapters.length,0), openRouter: !!OPENROUTER_KEY, model: OPENROUTER_MODEL, jevThreshold:JEV_THRESHOLD, lang: langOf(req)}));
+app.get('/health', (req,res)=>res.json({status:'ok', service:'readproof-backend', port:PORT, books: books.length, chapters: books.reduce((a,b)=>a+b.chapters.length,0), openRouter: !!OPENROUTER_KEY, model: OPENROUTER_MODEL, jevThreshold:JEV_THRESHOLD, jevTypesafe: !!TYPESAFE_API_KEY, lang: langOf(req), sessions: sessionsMem.size}));
+
+// ====== Reading Sessions — anti-ChatGPT: staged release, pool 20-30, Proof of Comprehension ======
+app.post('/api/sessions/start', (req,res)=>{
+  const {walletAddress, bookId, chapterId, expectedReadingMin} = req.body;
+  const lang = langOf(req);
+  if(!bookId || !chapterId) return res.status(400).json({error:'bookId and chapterId required'});
+  const wallet = walletAddress || `DemoWallet-${crypto.randomBytes(3).toString('hex')}`;
+  const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
+  if(!chapter) return res.status(404).json({error:'chapter not found'});
+  const isDemo = req.query.demo === '1' || req.body.demo === true || true; // default demo fast for hackathon
+  const picked = pickForSession(chapterId);
+  const startAt = new Date().toISOString();
+  const sessionChallenges = buildSessionChallenges(picked, startAt, isDemo);
+  const id = crypto.randomUUID();
+  const expectedMin = expectedReadingMin || 12;
+  const session = {
+    id, walletAddress: wallet, bookId, chapterId, startAt, endAt: null, status:'reading',
+    challengeIds: picked.map(c=>c.id), challenges: sessionChallenges,
+    answers: {}, // challengeId -> {answer, answeredAt, correct, jev}
+    readingDurationSec: 0, lang, expectedReadingMin: expectedMin, isDemo
+  };
+  sessionsMem.set(id, session);
+  db.run(`INSERT INTO reading_sessions (id, walletAddress, bookId, chapterId, startAt, endAt, status, challengeIds, answers, readingDurationSec, lang, expectedReadingMin, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id,wallet,bookId,chapterId,startAt,null,'reading', JSON.stringify(session.challengeIds), JSON.stringify(session.answers), 0, lang, expectedMin, startAt]);
+  // return without exposing future questions — only first is unlocked, rest masked
+  const now = Date.now();
+  const masked = sessionChallenges.map(c=>{
+    const unlockAt = new Date(c.releaseAt).getTime();
+    const locked = unlockAt > now;
+    if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: lang==='en'?'Reading — unlocks soon':'Czytanie — odblokuje się wkrótce'};
+    return {...c, locked:false};
+  });
+  res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, lang, timing: isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL, challenges: masked, poolSize: (challengesByChapter[chapterId]||[]).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
+});
+
+app.get('/api/sessions/:id', (req,res)=>{
+  const s = sessionsMem.get(req.params.id);
+  if(!s){
+    db.get(`SELECT * FROM reading_sessions WHERE id=?`, [req.params.id], (err,row)=>{
+      if(err||!row) return res.status(404).json({error:'session not found'});
+      // fallback from DB
+      const challenges = JSON.parse(row.challengeIds||'[]').map(id=> (challengesByChapter[row.chapterId]||[]).find(c=>c.id===id) || {id});
+      return res.json({id:row.id, walletAddress:row.walletAddress, bookId:row.bookId, chapterId:row.chapterId, startAt:row.startAt, endAt:row.endAt, status:row.status, challenges, answers: JSON.parse(row.answers||'{}')});
+    });
+    return;
+  }
+  const now = Date.now();
+  const masked = s.challenges.map(c=>{
+    const locked = new Date(c.releaseAt).getTime() > now;
+    if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: s.lang==='en'?'Keep reading…':'Czytaj dalej…'};
+    return {...c, locked:false};
+  });
+  const readingDurationSec = Math.floor((now - new Date(s.startAt).getTime())/1000);
+  res.json({...s, readingDurationSec, challenges: masked});
+});
+
+app.post('/api/sessions/:id/answer', async (req,res)=>{
+  const s = sessionsMem.get(req.params.id);
+  if(!s) return res.status(404).json({error:'session not found'});
+  const {challengeId, answer} = req.body;
+  const ch = s.challenges.find(c=>c.id===challengeId);
+  if(!ch) return res.status(404).json({error:'challenge not in session'});
+  if(new Date(ch.releaseAt).getTime() > Date.now()) return res.status(423).json({error:'challenge still locked — keep reading', releaseAt: ch.releaseAt});
+  if(s.answers[challengeId]) return res.status(409).json({error:'already answered'});
+  let correct=false; let jev=null;
+  switch(ch.type){
+    case 'multiple_choice': case 'true_false': case 'what_next': correct = answer === ch.correctAnswer; break;
+    case 'multiple_select': { const exp=new Set(ch.correctAnswers||[]); const got=new Set(Array.isArray(answer)?answer:[]); correct = exp.size===got.size && [...exp].every(v=>got.has(v)); break; }
+    case 'find_error': correct = answer === ch.errorIndex; break;
+    case 'ordering': case 'ranking': correct = JSON.stringify(answer) === JSON.stringify(ch.correctOrder); break;
+    case 'match': case 'who_said': { if(answer && typeof answer==='object'){ let ok=true; for(const [k,v] of Object.entries(answer)) if(Number(k)!==Number(v)) ok=false; correct= ok && Object.keys(answer).length===(ch.pairs||[]).length; } break; }
+    case 'open_question': case 'why_question': {
+      if(typeof answer==='string'){
+        const j = await callJev({question:ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: answer, context: ch.context||'', lang: s.lang});
+        jev = j || mockJev(ch.expectedMeaning||'', answer);
+        if(!jev.source) jev.source = j ? 'jev' : 'mock';
+        correct = jev.correct && jev.confidence >= JEV_THRESHOLD;
+      }
+      break;
+    }
+    default: correct=false;
+  }
+  s.answers[challengeId] = {answer, answeredAt: new Date().toISOString(), correct, jev};
+  s.readingDurationSec = Math.floor((Date.now() - new Date(s.startAt).getTime())/1000);
+  db.run(`UPDATE reading_sessions SET answers=?, readingDurationSec=? WHERE id=?`, [JSON.stringify(s.answers), s.readingDurationSec, s.id]);
+  res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec});
+});
+
+app.post('/api/sessions/:id/complete', async (req,res)=>{
+  const s = sessionsMem.get(req.params.id);
+  if(!s) return res.status(404).json({error:'session not found'});
+  const total = s.challenges.length;
+  const answered = Object.keys(s.answers).length;
+  if(answered < total) return res.status(400).json({error:`Not all challenges answered: ${answered}/${total}`});
+  let score = Object.values(s.answers).filter((a)=>a.correct).length;
+  let status='Failed'; if(score>=4) status='Reading Verified'; else if(score===3) status='Try Again';
+  const endAt = new Date().toISOString();
+  s.endAt = endAt; s.status = status;
+  const readingDurationSec = Math.floor((new Date(endAt).getTime() - new Date(s.startAt).getTime())/1000);
+  s.readingDurationSec = readingDurationSec;
+  const proofId = crypto.randomUUID();
+  const hashInput = `${s.bookId}|${s.chapterId}|${s.walletAddress}|${s.startAt}|${score}|${readingDurationSec}`;
+  const proofHash = crypto.createHash('sha256').update(hashInput).digest('hex').slice(0,16);
+  let tx=null, explorer=null, reward=null;
+  if(score>=4){
+    const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===s.chapterId);
+    reward = chapter?.reward || '5 USDC';
+    const real = await tryRealSolanaReward(s.walletAddress, reward);
+    if(real){ tx=real.signature; explorer=real.explorer; } else { const sig=mockSignature(proofHash); tx=sig; explorer=`https://explorer.solana.com/tx/${sig}?cluster=devnet`; }
+  }
+  const detail = s.challenges.map(c=>({challengeId:c.id, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null}));
+  db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [proofId, s.bookId, s.chapterId, score, total, status, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail)]);
+  db.run(`UPDATE reading_sessions SET endAt=?, status=?, readingDurationSec=? WHERE id=?`, [endAt, status, readingDurationSec, s.id]);
+  res.json({
+    sessionId: s.id, proof: {id: proofId, bookId:s.bookId, chapterId:s.chapterId, score, total, status, walletAddress:s.walletAddress, timestamp:endAt, proofHash, txSignature:tx, explorerUrl: explorer, reward},
+    readingDurationSec, startAt: s.startAt, endAt, lang: s.lang,
+    results: s.challenges.map(c=>({challengeId:c.id, type:c.type, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null})),
+    note: s.lang==='en' ? 'Comprehension verified — not physical reading. Stored: wallet, book, chapter, session_start/end, reading_duration, proof_hash.' : 'Comprehension verified — nie fizyczne czytanie. Zapisano: wallet, book, chapter, session_start/end, reading_duration, proof_hash.'
+  });
+});
 
 app.get('/api/books', (req,res)=>res.json(books));
 
@@ -439,4 +615,12 @@ async function tryRealSolanaReward(toAddress, amountUSDC='5'){
   }catch(e){ console.error('real solana reward failed, fallback mock', e.message); return null; }
 }
 
-app.listen(PORT,'0.0.0.0',()=>console.log(`ReadProof backend :${PORT} books=${books.length} openrouter=${!!OPENROUTER_KEY} jevTypesafe=${!!TYPESAFE_API_KEY} jevThresh=${JEV_THRESHOLD}`));
+const USE_TLS = fs.existsSync('./certs/cert.pem') && fs.existsSync('./certs/key.pem');
+if (USE_TLS) {
+  const opts = { cert: fs.readFileSync('./certs/cert.pem'), key: fs.readFileSync('./certs/key.pem') };
+  https.createServer(opts, app).listen(PORT, '0.0.0.0', () => console.log(`✅ ReadProof backend (TLS) https://0.0.0.0:${PORT} books=${books.length} openrouter=${!!OPENROUTER_KEY} jevTypesafe=${!!TYPESAFE_API_KEY} jevThresh=${JEV_THRESHOLD} [ENCRYPTED]`));
+  // fallback http na PORT+1 dla wygody lokalnej (opcjonalnie)
+  http.createServer(app).listen(PORT+1, '0.0.0.0', () => console.log(`   fallback http://0.0.0.0:${PORT+1}`));
+} else {
+  app.listen(PORT,'0.0.0.0',()=>console.log(`ReadProof backend :${PORT} books=${books.length} openrouter=${!!OPENROUTER_KEY} jevTypesafe=${!!TYPESAFE_API_KEY} jevThresh=${JEV_THRESHOLD} [PLAIN — dodaj certs/cert.pem + key.pem aby włączyć TLS]`));
+}

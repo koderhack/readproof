@@ -1,9 +1,9 @@
 import Foundation
 
 // BackendService — proxy do lokalnego Node backendu (Express + SQLite + OpenRouter free + Jev)
-// Fallback: jeśli backend nieosiągalny, używa bundled JSON i mock Jev (tak jak wcześniej)
-// Dla lokalnych testów: http://127.0.0.1:32288 (Simulator) lub http://localhost:32288
-// Dla Frog VPS: http://frog02.mikr.us:32287 (proxy -> :32288)
+// Fallback: jeśli backend nieosiągalny, używa bundled JSON i mock Jev
+// Dla lokalnych testów: https://127.0.0.1:32288 (Simulator) — TLS self-signed z backend/certs/
+// Dla Frog VPS: https://frog02.mikr.us:32287 (https proxy -> :32288)
 // Konfiguracja w UserDefaults "backend_url"
 
 final class BackendService: ObservableObject {
@@ -16,8 +16,7 @@ final class BackendService: ObservableObject {
         get {
             let stored = UserDefaults.standard.string(forKey: "backend_url") ?? ""
             if !stored.isEmpty { return stored.trimmingCharacters(in: .whitespacesAndNewlines) }
-            // default lokalny — Simulator widzi 127.0.0.1 hosta
-            return "http://127.0.0.1:32288"
+            return "https://127.0.0.1:32288"
         }
         set { UserDefaults.standard.set(newValue, forKey: "backend_url") }
     }
@@ -25,13 +24,29 @@ final class BackendService: ObservableObject {
     private var api: String { baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL }
     var langHeader: String { LocalizationService.shared.current.rawValue }
 
+    // szyfrowane połączenie — self-signed na localhost akceptujemy w dev (jak NSAllowsArbitraryLoads)
+    private lazy var session: URLSession = {
+        let delegate = InsecureTrustDelegate()
+        return URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+    }()
+    private var useInsecureSession: Bool { baseURL.contains("127.0.0.1") || baseURL.contains("localhost") }
+
+    private func data(for req: URLRequest) async throws -> (Data, URLResponse) {
+        if useInsecureSession { return try await session.data(for: req) }
+        return try await URLSession.shared.data(for: req)
+    }
+    private func data(from url: URL) async throws -> (Data, URLResponse) {
+        var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
+        return try await data(for: req)
+    }
+
     // MARK: - Health
     func checkHealth() async -> Bool {
         guard let url = URL(string: "\(api)/health") else { return false }
         var req = URLRequest(url: url); req.timeoutInterval = 4
         req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
         do {
-            let (d, r) = try await URLSession.shared.data(for: req)
+            let (d, r) = try await data(for: req)
             let ok = (r as? HTTPURLResponse)?.statusCode == 200
             if ok, let j = try? JSONSerialization.jsonObject(with: d) as? [String:Any] {
                 await MainActor.run { self.isReachable = true; self.lastError = nil }
@@ -46,31 +61,31 @@ final class BackendService: ObservableObject {
     func fetchBooks() async -> [Book]? {
         guard let url = URL(string: "\(api)/api/books") else { return nil }
         var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
-        do { let (d, r) = try await URLSession.shared.data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; return try JSONDecoder().decode([Book].self, from: d) } catch { return nil }
+        do { let (d, r) = try await data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; return try JSONDecoder().decode([Book].self, from: d) } catch { return nil }
     }
 
     func fetchChallenges(chapterId: String, pick: Int = 5) async -> [Challenge]? {
         guard let url = URL(string: "\(api)/api/challenges/\(chapterId)?pick=\(pick)&lang=\(langHeader)") else { return nil }
         var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
-        do { let (d, r) = try await URLSession.shared.data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; return try JSONDecoder().decode([Challenge].self, from: d) } catch { return nil }
+        do { let (d, r) = try await data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; return try JSONDecoder().decode([Challenge].self, from: d) } catch { return nil }
     }
 
     func fetchChallengeSet(bookId: String, chapterId: String) async -> [Challenge]? {
         guard let url = URL(string: "\(api)/api/books/\(bookId)/chapters/\(chapterId)/challenge?lang=\(langHeader)") else { return nil }
         var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
-        do { let (d, r) = try await URLSession.shared.data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; if let wrapper = try? JSONDecoder().decode(ChallengeSetWrapper.self, from: d) { return wrapper.challenges }; return try JSONDecoder().decode([Challenge].self, from: d) } catch { return nil }
+        do { let (d, r) = try await data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; if let wrapper = try? JSONDecoder().decode(ChallengeSetWrapper.self, from: d) { return wrapper.challenges }; return try JSONDecoder().decode([Challenge].self, from: d) } catch { return nil }
     }
 
     struct ChallengeSetWrapper: Codable { let challenges: [Challenge]; let chapterId: String; let count: Int? }
 
-    // MARK: - Jev via backend (korzysta z OpenRouter free na backendzie, fallback mock)
+    // MARK: - Jev via backend
     func evaluateViaBackend(question: String, expectedMeaning: String, userAnswer: String, context: String) async -> JevVerdict? {
         guard let url = URL(string: "\(api)/api/evaluate") else { return nil }
         var req = URLRequest(url: url); req.httpMethod = "POST"; req.setValue("application/json", forHTTPHeaderField: "Content-Type"); req.setValue(langHeader, forHTTPHeaderField: "X-Lang"); req.timeoutInterval = 12
         let body: [String:String] = ["question": question, "expectedMeaning": expectedMeaning, "userAnswer": userAnswer, "context": context]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         do {
-            let (d, r) = try await URLSession.shared.data(for: req)
+            let (d, r) = try await data(for: req)
             guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }
             return try JSONDecoder().decode(JevVerdict.self, from: d)
         } catch { return nil }
@@ -79,8 +94,7 @@ final class BackendService: ObservableObject {
     // MARK: - Proofs
     func submitProof(bookId: String, chapterId: String, challenges: [Challenge], answers: [String: UserAnswer], walletAddress: String?) async -> ReadingProof? {
         guard let url = URL(string: "\(api)/api/proofs") else { return nil }
-        var req = URLRequest(url: url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.timeoutInterval = 15
-        // map UserAnswer to JSON primitive for backend
+        var req = URLRequest(url: url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang"); req.timeoutInterval = 15
         var ansMap:[String:Any] = [:]
         for (k,v) in answers {
             switch v {
@@ -94,7 +108,7 @@ final class BackendService: ObservableObject {
         let payload:[String:Any]=["bookId":bookId,"chapterId":chapterId,"challenges": challenges.map{ try! JSONEncoder().encode($0) }.map{ try! JSONSerialization.jsonObject(with: $0) },"answers": ansMap,"walletAddress": walletAddress as Any]
         req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         do {
-            let (d, r)=try await URLSession.shared.data(for:req)
+            let (d, r)=try await data(for:req)
             guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }
             return try JSONDecoder().decode(ReadingProof.self, from: d)
         } catch { return nil }
@@ -104,7 +118,8 @@ final class BackendService: ObservableObject {
         var s="\(api)/api/proofs"
         if let w=wallet, !w.isEmpty { s+="?wallet=\(w.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? w)" }
         guard let url=URL(string:s) else { return nil }
-        do{ let (d,r)=try await URLSession.shared.data(from:url); guard (r as? HTTPURLResponse)?.statusCode==200 else {return nil}; return try JSONDecoder().decode([ReadingProof].self, from: d)}catch{return nil}
+        var req = URLRequest(url:url); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else {return nil}; return try JSONDecoder().decode([ReadingProof].self, from: d)}catch{return nil}
     }
 
     // MARK: - LLM generate
@@ -112,7 +127,7 @@ final class BackendService: ObservableObject {
         guard let url=URL(string:"\(api)/api/generate") else { throw GenError.badURL }
         var req=URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
         req.httpBody = try JSONSerialization.data(withJSONObject:["bookId":bookId,"chapterId":chapterId,"count":count])
-        let (d,r)=try await URLSession.shared.data(for:req)
+        let (d,r)=try await data(for:req)
         guard (r as? HTTPURLResponse)?.statusCode==200 else { let msg=String(data:d, encoding:.utf8) ?? ""; throw GenError.api(msg) }
         let j=try JSONSerialization.jsonObject(with:d) as? [String:Any]
         if let arr=j?["challenges"] as? [[String:Any]] {
@@ -122,4 +137,17 @@ final class BackendService: ObservableObject {
         throw GenError.parse
     }
     enum GenError: LocalizedError { case badURL, api(String), parse; var errorDescription:String?{ switch self{case .badURL:return "Bad URL";case .api(let m):return m;case .parse:return "Parse error"}}}
+}
+
+// Trust self-signed localhost w dev — tylko dla 127.0.0.1 / localhost
+final class InsecureTrustDelegate: NSObject, URLSessionDelegate {
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        if challenge.protectionSpace.host.contains("127.0.0.1") || challenge.protectionSpace.host.contains("localhost") {
+            if let trust = challenge.protectionSpace.serverTrust {
+                completionHandler(.useCredential, URLCredential(trust: trust))
+                return
+            }
+        }
+        completionHandler(.performDefaultHandling, nil)
+    }
 }
