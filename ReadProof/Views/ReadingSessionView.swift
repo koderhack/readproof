@@ -179,6 +179,20 @@ struct ReadingSessionView: View {
         ReadingSessionActivityManager.shared.update(completed: completed.count, total: challenges.count, nextUnlockIn: next, status: completed.count==challenges.count ? "verifying" : "reading")
     }
     func stopLive(){ ReadingSessionActivityManager.shared.end(status: proof?.status.rawValue ?? "ended") }
+    func completeWithWrong(failedId: String) async {
+        guard let id=sessionId else { return }
+        // oznacz jako błędną i zakończ natychmiast
+        _ = try? await BackendService.shared.flagSession(sessionId: id, type: "wrong_answer")
+        if let p = await BackendService.shared.completeSession(sessionId: id) {
+            proof = p; showResult = true; stopLive()
+        } else {
+            // fallback lokalny proof failed
+            let now2 = Date()
+            let hash = SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: appState.wallet.address ?? "no-wallet", timestamp: now2, score: completed.count)
+            let pf = ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: completed.count, total: challenges.count, status: .failed, walletAddress: appState.wallet.address ?? "no-wallet", timestamp: now2, proofHash: hash, txSignature: nil, explorerUrl: nil, reward: nil)
+            proof = pf; showResult = true; stopLive()
+        }
+    }
     func complete() async {
         guard let id=sessionId else { return }
         if let p = await BackendService.shared.completeSession(sessionId: id) {
@@ -221,7 +235,7 @@ struct UnlockCard: View {
                     let on = multi.contains(i)
                     Button{ if on { multi.remove(i)} else { multi.insert(i)} } label:{
                         HStack{ Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Image(systemName: on ? "checkmark.square.fill":"square").foregroundStyle(on ? RPColor.primary : RPColor.muted) }
-                        .padding(10).background(on ? RPColor.primaryLight : Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(on ? RPColor.primary : RPColor.line))
+                        .padding(10).background(on ? RPColor.primaryLight : RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(on ? RPColor.primary : RPColor.line))
                     }.buttonStyle(.plain)
                 }
                 Button("Zatwierdź"){ onSubmit(Array(multi)) }.disabled(multi.isEmpty).buttonStyle(BurgundyButtonStyle()).opacity(multi.isEmpty ? 0.5 : 1)
@@ -230,7 +244,7 @@ struct UnlockCard: View {
                 ForEach(Array(stmts.enumerated()), id:\.offset){ i, st in
                     Button{ sel=i } label:{
                         HStack{ Text("\(i+1).").font(.caption.weight(.bold)).foregroundStyle(RPColor.muted); Text(st).font(.system(size:13)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Circle().stroke(sel==i ? RPColor.primary : RPColor.line, lineWidth:2).frame(width:20,height:20).overlay(Circle().fill(sel==i ? RPColor.primary : Color.clear).frame(width:12,height:12)) }
-                        .padding(10).background(sel==i ? RPColor.primaryLight : Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
+                        .padding(10).background(sel==i ? RPColor.primaryLight : RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
                     }.buttonStyle(.plain)
                 }
                 Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(sel==nil ? 0.5 : 1)
@@ -247,7 +261,7 @@ struct UnlockCard: View {
                 ForEach(Array(opts.enumerated()), id:\.offset){ i, opt in
                     Button{ sel=i } label:{
                         HStack{ Text(["A","B","C","D"][min(i,3)]).font(.caption.weight(.bold)).frame(width:28,height:28).background(sel==i ? RPColor.primary : Color(hex:"#F3F4F6")).foregroundStyle(sel==i ? .white : RPColor.muted).clipShape(Circle()); Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer() }
-                        .padding(10).background(sel==i ? RPColor.primaryLight : Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
+                        .padding(10).background(sel==i ? RPColor.primaryLight : RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
                     }.buttonStyle(.plain)
                 }
                 Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(sel==nil ? 0.5 : 1)

@@ -57,13 +57,13 @@ function pickFive(chapterId) {
 
 async function ensurePoolAtLeast20(chapterId, lang='pl'){
   let pool = challengesByChapter[chapterId] || [];
-  if(pool.length >= 20) return pool;
+  if(pool.length >= 30) return pool;
   // live generowanie brakujących challenge'y via LLM OpenRouter free w języku urządzenia
   if(OPENROUTER_KEY){
     try{
       const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
       if(chapter){
-        const need = 20 - pool.length;
+        const need = 30 - pool.length;
         const generated = await callOpenRouterGenerate(chapter, need, lang);
         pool = pool.concat(generated);
         challengesByChapter[chapterId]=pool;
@@ -86,10 +86,10 @@ async function pickForSession(chapterId, lang='pl'){
     if(!used.has(c.type) || picked.length>=3){ picked.push(c); used.add(c.type); }
   }
   if(picked.length<5) for(const c of shuffled) if(!picked.find(p=>p.id===c.id) && picked.length<5) picked.push(c);
-  if(!picked.some(c=>c.type==='open_question'||c.type==='why_question')){
-    const jev=pool.find(c=>c.type==='open_question'||c.type==='why_question');
-    if(jev) picked[4]=jev;
-  }
+  // 2 otwarte na sesję — aby AI/GPT nie wystarczyło
+  const jevs = pool.filter(c=>c.type==='open_question'||c.type==='why_question');
+  let jevCount = picked.filter(c=>c.type==='open_question'||c.type==='why_question').length;
+  for(const jev of jevs){ if(jevCount>=2) break; if(!picked.find(p=>p.id===jev.id)){ picked[picked.length%5]=jev; jevCount++; } }
   return picked.slice(0,5);
 }
 const SESSION_TIMING_DEMO = [0, 20, 45, 70, 90];
@@ -307,11 +307,34 @@ app.post('/api/sessions/start', async (req,res)=>{
   if(!bookId || !chapterId) return res.status(400).json({error:'bookId and chapterId required'});
   if(!walletAddress) return res.status(400).json({error:'walletAddress required — connect Phantom Devnet'});
   const wallet = walletAddress;
+  // cooldown 30 min po błędnej/oszukanej sesji
+  const cooldownRows = await new Promise((res,rej)=>{
+    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
+    const cb=(e,rows)=> e?rej(e):res(rows);
+    if(useMySQL) mysqlPool.query(sql, [wallet, chapterId]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.all(sql, [wallet, chapterId], cb);
+  }).catch(()=>[]);
+  if(cooldownRows && cooldownRows.length>0){
+    const last = cooldownRows[0];
+    const end = new Date(last.endAt || last.endAt);
+    const retryAfter = Math.ceil((end.getTime() + 30*60*1000 - Date.now())/1000);
+    return res.status(429).json({error: 'Blokada 30 min po błędnej/oszukanej próbie', retryAfter, blockedUntil: new Date(end.getTime()+30*60*1000).toISOString()});
+  }
   const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
   if(!chapter) return res.status(404).json({error:'chapter not found'});
   const isDemo = req.query.demo === '1' || req.body.demo === true || true;
   let picked;
-  try{ picked = await pickForSession(chapterId, lang); }catch(e){ return res.status(500).json({error:e.message}); }
+  try{
+    // każda sesja — zupełnie nowe 5 pytań live w języku urządzenia (nie z tej samej puli)
+    const chapterForGen = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
+    if(chapterForGen && OPENROUTER_KEY){
+      const fresh = await callOpenRouterGenerate(chapterForGen, 5, lang);
+      picked = fresh;
+      challengesByChapter[chapterId] = (challengesByChapter[chapterId]||[]).concat(fresh);
+      try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+    } else {
+      picked = await pickForSession(chapterId, lang);
+    }
+  }catch(e){ return res.status(500).json({error:e.message}); }
   const startAt = new Date().toISOString();
   const sessionChallenges = isDevBypass ? buildSessionChallenges(picked, startAt, false).map(c=>({...c, releaseAt: startAt})) : buildSessionChallenges(picked, startAt, isDemo);
   const id = crypto.randomUUID();
@@ -382,10 +405,50 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     }
     default: correct=false;
   }
-  s.answers[challengeId] = {answer, answeredAt: new Date().toISOString(), correct, jev};
+  const answeredAt = new Date();
+  const unlockAt = new Date(ch.releaseAt).getTime();
+  const elapsed = Math.floor((answeredAt.getTime() - unlockAt)/1000);
+  // krótkie okno 60-90s — jeśli po czasie, oznacz jako niepoprawne (opcjonalnie)
+  if(elapsed > 90){
+    correct = false;
+    jev = jev ? {...jev, reason: (jev.reason||"") + " | overtime (>90s)"} : jev;
+  }
+  // bardzo szybka odpowiedź (<3s) na trudne — sygnał suspicious
+  if(elapsed < 3 && (ch.type==='open_question'||ch.type==='why_question')){
+    s.suspicious = 1;
+    s.suspiciousReason = `too_fast_answer: ${ch.id} ${elapsed}s`;
+  }
+  s.answers[challengeId] = {answer, answeredAt: answeredAt.toISOString(), correct, jev, elapsed};
   s.readingDurationSec = Math.floor((Date.now() - new Date(s.startAt).getTime())/1000);
   db.run(`UPDATE reading_sessions SET answers=?, readingDurationSec=? WHERE id=?`, [JSON.stringify(s.answers), s.readingDurationSec, s.id]);
   res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec});
+});
+
+// iOS: screenshot / screenRecording → oznacz sesję jako podejrzaną
+// Pauza — weryfikowana przez backend (nie tylko frontend)
+app.post('/api/sessions/:id/pause', (req,res)=>{
+  const s = sessionsMem.get(req.params.id);
+  if(!s) return res.status(404).json({error:'session not found'});
+  if(s.pausedAt) return res.json({ok:true, alreadyPaused:true});
+  s.pausedAt = new Date().toISOString(); s.status='paused';
+  db.run(`UPDATE reading_sessions SET pausedAt=?, status=? WHERE id=?`, [s.pausedAt, s.status, s.id]);
+  res.json({ok:true, pausedAt: s.pausedAt});
+});
+app.post('/api/sessions/:id/resume', (req,res)=>{
+  const s = sessionsMem.get(req.params.id);
+  if(!s || !s.pausedAt) return res.status(400).json({error:'not paused'});
+  const pausedMs = Date.now() - new Date(s.pausedAt).getTime();
+  const sec = Math.floor(pausedMs/1000);
+  s.totalPausedSec = (s.totalPausedSec||0)+sec;
+  // przesuń przyszłe releaseAt o pauzę
+  s.challenges = s.challenges.map(c=>{
+    const rel = new Date(c.releaseAt).getTime();
+    if(rel > Date.now() - pausedMs) return {...c, releaseAt: new Date(rel + pausedMs).toISOString()};
+    return c;
+  });
+  s.pausedAt=null; s.status='reading';
+  db.run(`UPDATE reading_sessions SET totalPausedSec=?, pausedAt=NULL, status=? WHERE id=?`, [s.totalPausedSec, s.status, s.id]);
+  res.json({ok:true, totalPausedSec: s.totalPausedSec});
 });
 
 // iOS: screenshot / screenRecording → oznacz sesję jako podejrzaną (nie wypłacaj, można ponownie)
@@ -395,8 +458,9 @@ app.post('/api/sessions/:id/flag', (req,res)=>{
   const {type, reason} = req.body; // type: "screenshot" | "screenRecording"
   s.suspicious = 1;
   s.suspiciousReason = `${type||'unknown'}: ${reason||''}`.slice(0,200);
-  db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=? WHERE id=?`, [s.suspiciousReason, s.id]);
-  res.json({ok:true, suspicious:true, reason: s.suspiciousReason});
+  s.status='Failed'; s.endAt=new Date().toISOString();
+  db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=?, status='Failed', endAt=? WHERE id=?`, [s.suspiciousReason, s.endAt, s.id]);
+  res.json({ok:true, suspicious:true, reason: s.suspiciousReason, ended:true});
 });
 
 app.post('/api/sessions/:id/complete', async (req,res)=>{
@@ -489,6 +553,18 @@ app.post('/api/proofs', async (req,res)=>{
   if(!bookId || !chapterId || !answers) return res.status(400).json({error:'bookId, chapterId, answers required'});
   if(!walletAddress) return res.status(400).json({error:'walletAddress required — connect Phantom (Devnet)'});
   const wallet = walletAddress;
+  // cooldown 30 min po błędnej/oszukanej sesji
+  const cooldownRows = await new Promise((res,rej)=>{
+    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
+    const cb=(e,rows)=> e?rej(e):res(rows);
+    if(useMySQL) mysqlPool.query(sql, [wallet, chapterId]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.all(sql, [wallet, chapterId], cb);
+  }).catch(()=>[]);
+  if(cooldownRows && cooldownRows.length>0){
+    const last = cooldownRows[0];
+    const end = new Date(last.endAt || last.endAt);
+    const retryAfter = Math.ceil((end.getTime() + 30*60*1000 - Date.now())/1000);
+    return res.status(429).json({error: 'Blokada 30 min po błędnej/oszukanej próbie', retryAfter, blockedUntil: new Date(end.getTime()+30*60*1000).toISOString()});
+  }
   const pool=challengesByChapter[chapterId] || [];
   // we expect answers is either map or array of {challengeId, answer}
   let results=[];
