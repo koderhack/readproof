@@ -109,8 +109,13 @@ db.serialize(() => {
     challengeIds TEXT, answers TEXT,
     readingDurationSec INTEGER,
     lang TEXT, expectedReadingMin INTEGER,
+    suspicious INTEGER DEFAULT 0,
+    suspiciousReason TEXT,
     createdAt TEXT
   )`);
+  // migracja kolumn jeśli brak
+  db.run(`ALTER TABLE reading_sessions ADD COLUMN suspicious INTEGER DEFAULT 0`, ()=>{});
+  db.run(`ALTER TABLE reading_sessions ADD COLUMN suspiciousReason TEXT`, ()=>{});
 });
 
 function proofHash(bookId, chapterId, wallet, ts, score) {
@@ -175,6 +180,9 @@ Summary: ${chapter.summary}
 Requirements:
 - Use DIVERSE types from: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
 - At least 1 open_question or why_question with expectedMeaning (in ENGLISH)
+- Questions MUST be fragment-dependent: e.g. "What did White Rabbit do immediately after Alice found the corridor?" not generic "What happened in chapter?"
+- To pass, model must have analyzed specific fragment, not general book knowledge.
+- Optionally, last question can be adaptive follow-up referencing previous answer context.
 - Return ONLY JSON: {"challenges": [ ... ]}
 - Each challenge: id, type, question, difficulty, and type-specific fields
 - Question language: ENGLISH only`
@@ -186,6 +194,9 @@ Streszczenie: ${chapter.summary}
 Wymagania:
 - Używaj RÓŻNYCH typów z: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
 - Co najmniej 1 open_question lub why_question z polem expectedMeaning (po POLSKU)
+- Pytania MUSZĄ być zależne od konkretnego fragmentu: np. "Co zrobił Biały Królik bezpośrednio po tym, jak Alice znalazła się w korytarzu?" zamiast "Co się wydarzyło w rozdziale?"
+- Aby odpowiedzieć, trzeba przeanalizować fragment, nie wystarczy ogólna wiedza o książce.
+- Opcjonalnie ostatnie pytanie może być adaptacyjne — dopytanie zależne od poprzedniej odpowiedzi.
 - Zwróć TYLKO JSON: {"challenges": [ ... ]}
 - Każdy challenge: id, type, question, difficulty, oraz pola specyficzne dla typu
 - Język pytań: POLSKI (tłumacz sens jeśli excerpt był po angielsku)`;
@@ -306,6 +317,17 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
   res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec});
 });
 
+// iOS: screenshot / screenRecording → oznacz sesję jako podejrzaną (nie wypłacaj, można ponownie)
+app.post('/api/sessions/:id/flag', (req,res)=>{
+  const s = sessionsMem.get(req.params.id);
+  if(!s) return res.status(404).json({error:'session not found'});
+  const {type, reason} = req.body; // type: "screenshot" | "screenRecording"
+  s.suspicious = 1;
+  s.suspiciousReason = `${type||'unknown'}: ${reason||''}`.slice(0,200);
+  db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=? WHERE id=?`, [s.suspiciousReason, s.id]);
+  res.json({ok:true, suspicious:true, reason: s.suspiciousReason});
+});
+
 app.post('/api/sessions/:id/complete', async (req,res)=>{
   const s = sessionsMem.get(req.params.id);
   if(!s) return res.status(404).json({error:'session not found'});
@@ -318,15 +340,29 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   s.endAt = endAt; s.status = status;
   const readingDurationSec = Math.floor((new Date(endAt).getTime() - new Date(s.startAt).getTime())/1000);
   s.readingDurationSec = readingDurationSec;
+  // Limit czasu — sygnał podejrzany, nie twardy reject (ale bez reward jeśli zbyt szybko)
+  const minimalSec = s.isDemo ? 60 : Math.floor((s.expectedReadingMin||12)*60*0.66); // demo: 60s, real: ~8min dla 12min
+  if(readingDurationSec < minimalSec){
+    s.suspicious = 1;
+    s.suspiciousReason = `too_fast: ${readingDurationSec}s < minimal ${minimalSec}s`;
+    db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=? WHERE id=?`, [s.suspiciousReason, s.id]);
+  }
+  // jeśli oznaczona jako podejrzana (screenshot/recording/too_fast) — nawet 5/5 nie dostaje rewardu, status Try Again
+  if(s.suspicious && score>=4){
+    status = 'Try Again';
+  }
   const proofId = crypto.randomUUID();
-  const hashInput = `${s.bookId}|${s.chapterId}|${s.walletAddress}|${s.startAt}|${score}|${readingDurationSec}`;
+  const hashInput = `${s.bookId}|${s.chapterId}|${s.walletAddress}|${s.startAt}|${score}|${readingDurationSec}|${s.suspicious||0}`;
   const proofHash = crypto.createHash('sha256').update(hashInput).digest('hex').slice(0,16);
   let tx=null, explorer=null, reward=null;
-  if(score>=4){
+  // nagroda tylko gdy verified i nie suspicious
+  if(score>=4 && !s.suspicious){
     const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===s.chapterId);
     reward = chapter?.reward || '5 USDC';
     const real = await tryRealSolanaReward(s.walletAddress, reward);
     if(real){ tx=real.signature; explorer=real.explorer; } else { tx=null; explorer=null; }
+  } else if(s.suspicious && score>=4){
+    reward = null; // podejrzana sesja — brak wypłaty, można spróbować ponownie
   }
   const detail = s.challenges.map(c=>({challengeId:c.id, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null}));
   db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,

@@ -21,17 +21,17 @@ enum RPColor {
     static let ink = Color(hex: "#0B0B0F")           // near-black, max contrast on white
     static let muted = Color(hex: "#374151")         // gray-700, readable secondary
     static let muted2 = Color(hex: "#6B7280")        // gray-500, captions only
-    // primaries
-    static let primary = Color(hex: "#16423C")       // Field Green — primary actions
-    static let primaryDark = Color(hex: "#0F2F2A")
-    static let primaryLight = Color(hex: "#E6F2EE")
-    static let primarySoft = Color(hex: "#EEF6F3")
-    // signal — słaby pomarańczowy per request, tylko dla nagrody
+    // primaries — Duolingo green per request (native iOS, zielony)
+    static let primary = Color(hex: "#58CC02")       // Duo Green
+    static let primaryDark = Color(hex: "#46A302")
+    static let primaryLight = Color(hex: "#E8FFD6")
+    static let primarySoft = Color(hex: "#F0FCE4")
+    // signal — słaby pomarańczowy per request, tylko dla nagrody/bonus
     static let peach = Color(hex: "#FF8B4D")
     static let peachLight = Color(hex: "#FFF1E6")
     static let peachSoft = Color(hex: "#FFF6EE")
-    static let success = Color(hex: "#16423C")
-    static let successLight = Color(hex: "#E6F2EE")
+    static let success = Color(hex: "#58CC02")
+    static let successLight = Color(hex: "#E8FFD6")
     // Duolingo quiz palette
     static let duoGreen = Color(hex: "#58CC02")
     static let duoGreenDark = Color(hex: "#46A302")

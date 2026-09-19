@@ -17,14 +17,18 @@ final class BackendService: ObservableObject {
             let stored = UserDefaults.standard.string(forKey: "backend_url") ?? ""
             if !stored.isEmpty {
                 let s = stored.trimmingCharacters(in: .whitespacesAndNewlines)
-                // migracja: stary http://127.0.0.1:32288 → https (teraz TLS), oraz http fallback na :32289
                 if s == "http://127.0.0.1:32288" {
                     UserDefaults.standard.set("https://127.0.0.1:32288", forKey: "backend_url")
                     return "https://127.0.0.1:32288"
                 }
                 return s
             }
+            // Telefon (device) → public Frog, Simulator → localhost https (szyfrowane)
+            #if targetEnvironment(simulator)
             return "https://127.0.0.1:32288"
+            #else
+            return "http://frog02.mikr.us:32287"
+            #endif
         }
         set { UserDefaults.standard.set(newValue, forKey: "backend_url") }
     }
@@ -37,7 +41,12 @@ final class BackendService: ObservableObject {
         let delegate = InsecureTrustDelegate()
         return URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
     }()
-    private var useInsecureSession: Bool { baseURL.contains("127.0.0.1") || baseURL.contains("localhost") }
+    private var useInsecureSession: Bool {
+        // self-signed na localhost + LAN IP (172.* / 192.168.* / 10.*) — tylko dev
+        if baseURL.contains("127.0.0.1") || baseURL.contains("localhost") { return true }
+        if baseURL.contains("172.20.") || baseURL.contains("192.168.") || baseURL.contains("10.0.") { return true }
+        return false
+    }
 
     private func data(for req: URLRequest) async throws -> (Data, URLResponse) {
         if useInsecureSession { return try await session.data(for: req) }
@@ -158,14 +167,14 @@ final class BackendService: ObservableObject {
     enum GenError: LocalizedError { case badURL, api(String), parse; var errorDescription:String?{ switch self{case .badURL:return "Bad URL";case .api(let m):return m;case .parse:return "Parse error"}}}
 }
 
-// Trust self-signed localhost w dev — tylko dla 127.0.0.1 / localhost
+// Trust self-signed w dev — localhost + LAN IP (172/192.168/10)
 final class InsecureTrustDelegate: NSObject, URLSessionDelegate {
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        if challenge.protectionSpace.host.contains("127.0.0.1") || challenge.protectionSpace.host.contains("localhost") {
-            if let trust = challenge.protectionSpace.serverTrust {
-                completionHandler(.useCredential, URLCredential(trust: trust))
-                return
-            }
+        let host = challenge.protectionSpace.host
+        let isLocal = host.contains("127.0.0.1") || host.contains("localhost") || host.hasPrefix("172.") || host.hasPrefix("192.168.") || host.hasPrefix("10.")
+        if isLocal, let trust = challenge.protectionSpace.serverTrust {
+            completionHandler(.useCredential, URLCredential(trust: trust))
+            return
         }
         completionHandler(.performDefaultHandling, nil)
     }
