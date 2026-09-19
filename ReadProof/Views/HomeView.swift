@@ -55,7 +55,7 @@ struct HomeView: View {
     var search: some View {
         HStack(spacing:8){
             Image(systemName:"magnifyingglass").foregroundStyle(RPColor.muted2)
-            TextField(loc.t("Szukaj tytułów, autorów…","Search titles, authors…"), text:$query).font(.system(size:15, design:.rounded))
+            TextField(loc.t("Szukaj tytułów, autorów…","Search titles, authors…"), text:$query).font(.system(size:15, design:.rounded)).foregroundStyle(RPColor.ink).tint(RPColor.primary).autocorrectionDisabled()
         }.padding(12).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))
     }
 

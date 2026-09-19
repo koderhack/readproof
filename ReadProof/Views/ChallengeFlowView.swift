@@ -128,18 +128,25 @@ struct ChallengeFlowView: View {
             case .findError: if case .single(let v)=ans{ correct=v==ch.errorIndex}
             case .ordering,.ranking: if case .ordered(let o)=ans, let exp=ch.correctOrder{ correct=o==exp}
             case .match,.whoSaid: if case .matched(let m)=ans{ var ok=true; for (k,v) in m{ if k != v{ ok=false}}; correct=ok && m.count==(ch.pairs?.count ?? 0)}
-            case .openQuestion,.whyQuestion: if case .text(let t)=ans, let exp=ch.expectedMeaning{ let v=await JevService.shared.evaluate(question: ch.question, expectedMeaning: exp, userAnswer:t, context: ch.context ?? chapter.contextExcerpt); verdict=v; correct=v.correct && v.confidence>=Scoring.jevThreshold}
+            case .openQuestion,.whyQuestion: if case .text(let t)=ans, let exp=ch.expectedMeaning{ if let v = try? await JevService.shared.evaluate(question: ch.question, expectedMeaning: exp, userAnswer:t, context: ch.context ?? chapter.contextExcerpt) { verdict=v; correct=v.correct && v.confidence>=Scoring.jevThreshold } else { verdict=nil; correct=false } }
             case .memory: correct=true
             }
             res.append(ChallengeResult(id: ch.id, challenge: ch, userAnswer: ans, isCorrect: correct, jevConfidence: verdict?.confidence, jevRaw: verdict))
         }
         let score=res.filter{$0.isCorrect}.count
         let status=Scoring.status(for: score)
-        let wallet=appState.wallet.address ?? "DemoWallet-\(String(UUID().uuidString.prefix(6)))"
+        guard let wallet = appState.wallet.address else {
+            // brak portfela — nie można wypłacić, ale dowód lokalny bez tx
+            let now2=Date(); let hash2=SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: "no-wallet", timestamp: now2, score: score)
+            let p=ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: score, total: challenges.count, status: status, walletAddress: "no-wallet", timestamp: now2, proofHash: hash2, txSignature: nil, explorerUrl: nil, reward: nil)
+            if status != .failed{ appState.saveProof(p)}
+            results=res; proof=p; evaluating=false; showResult=true; return
+        }
         let now=Date()
         let hash=SolanaService.shared.createProofHash(bookId: book.id, chapterId: chapter.id, wallet: wallet, timestamp: now, score: score)
         var sig:String?=nil; var explorer:String?=nil; var reward:String?=nil
-        if Scoring.isPassing(score: score){ let tx=await SolanaService.shared.sendReward(to: wallet, amount: chapter.reward, proofHash: hash); sig=tx.sig; explorer=tx.explorer; reward=chapter.reward}
+        // wypłata tylko przez backend — bez mocka, jeśli backend nie skonfigurowany to brak tx
+        if Scoring.isPassing(score: score){ reward=chapter.reward }
         let newProof=ReadingProof(id: UUID().uuidString, bookId: book.id, chapterId: chapter.id, challengeIds: challenges.map{$0.id}, score: score, total: challenges.count, status: status, walletAddress: wallet, timestamp: now, proofHash: hash, txSignature: sig, explorerUrl: explorer, reward: reward)
         if status != .failed{ appState.saveProof(newProof)}
         results=res; proof=newProof; evaluating=false; showResult=true
@@ -241,7 +248,7 @@ struct ChallengeCardDuo: View {
     var duoReflection: some View {
         VStack(alignment:.leading, spacing:8){
             HStack{ Text("KRÓTKA REFLEKSJA").font(.system(size:11, weight:.black, design:.rounded)).tracking(0.6).foregroundStyle(RPColor.duoText); MonoPill(text:"+1.50 USDC", fg:Color.white, bg:RPColor.peach, border:.clear); Spacer(); Text("\(text.count) / 240").font(.system(size:11, weight:.bold)).foregroundStyle(text.count>240 ? Color.red : RPColor.muted)}
-            TextField("Wpisz odpowiedź własnymi słowami…", text:$text, axis:.vertical).font(.system(size:15, design:.rounded)).lineLimit(3...5).padding(12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(text.count>10 ? RPColor.duoGreen : RPColor.duoGray, lineWidth:2))
+            TextField("Wpisz odpowiedź własnymi słowami…", text:$text, axis:.vertical).font(.system(size:15, design:.rounded)).foregroundStyle(RPColor.ink).tint(RPColor.primary).lineLimit(3...5).padding(12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(text.count>10 ? RPColor.duoGreen : RPColor.duoGray, lineWidth:2))
         }
     }
 

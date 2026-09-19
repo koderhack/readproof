@@ -60,7 +60,7 @@ struct PassportView: View {
                     }.buttonStyle(.plain)
                     Text("Masz już Devnet w Phantom? Przełącz Phantom → Settings → Developer Settings → Enable → Devnet, skopiuj adres i wklej poniżej.").font(.system(size:10)).foregroundStyle(.white.opacity(0.75))
                     HStack(spacing:8){
-                        TextField("Wklej Phantom address (base58)", text:$input).font(.system(size:11, design:.monospaced)).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius:10))
+                        TextField("Wklej Phantom address (base58)", text:$input).font(.system(size:11, design:.monospaced)).foregroundStyle(RPColor.ink).tint(RPColor.primary).autocorrectionDisabled().textInputAutocapitalization(.never).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(RPColor.line))
                         Button("Połącz"){
                             guard PhantomService.isValidSolanaAddress(input) else { return }
                             appState.connectWallet(address:input); input=""
