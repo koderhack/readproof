@@ -150,6 +150,62 @@ final class BackendService: ObservableObject {
         do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else {return nil}; return try JSONDecoder().decode([ReadingProof].self, from: d)}catch{return nil}
     }
 
+    // MARK: - Reading Sessions (staged, anti-ChatGPT)
+    struct SessionStartResponse: Codable {
+        let id: String
+        let walletAddress: String
+        let bookId: String
+        let chapterId: String
+        let startAt: String
+        let expectedReadingMin: Int
+        let challenges: [SessionChallenge]
+        let poolSize: Int?
+    }
+    struct SessionChallenge: Codable, Identifiable {
+        let id: String
+        let type: ChallengeType?
+        let releaseAt: String?
+        let releaseAfterSec: Int?
+        let locked: Bool?
+        let question: String?
+        let context: String?
+        let options: [String]?
+        let correctAnswer: Int?
+        let expectedMeaning: String?
+        // full Challenge fields when unlocked
+        let hint: String?
+    }
+    func startSession(bookId: String, chapterId: String, walletAddress: String) async throws -> SessionStartResponse {
+        guard let url = URL(string:"\(api)/api/sessions/start") else { throw GenError.badURL }
+        var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        req.httpBody = try JSONSerialization.data(withJSONObject:["bookId":bookId,"chapterId":chapterId,"walletAddress":walletAddress])
+        let (d,r)=try await data(for:req)
+        guard (r as? HTTPURLResponse)?.statusCode==200 else { throw GenError.api(String(data:d, encoding:.utf8) ?? "start failed") }
+        return try JSONDecoder().decode(SessionStartResponse.self, from:d)
+    }
+    func getSession(id: String) async -> SessionStartResponse? {
+        guard let url = URL(string:"\(api)/api/sessions/\(id)") else { return nil }
+        var req = URLRequest(url:url); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; return try JSONDecoder().decode(SessionStartResponse.self, from:d)}catch{return nil}
+    }
+    func answerSession(sessionId: String, challengeId: String, answer: Any) async -> Bool {
+        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return false }
+        var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        req.httpBody = try? JSONSerialization.data(withJSONObject:["challengeId":challengeId,"answer":answer])
+        do{ let (_,r)=try await data(for:req); return (r as? HTTPURLResponse)?.statusCode==200 }catch{return false}
+    }
+    func flagSession(sessionId: String, type: String) async {
+        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/flag") else { return }
+        var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        req.httpBody = try? JSONSerialization.data(withJSONObject:["type":type])
+        _ = try? await data(for:req)
+    }
+    func completeSession(sessionId: String) async -> ReadingProof? {
+        guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/complete") else { return nil }
+        var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; let j = try JSONSerialization.jsonObject(with:d) as? [String:Any]; if let p = j?["proof"] as? [String:Any]{ let data = try JSONSerialization.data(withJSONObject:p); return try JSONDecoder().decode(ReadingProof.self, from:data)}; return nil }catch{return nil}
+    }
+
     // MARK: - LLM generate
     func generateChallenges(bookId:String, chapterId:String, count:Int=10) async throws -> [Challenge] {
         guard let url=URL(string:"\(api)/api/generate") else { throw GenError.badURL }

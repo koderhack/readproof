@@ -55,14 +55,29 @@ function pickFive(chapterId) {
   return picked.slice(0,5);
 }
 
-function ensurePoolAtLeast20(chapterId){
-  const pool = challengesByChapter[chapterId] || [];
-  if(pool.length < 5) throw new Error(`Pula pytań dla ${chapterId} za mała (${pool.length}) — wygeneruj via POST /api/generate (LLM OpenRouter free, live w języku urządzenia)`);
+async function ensurePoolAtLeast20(chapterId, lang='pl'){
+  let pool = challengesByChapter[chapterId] || [];
+  if(pool.length >= 20) return pool;
+  // live generowanie brakujących challenge'y via LLM OpenRouter free w języku urządzenia
+  if(OPENROUTER_KEY){
+    try{
+      const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
+      if(chapter){
+        const need = 20 - pool.length;
+        const generated = await callOpenRouterGenerate(chapter, need, lang);
+        pool = pool.concat(generated);
+        challengesByChapter[chapterId]=pool;
+        // persist
+        try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+        console.log(`Live LLM: wygenerowano ${generated.length} dla ${chapterId} (${lang}) — pool ${pool.length}`);
+      }
+    }catch(e){ console.error('Live gen failed, używam istniejącej puli', e.message); }
+  }
+  if(pool.length < 5) throw new Error(`Pula pytań dla ${chapterId} za mała (${pool.length}) — wygeneruj via POST /api/generate`);
   return pool;
 }
-function pickForSession(chapterId){
-  ensurePoolAtLeast20(chapterId);
-  const pool = challengesByChapter[chapterId];
+async function pickForSession(chapterId, lang='pl'){
+  const pool = await ensurePoolAtLeast20(chapterId, lang);
   let shuffled = [...pool].sort(()=>Math.random()-0.5);
   let picked=[];
   let used=new Set();
@@ -281,7 +296,7 @@ function langOf(req){
 app.get('/health', (req,res)=>res.json({status:'ok', service:'readproof-backend', port:PORT, books: books.length, chapters: books.reduce((a,b)=>a+b.chapters.length,0), openRouter: !!OPENROUTER_KEY, model: OPENROUTER_MODEL, jevThreshold:JEV_THRESHOLD, jevTypesafe: !!TYPESAFE_API_KEY, lang: langOf(req), sessions: sessionsMem.size}));
 
 // ====== Reading Sessions — anti-ChatGPT: staged release, pool 20-30, Proof of Comprehension ======
-app.post('/api/sessions/start', (req,res)=>{
+app.post('/api/sessions/start', async (req,res)=>{
   const {walletAddress, bookId, chapterId, expectedReadingMin} = req.body;
   const lang = langOf(req);
   if(!bookId || !chapterId) return res.status(400).json({error:'bookId and chapterId required'});
@@ -289,8 +304,9 @@ app.post('/api/sessions/start', (req,res)=>{
   const wallet = walletAddress;
   const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
   if(!chapter) return res.status(404).json({error:'chapter not found'});
-  const isDemo = req.query.demo === '1' || req.body.demo === true || true; // default demo fast for hackathon
-  const picked = pickForSession(chapterId);
+  const isDemo = req.query.demo === '1' || req.body.demo === true || true;
+  let picked;
+  try{ picked = await pickForSession(chapterId, lang); }catch(e){ return res.status(500).json({error:e.message}); }
   const startAt = new Date().toISOString();
   const sessionChallenges = buildSessionChallenges(picked, startAt, isDemo);
   const id = crypto.randomUUID();
@@ -385,7 +401,7 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   const answered = Object.keys(s.answers).length;
   if(answered < total) return res.status(400).json({error:`Not all challenges answered: ${answered}/${total}`});
   let score = Object.values(s.answers).filter((a)=>a.correct).length;
-  let status='Failed'; if(score>=4) status='Reading Verified'; else if(score===3) status='Try Again';
+  let status='Failed'; if(score===5) status='Reading Verified'; else if(score>=3) status='Try Again';
   const endAt = new Date().toISOString();
   s.endAt = endAt; s.status = status;
   const readingDurationSec = Math.floor((new Date(endAt).getTime() - new Date(s.startAt).getTime())/1000);
@@ -398,21 +414,21 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
     db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=? WHERE id=?`, [s.suspiciousReason, s.id]);
   }
   // jeśli oznaczona jako podejrzana (screenshot/recording/too_fast) — nawet 5/5 nie dostaje rewardu, status Try Again
-  if(s.suspicious && score>=4){
+  if(s.suspicious && score===5){
     status = 'Try Again';
   }
   const proofId = crypto.randomUUID();
   const hashInput = `${s.bookId}|${s.chapterId}|${s.walletAddress}|${s.startAt}|${score}|${readingDurationSec}|${s.suspicious||0}`;
   const proofHash = crypto.createHash('sha256').update(hashInput).digest('hex').slice(0,16);
   let tx=null, explorer=null, reward=null;
-  // nagroda tylko gdy verified i nie suspicious
-  if(score>=4 && !s.suspicious){
+  // nagroda tylko gdy 5/5 i nie suspicious — błędna odpowiedź = zero
+  if(score===5 && !s.suspicious){
     const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===s.chapterId);
     reward = chapter?.reward || '5 USDC';
     const real = await tryRealSolanaReward(s.walletAddress, reward);
     if(real){ tx=real.signature; explorer=real.explorer; } else { tx=null; explorer=null; }
-  } else if(s.suspicious && score>=4){
-    reward = null; // podejrzana sesja — brak wypłaty, można spróbować ponownie
+  } else if(s.suspicious && score===5){
+    reward = null;
   }
   const detail = s.challenges.map(c=>({challengeId:c.id, correct: !!s.answers[c.id]?.correct, jev: s.answers[c.id]?.jev || null}));
   db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -509,12 +525,13 @@ app.post('/api/proofs', async (req,res)=>{
   }
   const total=challenges.length;
   let status='Failed';
-  if(score>=4) status='Reading Verified';
-  else if(score===3) status='Try Again';
+  if(score===5) status='Reading Verified';
+  else if(score>=3) status='Try Again';
   const now=new Date().toISOString();
   const hash=proofHash(bookId, chapterId, wallet, now, score);
   let tx=null, explorer=null, reward=null;
-  if(score>=4){
+  // nagroda tylko gdy 5/5 — błędna odpowiedź = zero
+  if(score===5){
     const chapter=books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
     reward=chapter?.reward || '5 USDC';
     const real = await tryRealSolanaReward(wallet, reward);

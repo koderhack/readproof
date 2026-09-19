@@ -176,22 +176,17 @@ enum AppRoute: Hashable {
     case wallet
 }
 
-// Scoring logic
+// Scoring logic — nagroda tylko gdy 5/5 (błędna = zero), Proof of Comprehension
 enum Scoring {
     static let jevThreshold: Double = 0.80
 
     static func status(for score: Int, total: Int = 5) -> ProofStatus {
         switch score {
-        case 5, 4: return .verified
-        case 3: return .tryAgain
+        case 5: return .verified
+        case 4, 3: return .tryAgain
         default: return .failed
         }
     }
 
-    static var verified: Bool {
-        // helper not used
-        false
-    }
-
-    static func isPassing(score: Int) -> Bool { score >= 4 }
+    static func isPassing(score: Int) -> Bool { score == 5 }
 }
