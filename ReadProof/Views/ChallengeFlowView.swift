@@ -215,14 +215,17 @@ struct ChallengeCardDuo: View {
             EmptyView()
         case .ordering,.ranking:
             VStack(spacing:8){
-                ForEach(Array(order.enumerated()), id:\.offset){ pos, orig in
-                    HStack{
-                        Text("\(pos+1)").font(.system(size:12, weight:.black, design:.rounded)).foregroundStyle(.white).frame(width:28,height:28).background(RPColor.duoBlue).clipShape(RoundedRectangle(cornerRadius:8))
-                        Text(challenge.items?[orig] ?? "?").font(.system(size:14, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.duoText)
-                        Spacer()
-                        HStack(spacing:4){ Button{ moveUp(pos)} label:{ Image(systemName:"chevron.up").font(.caption2)} .disabled(pos==0); Button{ moveDown(pos)} label:{ Image(systemName:"chevron.down").font(.caption2)} .disabled(pos==order.count-1)}.foregroundStyle(RPColor.muted)
-                    }.padding(12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.duoGray, lineWidth:2))
-                }
+                HStack(spacing:6){ Image(systemName:"arrow.up.arrow.down").font(.caption2).foregroundStyle(RPColor.muted2); Text("Przytrzymaj ☰ i przeciągnij (swipe) aby zmienić kolejność").font(.system(size:11, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.muted2)}
+                List{
+                    ForEach(Array(order.enumerated()), id:\.offset){ pos, orig in
+                        HStack(spacing:10){
+                            Image(systemName:"line.3.horizontal").font(.system(size:14, weight:.bold)).foregroundStyle(RPColor.muted2)
+                            Text(challenge.items?[orig] ?? "?").font(.system(size:14, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.duoText)
+                            Spacer()
+                            Text("\(pos+1)").font(.system(size:12, weight:.black, design:.rounded)).foregroundStyle(.white).frame(width:28,height:28).background(RPColor.duoBlue).clipShape(RoundedRectangle(cornerRadius:8))
+                        }.padding(.vertical,4).listRowInsets(EdgeInsets(top:6, leading:12, bottom:6, trailing:12)).listRowSeparator(.hidden).listRowBackground(Color.clear)
+                    }.onMove{ from, to in order.move(fromOffsets: from, toOffset: to) }
+                }.listStyle(.plain).frame(height: CGFloat(max(1, challenge.items?.count ?? 0) * 56 + 12)).scrollDisabled(true).environment(\.editMode, .constant(.active)).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.duoGray, lineWidth:2))
             }.onAppear{ if order.isEmpty{ order=Array(0..<(challenge.items?.count ?? 0)).shuffled()}}
         case .match,.whoSaid:
             let pairs=challenge.pairs ?? []; let rights=pairs.map{$0.right}
