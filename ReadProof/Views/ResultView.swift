@@ -84,25 +84,40 @@ typealias ResultCollegiumView = ResultMinimalView
 struct ProofsListView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var loc: LocalizationService
+    @State private var serverProofs: [ReadingProof] = []
+    var all: [ReadingProof] { (serverProofs.isEmpty ? appState.proofs : serverProofs).sorted{ $0.timestamp > $1.timestamp } }
     var body: some View {
         NavigationStack{
-            ScrollView{
-                VStack(spacing:10){
-                    if appState.proofs.isEmpty{
-                        VStack(spacing:12){ Image(systemName:"checkmark.seal").font(.largeTitle).foregroundStyle(RPColor.muted2); Text(loc.t("Brak dowodów","No proofs")).font(.system(size:16, weight:.bold, design:.rounded)); Text(loc.t("Ukończ 4–5/5 aby otrzymać Reading Verified.","Complete 4–5/5 to get Reading Verified.")).font(.system(size:13)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)}.padding(40)
-                    } else {
-                        ForEach(appState.proofs){ p in
-                            NavigationLink(destination: ProofDetailMinimal(proof:p)){
-                                HStack(spacing:12){
-                                    ZStack{ RoundedRectangle(cornerRadius:10).fill(p.status == .verified ? RPColor.primaryLight : Color(hex:"#F3F4F6")).frame(width:40,height:40); Image(systemName: p.status == .verified ? "checkmark.seal.fill":"xmark.seal").foregroundStyle(p.status == .verified ? RPColor.primary : RPColor.muted)}
-                                    VStack(alignment:.leading, spacing:3){ Text("\(p.bookId) • \(p.chapterId)").font(.system(size:13, weight:.semibold, design:.rounded)); Text("\(p.score)/\(p.total) • \(p.status.rawValue) • \(p.timestamp.formatted(date:.abbreviated, time:.shortened))").font(.system(size:11)).foregroundStyle(RPColor.muted)}
-                                    Spacer(); if let r=p.reward{ Text(r).font(.system(size:13, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.primary)}
-                                }.padding(14).card()
-                            }.buttonStyle(.plain)
+            List{
+                if all.isEmpty {
+                    ContentUnavailableView(loc.t("Brak dowodów","No proofs"), systemImage:"checkmark.seal", description: Text(loc.t("Ukończ 4–5/5 aby otrzymać Reading Verified. Dane z serwera.","Complete 4–5/5 to get Reading Verified. Data from server.")))
+                } else {
+                    ForEach(all){ p in
+                        NavigationLink(destination: ProofDetailMinimal(proof:p)){
+                            HStack(spacing:12){
+                                Image(systemName: p.status == .verified ? "checkmark.seal.fill":"xmark.seal").foregroundStyle(p.status == .verified ? RPColor.primary : RPColor.muted)
+                                VStack(alignment:.leading, spacing:2){
+                                    Text("\(p.bookId) • \(p.chapterId)").font(.subheadline.weight(.semibold)).foregroundStyle(RPColor.ink)
+                                    Text("\(p.score)/\(p.total) • \(p.status.rawValue) • \(p.timestamp.formatted(date:.abbreviated, time:.shortened))").font(.caption).foregroundStyle(RPColor.muted)
+                                }
+                                Spacer()
+                                if let r=p.reward{ Text(r).font(.caption.weight(.semibold)).foregroundStyle(RPColor.primary) }
+                            }
                         }
                     }
-                }.padding(16)
-            }.background(RPColor.bg).navigationTitle(loc.t("Dowody","Proofs"))
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle(loc.t("Dowody","Proofs"))
+            .refreshable { await load() }
+            .task { await load() }
+        }
+    }
+    func load() async {
+        if let w = appState.wallet.address, let proofs = await BackendService.shared.fetchProofs(wallet: w) {
+            serverProofs = proofs
+        } else if let proofs = await BackendService.shared.fetchProofs() {
+            serverProofs = proofs
         }
     }
 }
