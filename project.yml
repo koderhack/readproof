@@ -26,6 +26,7 @@ targets:
       properties:
         CFBundleDisplayName: ReadProof
         UILaunchScreen: {}
+        NSSupportsLiveActivities: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
@@ -41,3 +42,22 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/Frameworks
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
+  ReadProofLiveActivity:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: 17.0
+    sources:
+      - ReadProofLiveActivity
+      - ReadProof/Services/ReadingSessionActivity.swift
+    info:
+      path: ReadProofLiveActivity/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        INFOPLIST_FILE: ReadProofLiveActivity/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: false
+    dependencies:
+      - target: ReadProof
