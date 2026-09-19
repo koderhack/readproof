@@ -14,6 +14,7 @@ struct ReadingSessionView: View {
     @State private var now = Date()
     @State private var error: String?
     @State private var suspicious = false
+    @State private var isPaused = false
     @State private var isCaptured = UIScreen.main.isCaptured
     @State private var showResult = false
     @State private var proof: ReadingProof?
@@ -25,11 +26,14 @@ struct ReadingSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if starting {
-                    ProgressView("Tworzę sesję — losuję 5 z 20 (live \(loc.current.rawValue))…")
+                    ProgressView("Tworzę sesję — losuję 5 z 30 (live \(loc.current.rawValue))…")
                         .frame(maxWidth: .infinity)
                         .padding(20)
                 } else {
                     header
+                    if isPaused {
+                        Label("Sesja wstrzymana — licznik zatrzymany (weryfikowane przez backend).", systemImage:"pause.circle.fill").font(.caption).foregroundStyle(.white).padding(10).background(Color(hex:"#FF8B4D")).clipShape(RoundedRectangle(cornerRadius:10))
+                    }
                     if suspicious {
                         Label(loc.t("Sesja oznaczona jako podejrzana — screenshot/screen recording wykryty. Możesz spróbować ponownie.","Session flagged suspicious — screenshot detected. You can retry."), systemImage: "exclamationmark.triangle.fill")
                             .font(.caption).foregroundStyle(.white).padding(10).background(Color.red).clipShape(RoundedRectangle(cornerRadius:10))
@@ -78,7 +82,7 @@ struct ReadingSessionView: View {
                             }
                         }
                         .padding(14)
-                        .background(Color.white)
+                        .background(RPColor.card)
                         .clipShape(RoundedRectangle(cornerRadius:14))
                         .overlay(RoundedRectangle(cornerRadius:14).stroke(locked ? RPColor.line : RPColor.primary, lineWidth: locked ? 1 : 1.5))
                         .blur(radius: isCaptured ? 16 : 0)
@@ -142,13 +146,13 @@ struct ReadingSessionView: View {
             Text(chapter.title).font(.subheadline).foregroundStyle(RPColor.muted)
             HStack(spacing:8){
                 Label("Sesja", systemImage:"timer").font(.caption2).foregroundStyle(RPColor.muted)
-                Text("5 wyzwań • losowe 5 z 20 • fragment-dependent").font(.caption2).foregroundStyle(RPColor.muted)
+                Text("5 wyzwań • losowe 5 z 30 • fragment-dependent").font(.caption2).foregroundStyle(RPColor.muted)
                 Spacer()
                 Text("\(completed.count)/\(challenges.count)").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
             }
             ProgressView(value: Double(completed.count), total: Double(max(challenges.count,1))).tint(RPColor.primary)
             Text("Nie pokazujemy 5 pytań od razu — odblokowują się co ~20-25s (demo) / 3-5min (real). Nie da się wkleić całości do ChatGPT.").font(.caption2).foregroundStyle(RPColor.muted)
-        }.padding(14).background(Color.white).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
+        }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
     }
 
     func isLocked(_ ch: BackendService.SessionChallenge) -> Bool {
@@ -207,26 +211,42 @@ struct UnlockCard: View {
     @State private var sel:Int?
     @State private var multi:Set<Int>=[]
     var isOpen: Bool { challenge.type == .openQuestion || challenge.type == .whyQuestion }
-    var options: [String] { challenge.options ?? [] }
     var body: some View {
         VStack(alignment:.leading, spacing:8){
             if isOpen {
-                TextField("Odpowiedz własnymi słowami…", text:$text, axis:.vertical).font(.system(size:14)).foregroundStyle(Color.black).tint(RPColor.primary).lineLimit(2...4).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(RPColor.line))
+                TextField("Odpowiedz własnymi słowami…", text:$text, axis:.vertical).font(.system(size:14)).foregroundStyle(RPColor.ink).tint(RPColor.primary).lineLimit(2...4).padding(10).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(RPColor.line))
                 Button("Wyślij"){ onSubmit(text) }.disabled(text.trimmingCharacters(in:.whitespaces).count<3).buttonStyle(BurgundyButtonStyle())
             } else if challenge.type == .multipleSelect {
-                ForEach(Array(options.enumerated()), id:\.offset){ i, opt in
+                ForEach(Array((challenge.options ?? []).enumerated()), id:\.offset){ i, opt in
                     let on = multi.contains(i)
                     Button{ if on { multi.remove(i)} else { multi.insert(i)} } label:{
-                        HStack{ Text(opt).font(.system(size:14)).foregroundStyle(Color.black).multilineTextAlignment(.leading); Spacer(); Image(systemName: on ? "checkmark.square.fill":"square").foregroundStyle(on ? RPColor.primary : RPColor.muted) }
+                        HStack{ Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Image(systemName: on ? "checkmark.square.fill":"square").foregroundStyle(on ? RPColor.primary : RPColor.muted) }
                         .padding(10).background(on ? RPColor.primaryLight : Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(on ? RPColor.primary : RPColor.line))
                     }.buttonStyle(.plain)
                 }
                 Button("Zatwierdź"){ onSubmit(Array(multi)) }.disabled(multi.isEmpty).buttonStyle(BurgundyButtonStyle()).opacity(multi.isEmpty ? 0.5 : 1)
+            } else if challenge.type == .findError {
+                let stmts = challenge.statements ?? challenge.options ?? []
+                ForEach(Array(stmts.enumerated()), id:\.offset){ i, st in
+                    Button{ sel=i } label:{
+                        HStack{ Text("\(i+1).").font(.caption.weight(.bold)).foregroundStyle(RPColor.muted); Text(st).font(.system(size:13)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Circle().stroke(sel==i ? RPColor.primary : RPColor.line, lineWidth:2).frame(width:20,height:20).overlay(Circle().fill(sel==i ? RPColor.primary : Color.clear).frame(width:12,height:12)) }
+                        .padding(10).background(sel==i ? RPColor.primaryLight : Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
+                    }.buttonStyle(.plain)
+                }
+                Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(sel==nil ? 0.5 : 1)
+            } else if challenge.type == .ordering || challenge.type == .ranking {
+                Text("Przeciągnij aby zmienić kolejność — w pełnej sesji").font(.caption).foregroundStyle(RPColor.muted)
+                Button("Zatwierdź kolejność"){ onSubmit([0,1,2,3]) }.buttonStyle(BurgundyButtonStyle())
             } else {
-                let opts = options.isEmpty ? (challenge.type == .trueFalse ? ["Prawda","Fałsz"] : []) : options
+                let opts: [String] = {
+                    if let o = challenge.options, !o.isEmpty { return o }
+                    if let s = challenge.statements, !s.isEmpty { return s }
+                    if challenge.type == .trueFalse { return ["Prawda","Fałsz"] }
+                    return []
+                }()
                 ForEach(Array(opts.enumerated()), id:\.offset){ i, opt in
                     Button{ sel=i } label:{
-                        HStack{ Text(["A","B","C","D"][min(i,3)]).font(.caption.weight(.bold)).frame(width:28,height:28).background(sel==i ? RPColor.primary : Color(hex:"#F3F4F6")).foregroundStyle(sel==i ? .white : RPColor.muted).clipShape(Circle()); Text(opt).font(.system(size:14)).foregroundStyle(Color.black).multilineTextAlignment(.leading); Spacer() }
+                        HStack{ Text(["A","B","C","D"][min(i,3)]).font(.caption.weight(.bold)).frame(width:28,height:28).background(sel==i ? RPColor.primary : Color(hex:"#F3F4F6")).foregroundStyle(sel==i ? .white : RPColor.muted).clipShape(Circle()); Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer() }
                         .padding(10).background(sel==i ? RPColor.primaryLight : Color.white).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
                     }.buttonStyle(.plain)
                 }
