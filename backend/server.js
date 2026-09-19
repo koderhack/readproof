@@ -92,7 +92,8 @@ async function pickForSession(chapterId, lang='pl'){
   }
   return picked.slice(0,5);
 }
-const SESSION_TIMING_DEMO = [0, 20, 45, 70, 90]; // seconds from start — fast demo, prevents copy-all-to-AI
+const SESSION_TIMING_DEMO = [0, 20, 45, 70, 90];
+const SESSION_TIMING_DEV = [0, 0, 0, 0, 0]; // admin dev mode — natychmiastowe odblokowanie // seconds from start — fast demo, prevents copy-all-to-AI
 const SESSION_TIMING_REAL = [0, 5*60, 8*60, 12*60, 14*60]; // ~14 min total, per spec
 
 function buildSessionChallenges(picked, startAt, isDemo){
@@ -127,10 +128,14 @@ db.serialize(() => {
     lang TEXT, expectedReadingMin INTEGER,
     suspicious INTEGER DEFAULT 0,
     suspiciousReason TEXT,
+    totalPausedSec INTEGER DEFAULT 0,
+    pausedAt TEXT,
     createdAt TEXT
   )`);
   db.run(`ALTER TABLE reading_sessions ADD COLUMN suspicious INTEGER DEFAULT 0`, ()=>{});
   db.run(`ALTER TABLE reading_sessions ADD COLUMN suspiciousReason TEXT`, ()=>{});
+  db.run(`ALTER TABLE reading_sessions ADD COLUMN totalPausedSec INTEGER DEFAULT 0`, ()=>{});
+  db.run(`ALTER TABLE reading_sessions ADD COLUMN pausedAt TEXT`, ()=>{});
 });
 // MySQL mikrus (db_f22287) — jeśli MYSQL_HOST ustawiony, nadpisuje db.* na MySQL (prefix readproof_)
 let useMySQL = !!(process.env.MYSQL_HOST && process.env.MYSQL_USER);
@@ -308,14 +313,14 @@ app.post('/api/sessions/start', async (req,res)=>{
   let picked;
   try{ picked = await pickForSession(chapterId, lang); }catch(e){ return res.status(500).json({error:e.message}); }
   const startAt = new Date().toISOString();
-  const sessionChallenges = buildSessionChallenges(picked, startAt, isDemo);
+  const sessionChallenges = isDevBypass ? buildSessionChallenges(picked, startAt, false).map(c=>({...c, releaseAt: startAt})) : buildSessionChallenges(picked, startAt, isDemo);
   const id = crypto.randomUUID();
   const expectedMin = expectedReadingMin || 12;
   const session = {
     id, walletAddress: wallet, bookId, chapterId, startAt, endAt: null, status:'reading',
     challengeIds: picked.map(c=>c.id), challenges: sessionChallenges,
     answers: {}, // challengeId -> {answer, answeredAt, correct, jev}
-    readingDurationSec: 0, lang, expectedReadingMin: expectedMin, isDemo
+    readingDurationSec: 0, lang, expectedReadingMin: expectedMin, isDemo, isDevBypass
   };
   sessionsMem.set(id, session);
   db.run(`INSERT INTO reading_sessions (id, walletAddress, bookId, chapterId, startAt, endAt, status, challengeIds, answers, readingDurationSec, lang, expectedReadingMin, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -328,7 +333,7 @@ app.post('/api/sessions/start', async (req,res)=>{
     if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: lang==='en'?'Reading — unlocks soon':'Czytanie — odblokuje się wkrótce'};
     return {...c, locked:false};
   });
-  res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, lang, timing: isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL, challenges: masked, poolSize: (challengesByChapter[chapterId]||[]).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
+  res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, isDevBypass, lang, timing: isDevBypass ? SESSION_TIMING_DEV : (isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL), challenges: masked, poolSize: (challengesByChapter[chapterId]||[]).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
 });
 
 app.get('/api/sessions/:id', (req,res)=>{
@@ -407,8 +412,11 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   const readingDurationSec = Math.floor((new Date(endAt).getTime() - new Date(s.startAt).getTime())/1000);
   s.readingDurationSec = readingDurationSec;
   // Limit czasu — sygnał podejrzany, nie twardy reject (ale bez reward jeśli zbyt szybko)
-  const minimalSec = s.isDemo ? 60 : Math.floor((s.expectedReadingMin||12)*60*0.66); // demo: 60s, real: ~8min dla 12min
-  if(readingDurationSec < minimalSec){
+  const isDev = s.suspiciousReason && s.suspiciousReason.includes('devBypass');
+  const minimalSec = s.isDemo ? 60 : Math.floor((s.expectedReadingMin||12)*60*0.66);
+  // dev bypass nie oznacza suspicious za too_fast
+  if(s.challengeIds && s.challengeIds[0] && s.challengeIds[0].includes('dev')){} // demo: 60s, real: ~8min dla 12min
+  if(!s.isDevBypass && readingDurationSec < minimalSec){
     s.suspicious = 1;
     s.suspiciousReason = `too_fast: ${readingDurationSec}s < minimal ${minimalSec}s`;
     db.run(`UPDATE reading_sessions SET suspicious=1, suspiciousReason=? WHERE id=?`, [s.suspiciousReason, s.id]);

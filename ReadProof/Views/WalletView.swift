@@ -76,6 +76,12 @@ struct PassportView: View {
                         Button("Test"){ Task{ _=await BackendService.shared.checkHealth() } }
                     }
                     BackendHealthView()
+                    Toggle(isOn: Binding(get:{UserDefaults.standard.bool(forKey:"admin_dev_mode")}, set:{UserDefaults.standard.set($0, forKey:"admin_dev_mode")})) {
+                        Label("Admin Dev Mode — bez czekania", systemImage:"hammer.fill")
+                    }.tint(RPColor.primary)
+                    if UserDefaults.standard.bool(forKey:"admin_dev_mode") {
+                        Text("Włączone: sesje odblokowują wszystkie 5 wyzwań natychmiast (X-Dev-Mode), brak limitu czasu. Do testów.").font(.caption2).foregroundStyle(RPColor.peach)
+                    }
                     Text("Frontend nie wysyła AI. LLM (OpenRouter free) i Jev (TypeSafe jev-latest) tylko przez backend.").font(.caption2).foregroundStyle(RPColor.muted)
                 }
 

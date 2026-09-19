@@ -35,6 +35,7 @@ final class BackendService: ObservableObject {
 
     private var api: String { baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL }
     var langHeader: String { LocalizationService.shared.current.rawValue }
+    var devMode: Bool { UserDefaults.standard.bool(forKey: "admin_dev_mode") }
 
     // szyfrowane połączenie — self-signed na localhost akceptujemy w dev (jak NSAllowsArbitraryLoads)
     private lazy var session: URLSession = {
@@ -178,7 +179,8 @@ final class BackendService: ObservableObject {
     func startSession(bookId: String, chapterId: String, walletAddress: String) async throws -> SessionStartResponse {
         guard let url = URL(string:"\(api)/api/sessions/start") else { throw GenError.badURL }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
-        req.httpBody = try JSONSerialization.data(withJSONObject:["bookId":bookId,"chapterId":chapterId,"walletAddress":walletAddress])
+        if devMode { req.setValue("1", forHTTPHeaderField:"X-Dev-Mode") }
+        req.httpBody = try JSONSerialization.data(withJSONObject:["bookId":bookId,"chapterId":chapterId,"walletAddress":walletAddress, "devBypass": devMode])
         let (d,r)=try await data(for:req)
         guard (r as? HTTPURLResponse)?.statusCode==200 else { throw GenError.api(String(data:d, encoding:.utf8) ?? "start failed") }
         return try JSONDecoder().decode(SessionStartResponse.self, from:d)
