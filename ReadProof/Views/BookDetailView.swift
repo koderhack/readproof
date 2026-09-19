@@ -41,10 +41,7 @@ struct BookDetailView: View {
                 MonoPill(text: book.license ?? "Public domain", fg: RPColor.burgundy)
                 if let url = book.sourceUrl { Link(destination: URL(string: url)!) { MonoPill(text: "Gutenberg", fg: RPColor.success) } }
             }
-            if let f = book.fullTextFile {
-                HStack { Image(systemName: "doc.text").foregroundStyle(RPColor.muted); Text(f).font(.system(size: 11, design: .monospaced)).foregroundStyle(RPColor.muted2); Spacer(); NavigationLink("Czytaj fragment") { TextViewer(book: book) } .font(.system(size: 11, weight: .semibold, design: .serif)).foregroundStyle(RPColor.burgundy) }
-            }
-            Text("Tekst legalnie z Project Gutenberg (USA public domain). Weryfikuj w UI: 'Reading/Comprehension Verified', nie 'we proved you physically read'.").font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
+            Text("Tekst służy wyłącznie do generowania pytań przez LLM na backendzie — nie jest udostępniany w całości w apce (fizyczna książka).").font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
         }.padding(12).parchmentCard(dashed: true)
     }
 
@@ -70,23 +67,4 @@ struct BookDetailView: View {
     }
 }
 
-struct TextViewer: View {
-    let book: Book
-    @State private var text: String = "Ładowanie..."
-    var body: some View {
-        ScrollView { Text(text).font(.system(size: 12, design: .serif)).foregroundStyle(RPColor.ink2).padding(16).textSelection(.enabled) }
-        .background(RPColor.parchment)
-        .navigationTitle(book.fullTextFile ?? "Tekst")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            if let file = book.fullTextFile, let url = Bundle.main.url(forResource: (file as NSString).deletingPathExtension, withExtension: "txt") {
-                if let s = try? String(contentsOf: url, encoding: .utf8) { text = String(s.prefix(20000)) + "\n\n… pełny tekst w bundlu \(file) — przewiń aby czytać całość (Project Gutenberg)." }
-            } else if let url = Bundle.main.url(forResource: book.fullTextFile, withExtension: nil) {
-                text = (try? String(contentsOf: url)) ?? "Brak"
-            } else {
-                // Fallback to docs
-                text = "Pełny tekst \(book.title) — \(book.sourceUrl ?? "")\nPlik bundla: \(book.fullTextFile ?? "")\n\(book.description)"
-            }
-        }
-    }
-}
+// TextViewer usunięty — brak dostępu do pełnego tekstu w apce (anti-AI, fizyczna książka)

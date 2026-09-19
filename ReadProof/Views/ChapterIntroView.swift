@@ -5,8 +5,8 @@ struct ChapterIntroView: View {
     let chapter: Chapter
     @EnvironmentObject var store: ChallengeStore
     @EnvironmentObject var appState: AppState
-    @State private var goChallenge = false
-    @State private var picked: [Challenge] = []
+    @EnvironmentObject var loc: LocalizationService
+    @State private var goSession = false
 
     var body: some View {
         ScrollView {
@@ -14,20 +14,19 @@ struct ChapterIntroView: View {
                 card
                 excerpt
                 Button {
-                    picked = store.pickFive(for: chapter.id)
-                    goChallenge = true
-                } label: { HStack { Image(systemName: "play.fill"); Text("Start Reading Challenge") }.font(.system(size: 14, weight: .bold, design: .serif)) }
+                    goSession = true
+                } label: { HStack { Image(systemName: "play.fill"); Text(loc.t("Start Reading Session","Start Reading Session")) }.font(.system(size: 15, weight:.bold, design:.rounded)) }
                 .buttonStyle(BurgundyButtonStyle())
-                Text("5 różnych zadań • jedno otwarte oceni Jev (próg 80%) • 4–5/5 = Comprehension Verified").font(.system(size: 9, design: .monospaced)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+                Text(loc.t("Proof of Comprehension — nie dowód fizycznego czytania. 5 wyzwań losowanych z 20 (backend), odblokowywane co ~20s/3min, fragment-dependent, limit 8min/12min, Jev, anti-copy, screenshot→suspicious, Live Activity.","Proof of Comprehension — not physical reading. 5 random from 20, staged unlock, fragment-dependent, time limit, Jev, anti-copy, screenshot→suspicious, Live Activity.")).font(.system(size: 10)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
                 if appState.wallet.address == nil {
-                    NavigationLink(destination: PassportView()) { Label("Podłącz wallet aby odebrać nagrodę (Devnet) — Paszport", systemImage: "wallet.pass").font(.system(size: 11, weight: .semibold, design: .serif)) }.tint(RPColor.burgundy)
+                    NavigationLink(destination: PassportView()) { Label(loc.t("Podłącz Phantom aby odebrać nagrodę (Devnet)","Connect Phantom to claim reward"), systemImage: "wallet.pass").font(.system(size: 12, weight:.semibold, design:.rounded)) }.tint(RPColor.primary)
                 }
             }.padding(16)
         }
-        .background(RPColor.parchment)
+        .background(RPColor.bg)
         .navigationTitle("Chapter \(chapter.index)")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $goChallenge) { ChallengeFlowView(book: book, chapter: chapter, challenges: picked) }
+        .navigationDestination(isPresented: $goSession) { ReadingSessionView(book: book, chapter: chapter) }
     }
 
     var card: some View {
@@ -42,9 +41,8 @@ struct ChapterIntroView: View {
     var excerpt: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack { Image(systemName: "book"); Text("Przeczytaj rozdział w fizycznej książce").font(.system(size: 12, weight: .semibold, design: .serif)); Spacer() }
-            Text(chapter.contextExcerpt).font(.system(size: 11, design: .serif)).foregroundStyle(RPColor.muted2).padding(10).background(RPColor.cream.opacity(0.6)).clipShape(RoundedRectangle(cornerRadius: 8))
-            NavigationLink(destination: TextViewer(book: book)) { Label("Zobacz pełny tekst (Gutenberg) w apce — legal public domain", systemImage: "doc.text.magnifyingglass").font(.system(size: 10, design: .serif)) }.tint(RPColor.burgundy)
-            Text("App nie jest ebook readerem — służy weryfikacji zrozumienia. Pełny tekst do czytania poza apką lub podgląd w bundlu.").font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
-        }.padding(14).parchmentCard(dashed: true)
+            Text(chapter.contextExcerpt).font(.system(size: 11, design: .serif)).foregroundStyle(Color.black).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 8)).overlay(RoundedRectangle(cornerRadius:8).stroke(RPColor.line)).textSelection(.disabled)
+            Text("Brak pełnego tekstu w apce — celowo. Czytaj fizyczną książkę, apka weryfikuje zrozumienie fragmentów (anti-AI).").font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
+        }.padding(14).card()
     }
 }
