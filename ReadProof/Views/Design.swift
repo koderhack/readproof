@@ -14,13 +14,15 @@ import SwiftUI
 // Signature: Wax seal stamp on proof/reward — single memorable motion (scale+fade)
 
 enum RPColor {
-    static let bg = Color(hex: "#FFFCF5")          // Paper
-    static let card = Color.white
-    static let line = Color(hex: "#E6DDC8")         // Rule
-    static let line2 = Color(hex: "#EDE7D8")
-    static let ink = Color(hex: "#0B0B0F")           // near-black, max contrast on white
-    static let muted = Color(hex: "#374151")         // gray-700, readable secondary
-    static let muted2 = Color(hex: "#6B7280")        // gray-500, captions only
+    static let bg = Color(UIColor.systemGroupedBackground)          // adaptive: białe w light, ciemne w dark
+    static let card = Color(UIColor.secondarySystemGroupedBackground) // adaptive card
+    static let line = Color(UIColor.separator)         // adaptive hairline
+    static let line2 = Color(UIColor.opaqueSeparator)
+    static let ink = Color(UIColor.label)           // adaptive: czarne w light, białe w dark
+    static let muted = Color(UIColor.secondaryLabel)         // adaptive secondary
+    static let muted2 = Color(UIColor.tertiaryLabel)        // adaptive tertiary
+    static let inkFixed = Color(hex: "#0B0B0F") // fixed dark for dark cards (funds)
+    static let cardFixedWhite = Color.white // fixed white for light cards when needed
     // primaries — Duolingo green per request (native iOS, zielony)
     static let primary = Color(hex: "#58CC02")       // Duo Green
     static let primaryDark = Color(hex: "#46A302")

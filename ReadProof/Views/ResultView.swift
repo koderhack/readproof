@@ -69,7 +69,7 @@ struct ResultMinimalView: View {
     }
     var actions: some View {
         VStack(spacing:10){
-            Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName:"wallet.pass"); Text("Wypłać \(proof.reward ?? "$15.00") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.ink).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
+            Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName:"wallet.pass"); Text("Wypłać \(proof.reward ?? "$15.00") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.inkFixed).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
             HStack(spacing:10){
                 Button{} label:{ HStack{ Image(systemName:"square.and.arrow.up"); Text("Udostępnij").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
                 Button{} label:{ HStack{ Image(systemName:"doc.text"); Text("Certyfikat ZK").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
