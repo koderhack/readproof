@@ -1,0 +1,18 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+Pods/
+
+# Node
+backend/node_modules/
+backend/.env
+backend/readproof.db
+*.log
+.DS_Store
+/tmp/
+.env.local
