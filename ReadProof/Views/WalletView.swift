@@ -52,9 +52,38 @@ struct PassportView: View {
                 Button{} label:{HStack{ Image(systemName:"arrow.down"); Text("Wypłać").font(.system(size:13, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,10).background(Color.white.opacity(0.18)).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:12))}.buttonStyle(.plain)
             }
             if !appState.wallet.isConnected {
-                HStack{ TextField("Solana address", text:$input).font(.system(size:12, design:.monospaced)).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius:10)); Button("Połącz"){ appState.connectWallet(address:input); input=""}.buttonStyle(BurgundyButtonStyle()) }
+                VStack(spacing:8){
+                    Button{
+                        PhantomService.openPhantom()
+                    } label: {
+                        HStack{ Image(systemName:"wallet.pass.fill"); Text("Połącz Phantom (Devnet)").font(.system(size:13, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,11).background(Color.white).foregroundStyle(RPColor.ink).clipShape(RoundedRectangle(cornerRadius:12))
+                    }.buttonStyle(.plain)
+                    Text("Masz już Devnet w Phantom? Przełącz Phantom → Settings → Developer Settings → Enable → Devnet, skopiuj adres i wklej poniżej.").font(.system(size:10)).foregroundStyle(.white.opacity(0.75))
+                    HStack(spacing:8){
+                        TextField("Wklej Phantom address (base58)", text:$input).font(.system(size:11, design:.monospaced)).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius:10))
+                        Button("Połącz"){
+                            guard PhantomService.isValidSolanaAddress(input) else { return }
+                            appState.connectWallet(address:input); input=""
+                        }.buttonStyle(BurgundyButtonStyle()).disabled(!PhantomService.isValidSolanaAddress(input))
+                    }
+                    HStack(spacing:8){
+                        Link("Faucet SOL Devnet", destination: URL(string:"https://faucet.solana.com")!).font(.system(size:11, weight:.semibold)).tint(.white)
+                        Text("•").foregroundStyle(.white.opacity(0.6))
+                        Link("Faucet USDC Devnet", destination: URL(string:"https://faucet.circle.com")!).font(.system(size:11, weight:.semibold)).tint(.white)
+                    }
+                }
             } else {
-                HStack{ Text(appState.wallet.address ?? "").font(.system(size:10, design:.monospaced)).foregroundStyle(.white.opacity(0.85)).lineLimit(1).truncationMode(.middle); Spacer(); Button(showCopied ? "OK" : "Kopiuj"){ UIPasteboard.general.string=appState.wallet.address; showCopied=true; DispatchQueue.main.asyncAfter(deadline:.now()+1.5){showCopied=false}}.font(.system(size:11, weight:.semibold)).tint(.white); Button("Rozłącz", role:.destructive){ appState.disconnect()}.font(.system(size:11)).tint(.white) }
+                VStack(alignment:.leading, spacing:8){
+                    HStack{ Text(appState.wallet.address ?? "").font(.system(size:10, design:.monospaced)).foregroundStyle(.white.opacity(0.85)).lineLimit(1).truncationMode(.middle); Spacer(); Button(showCopied ? "OK" : "Kopiuj"){ UIPasteboard.general.string=appState.wallet.address; showCopied=true; DispatchQueue.main.asyncAfter(deadline:.now()+1.5){showCopied=false}}.font(.system(size:11, weight:.semibold)).tint(.white); Button("Rozłącz", role:.destructive){ appState.disconnect()}.font(.system(size:11)).tint(.white) }
+                    HStack(spacing:8){
+                        if let addr = appState.wallet.address, let url = URL(string:"https://explorer.solana.com/address/\(addr)?cluster=devnet"){
+                            Link(destination: url){ Label("Explorer Devnet", systemImage:"link").font(.system(size:11, weight:.semibold)) }.tint(.white)
+                        }
+                        Spacer()
+                        Button("Otwórz Phantom"){ PhantomService.openPhantom() }.font(.system(size:11)).tint(.white.opacity(0.9))
+                    }
+                    Text("Devnet: darmowe USDC = faucet.circle.com → wklej ten sam adres → wybierz Solana Devnet → mint 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU").font(.system(size:9)).foregroundStyle(.white.opacity(0.7))
+                }
             }
         }.padding(16).background(RPColor.ink).clipShape(RoundedRectangle(cornerRadius:16))
     }
