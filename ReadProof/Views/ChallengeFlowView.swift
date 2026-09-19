@@ -184,7 +184,7 @@ struct ChallengeCardMinimal: View {
 
     var reflection: some View {
         VStack(alignment:.leading, spacing:8){
-            HStack{ Text("KRÓTKA REFLEKSJA").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(RPColor.muted); MonoPill(text:"+1.50 USDC bonus", fg:RPColor.primary, bg:RPColor.primaryLight, border:.clear); Spacer(); Text("\(text.count) / 240").font(.system(size:11)).foregroundStyle(RPColor.muted)}
+            HStack{ Text("KRÓTKA REFLEKSJA").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(RPColor.muted); MonoPill(text:"+1.50 USDC bonus", fg:Color.white, bg:RPColor.peach, border:.clear); Spacer(); Text("\(text.count) / 240").font(.system(size:11)).foregroundStyle(RPColor.muted)}
             TextField("Opisz w 1-2 zdaniach przykład błędu kotwiczenia…", text:$text, axis:.vertical).font(.system(size:14, design:.rounded)).lineLimit(3...5).padding(12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))
                 .overlay(alignment:.bottomTrailing){ Image(systemName:"square.and.pencil").foregroundStyle(RPColor.muted).padding(8)}
         }
