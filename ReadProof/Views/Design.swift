@@ -18,9 +18,9 @@ enum RPColor {
     static let card = Color.white
     static let line = Color(hex: "#E6DDC8")         // Rule
     static let line2 = Color(hex: "#EDE7D8")
-    static let ink = Color(hex: "#0E1E2A")           // Expedition Ink
-    static let muted = Color(hex: "#6B7B7F")         // Fog
-    static let muted2 = Color(hex: "#9AA8A6")        // Mist
+    static let ink = Color(hex: "#0B0B0F")           // near-black, max contrast on white
+    static let muted = Color(hex: "#374151")         // gray-700, readable secondary
+    static let muted2 = Color(hex: "#6B7280")        // gray-500, captions only
     // primaries
     static let primary = Color(hex: "#16423C")       // Field Green — primary actions
     static let primaryDark = Color(hex: "#0F2F2A")
@@ -32,6 +32,15 @@ enum RPColor {
     static let peachSoft = Color(hex: "#FFF6EE")
     static let success = Color(hex: "#16423C")
     static let successLight = Color(hex: "#E6F2EE")
+    // Duolingo quiz palette
+    static let duoGreen = Color(hex: "#58CC02")
+    static let duoGreenDark = Color(hex: "#46A302")
+    static let duoGreenLight = Color(hex: "#E8FFD6")
+    static let duoYellow = Color(hex: "#FFCA00")
+    static let duoBlue = Color(hex: "#1CB0F6")
+    static let duoGray = Color(hex: "#E5E5E5")
+    static let duoGrayDark = Color(hex: "#777777")
+    static let duoText = Color(hex: "#4B4B4B")
 
     // compat (stary kod)
     static let parchment = bg

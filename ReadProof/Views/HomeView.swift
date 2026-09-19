@@ -26,7 +26,7 @@ struct HomeView: View {
                         .font(.system(size:32, weight:.bold, design:.serif)).tracking(-1).foregroundStyle(RPColor.ink).lineSpacing(-1)
                     Text(loc.t("5 przygodowych książek z pełnym tekstem public domain (Gutenberg). Pytania generuje LLM na żywo w języku urządzenia.",
                                "5 adventure books, full public-domain text (Gutenberg). Questions are generated live in your device language."))
-                        .font(.system(size:13, design:.rounded)).foregroundStyle(RPColor.muted).lineSpacing(2)
+                        .font(.system(size:13, design:.rounded)).foregroundStyle(RPColor.ink).lineSpacing(2)
 
                     search
                     chips
