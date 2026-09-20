@@ -21,6 +21,7 @@ struct ReadingSessionView: View {
     @State private var proof: ReadingProof?
     @State private var starting = false
     @State private var lastResult: (challengeId: String, correct: Bool)?
+    @State private var lastCorrectText: String?
     @State private var hearts = 3
     let maxHearts = 3
     @State private var rulesAccepted = false
@@ -67,38 +68,44 @@ struct ReadingSessionView: View {
                                 Text(q).font(.headline).foregroundStyle(RPColor.ink).textSelection(.disabled)
                                 if let ctx = active.context { Text(ctx).font(.caption).foregroundStyle(RPColor.muted).textSelection(.disabled) }
                             }
-                            // natychmiastowy wynik — jak Duolingo
+                            // wynik — pokazujemy też poprawną odpowiedź, mniej agresywne czerwone
                             if let fb = lastResult, fb.challengeId == active.id {
-                                HStack(spacing: 8) {
-                                    Image(systemName: fb.correct ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
-                                    VStack(alignment:.leading, spacing:2){
-                                        Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t(hearts<=0 ? "Źle — koniec serc" : "Źle — straciłeś serce","Wrong — lost a heart")).font(.headline.weight(.bold))
-                                        if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — możesz spróbować ponownie od razu","Session ended — you can retry right away") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
+                                VStack(alignment:.leading, spacing:6){
+                                    HStack(spacing: 8) {
+                                        Image(systemName: fb.correct ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
+                                        VStack(alignment:.leading, spacing:2){
+                                            Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t(hearts<=0 ? "Źle — koniec serc" : "Źle — straciłeś serce","Wrong — lost a heart")).font(.headline.weight(.bold))
+                                            if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — możesz spróbować ponownie od razu","Session ended — you can retry right away") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
+                                        }
+                                        Spacer()
                                     }
-                                    Spacer()
+                                    if !fb.correct, let ct = lastCorrectText, !ct.isEmpty {
+                                        Text(loc.t("Poprawna odpowiedź: ","Correct answer: ") + ct).font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.95)).padding(.top,2)
+                                    }
                                 }
-                                .foregroundStyle(.white).padding(12).background(fb.correct ? RPColor.success : Color.red).clipShape(RoundedRectangle(cornerRadius:10))
+                                .foregroundStyle(.white).padding(12).background(fb.correct ? RPColor.success : Color.red.opacity(0.88)).clipShape(RoundedRectangle(cornerRadius:10))
                             }
-                            UnlockCard(challenge: active, onSubmit: { ans in
+                            UnlockCard(challenge: active, answered: lastResult?.challengeId == active.id ? lastResult?.correct : nil, correctText: lastCorrectText, onSubmit: { ans in
                                 answers[active.id] = ans
                                 Task {
                                     let ok = await BackendService.shared.answerSessionDetailed(sessionId: sessionId ?? "", challengeId: active.id, answer: ans)
                                     let correct = ok?.correct ?? false
+                                    if !correct { lastCorrectText = correctAnswerText(for: active) }
                                     lastResult = (active.id, correct)
                                     if correct {
                                         try? await Task.sleep(nanoseconds: 900_000_000)
                                         completed.insert(active.id)
-                                        lastResult = nil
+                                        lastResult = nil; lastCorrectText = nil
                                         updateLive()
                                     } else {
                                         hearts -= 1
                                         if hearts <= 0 {
-                                            try? await Task.sleep(nanoseconds: 1_200_000_000)
+                                            try? await Task.sleep(nanoseconds: 2_000_000_000)
                                             await completeWithWrong()
                                         } else {
-                                            // zostało serc — pokaż, pozwól spróbować ponownie tego samego pytania
-                                            try? await Task.sleep(nanoseconds: 1_500_000_000)
-                                            lastResult = nil
+                                            // pokaż poprawną odpowiedź dłużej, nie blokuj od razu czerwonym na cały ekran
+                                            try? await Task.sleep(nanoseconds: 2_500_000_000)
+                                            lastResult = nil; lastCorrectText = nil
                                             answers.removeValue(forKey: active.id)
                                         }
                                     }
@@ -221,6 +228,14 @@ struct ReadingSessionView: View {
         }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.primary, lineWidth: 1.5))
     }
 
+    func correctAnswerText(for ch: BackendService.SessionChallenge) -> String? {
+        if let idx = ch.correctAnswer, let opts = ch.options, idx >= 0, idx < opts.count { return opts[idx] }
+        if let idxs = ch.correctAnswers, let opts = ch.options { return idxs.compactMap{ $0 < opts.count ? opts[$0] : nil }.joined(separator: ", ") }
+        if let exp = ch.expectedMeaning, !exp.isEmpty { return exp }
+        if let hint = ch.hint, !hint.isEmpty { return hint }
+        if let err = ch.errorIndex, let stmts = ch.statements, err < stmts.count { return stmts[err] }
+        return nil
+    }
     func isLocked(_ ch: BackendService.SessionChallenge) -> Bool {
         if UserDefaults.standard.bool(forKey:"admin_dev_mode") { return false }
         guard let ra = ch.releaseAt, let d = ISO8601DateFormatter().date(from: ra) else { return ch.locked ?? false }
@@ -367,37 +382,43 @@ final class CameraPreviewUIView: UIView {
 
 struct UnlockCard: View {
     let challenge: BackendService.SessionChallenge
+    var answered: Bool? = nil // nil = nie odpowiedziano, true/false = wynik
+    var correctText: String? = nil
     var onSubmit: (Any)->Void
     @State private var text=""
     @State private var sel:Int?
     @State private var multi:Set<Int>=[]
     var isOpen: Bool { challenge.type == .openQuestion || challenge.type == .whyQuestion }
+    var isDisabled: Bool { answered != nil }
     var body: some View {
         VStack(alignment:.leading, spacing:8){
             if isOpen {
-                TextField("Odpowiedz własnymi słowami…", text:$text, axis:.vertical).font(.system(size:14)).foregroundStyle(RPColor.ink).tint(RPColor.primary).lineLimit(2...4).padding(10).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(RPColor.line))
-                Button("Wyślij"){ onSubmit(text) }.disabled(text.trimmingCharacters(in:.whitespaces).count<3).buttonStyle(BurgundyButtonStyle())
+                TextField("Odpowiedz własnymi słowami…", text:$text, axis:.vertical).font(.system(size:14)).foregroundStyle(RPColor.ink).tint(RPColor.primary).lineLimit(2...4).padding(10).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(RPColor.line)).disabled(isDisabled)
+                Button("Wyślij"){ onSubmit(text) }.disabled(isDisabled || text.trimmingCharacters(in:.whitespaces).count<3).buttonStyle(BurgundyButtonStyle())
+                if let ct = correctText, answered == false { Text("Poprawna: \(ct)").font(.caption.weight(.semibold)).foregroundStyle(RPColor.success) }
             } else if challenge.type == .multipleSelect {
                 ForEach(Array((challenge.options ?? []).enumerated()), id:\.offset){ i, opt in
                     let on = multi.contains(i)
-                    Button{ if on { multi.remove(i)} else { multi.insert(i)} } label:{
-                        HStack{ Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Image(systemName: on ? "checkmark.square.fill":"square").foregroundStyle(on ? RPColor.primary : RPColor.muted) }
-                        .padding(10).background(on ? RPColor.primaryLight : RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(on ? RPColor.primary : RPColor.line))
-                    }.buttonStyle(.plain)
+                    let isCorrect = (challenge.correctAnswers ?? []).contains(i)
+                    Button{ if !isDisabled { if on { multi.remove(i)} else { multi.insert(i)} } } label:{
+                        HStack{ Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Image(systemName: on ? "checkmark.square.fill":"square").foregroundStyle(isDisabled && isCorrect ? RPColor.success : (on ? RPColor.primary : RPColor.muted)) }
+                        .padding(10).background(isDisabled && isCorrect ? Color.green.opacity(0.12) : (on ? RPColor.primaryLight : RPColor.card)).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(isDisabled && isCorrect ? RPColor.success : (on ? RPColor.primary : RPColor.line)))
+                    }.buttonStyle(.plain).disabled(isDisabled)
                 }
-                Button("Zatwierdź"){ onSubmit(Array(multi)) }.disabled(multi.isEmpty).buttonStyle(BurgundyButtonStyle()).opacity(multi.isEmpty ? 0.5 : 1)
+                Button("Zatwierdź"){ onSubmit(Array(multi)) }.disabled(isDisabled || multi.isEmpty).buttonStyle(BurgundyButtonStyle()).opacity(isDisabled || multi.isEmpty ? 0.5 : 1)
             } else if challenge.type == .findError {
                 let stmts = challenge.statements ?? challenge.options ?? []
                 ForEach(Array(stmts.enumerated()), id:\.offset){ i, st in
-                    Button{ sel=i } label:{
-                        HStack{ Text("\(i+1).").font(.caption.weight(.bold)).foregroundStyle(RPColor.muted); Text(st).font(.system(size:13)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Circle().stroke(sel==i ? RPColor.primary : RPColor.line, lineWidth:2).frame(width:20,height:20).overlay(Circle().fill(sel==i ? RPColor.primary : Color.clear).frame(width:12,height:12)) }
-                        .padding(10).background(sel==i ? RPColor.primaryLight : RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
-                    }.buttonStyle(.plain)
+                    let isCorrect = challenge.errorIndex == i
+                    Button{ if !isDisabled { sel=i } } label:{
+                        HStack{ Text("\(i+1).").font(.caption.weight(.bold)).foregroundStyle(RPColor.muted); Text(st).font(.system(size:13)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); Circle().stroke(sel==i ? RPColor.primary : (isDisabled && isCorrect ? RPColor.success : RPColor.line), lineWidth:2).frame(width:20,height:20).overlay(Circle().fill(sel==i ? RPColor.primary : (isDisabled && isCorrect ? RPColor.success : Color.clear)).frame(width:12,height:12)) }
+                        .padding(10).background(isDisabled && isCorrect ? Color.green.opacity(0.12) : (sel==i ? RPColor.primaryLight : RPColor.card)).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(isDisabled && isCorrect ? RPColor.success : (sel==i ? RPColor.primary : RPColor.line)))
+                    }.buttonStyle(.plain).disabled(isDisabled)
                 }
-                Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(sel==nil ? 0.5 : 1)
+                Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(isDisabled || sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(isDisabled || sel==nil ? 0.5 : 1)
             } else if challenge.type == .ordering || challenge.type == .ranking {
                 Text("Przeciągnij aby zmienić kolejność — w pełnej sesji").font(.caption).foregroundStyle(RPColor.muted)
-                Button("Zatwierdź kolejność"){ onSubmit([0,1,2,3]) }.buttonStyle(BurgundyButtonStyle())
+                Button("Zatwierdź kolejność"){ onSubmit([0,1,2,3]) }.buttonStyle(BurgundyButtonStyle()).disabled(isDisabled)
             } else {
                 let opts: [String] = {
                     if let o = challenge.options, !o.isEmpty { return o }
@@ -406,12 +427,13 @@ struct UnlockCard: View {
                     return []
                 }()
                 ForEach(Array(opts.enumerated()), id:\.offset){ i, opt in
-                    Button{ sel=i } label:{
-                        HStack{ Text(["A","B","C","D"][min(i,3)]).font(.caption.weight(.bold)).frame(width:28,height:28).background(sel==i ? RPColor.primary : Color(hex:"#F3F4F6")).foregroundStyle(sel==i ? .white : RPColor.muted).clipShape(Circle()); Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer() }
-                        .padding(10).background(sel==i ? RPColor.primaryLight : RPColor.card).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(sel==i ? RPColor.primary : RPColor.line))
-                    }.buttonStyle(.plain)
+                    let isCorrect = challenge.correctAnswer == i
+                    Button{ if !isDisabled { sel=i } } label:{
+                        HStack{ Text(["A","B","C","D"][min(i,3)]).font(.caption.weight(.bold)).frame(width:28,height:28).background(sel==i ? RPColor.primary : (isDisabled && isCorrect ? RPColor.success : Color(hex:"#F3F4F6"))).foregroundStyle(sel==i || (isDisabled && isCorrect) ? .white : RPColor.muted).clipShape(Circle()); Text(opt).font(.system(size:14)).foregroundStyle(RPColor.ink).multilineTextAlignment(.leading); Spacer(); if isDisabled && isCorrect { Image(systemName:"checkmark.circle.fill").foregroundStyle(RPColor.success) } }
+                        .padding(10).background(sel==i ? RPColor.primaryLight : (isDisabled && isCorrect ? Color.green.opacity(0.12) : RPColor.card)).clipShape(RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).stroke(isDisabled && isCorrect ? RPColor.success : (sel==i ? RPColor.primary : RPColor.line)))
+                    }.buttonStyle(.plain).disabled(isDisabled)
                 }
-                Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(sel==nil ? 0.5 : 1)
+                Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(isDisabled || sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(isDisabled || sel==nil ? 0.5 : 1)
             }
         }
     }
