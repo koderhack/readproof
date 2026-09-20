@@ -7,13 +7,12 @@ import UIKit
 /// Anti-screenshot: przednia kamera wykrywa, czy ktoś celuje drugim telefonem/ekranem w nasz ekran.
 /// W 100% on-device (AVFoundation + Vision + Core ML MobileNet), free/open, zero zapisu klatek.
 ///
-/// Kanały (fail przy SCORE >= 3 — jedna próbka):
-/// 1. SZYBKIE PIKSELE  — jasność / % bieli / krawędzie (CPU, co ~0.9 s).
+/// Kanały (fail przy SCORE >= 6 — wcześniej 3, było za czułe):
+/// 1. SZYBKIE PIKSELE  — jasność / % bieli / krawędzie (CPU, co ~0.9 s) — progi podniesione 0.65/0.60/0.08.
 /// 2. VISION (2 s cache) — twarz w kadrze (legitymizacja) + duży prostokąt.
-/// 3. MODEL MobileNet (ImageNet, 16MB via Core ML) — rozpoznaje konkretny obiekt
-///    „telefon / monitor / screen / laptop” pośród 1000 klas → +3.
-/// 4. TRUEDEPTH (Face ID) — ADAPTACYJNIE: baseline mediany dysparyty w centrum;
-///    nagły spike (coś blisko, ≈2.5×) 2× z rzędu ⇒ fail. Bez ręcznych progów.
+/// 3. MODEL MobileNet (ImageNet, 16MB via Core ML) — rozpoznaje „telefon/monitor/laptop” tylko przy conf >=0.50 (było 0.30) → +2.
+/// 4. YOLOv8n cell phone — conf >=0.40 + 0.35 threshold (było 0.20/0.15), bez natychmiastowego fire, przez scoring.
+/// 5. TRUEDEPTH — baseline ×2.5 i nearRatio 0.60/0.80 (było 2.0× 0.45/0.75).
 final class FrontCameraMonitor: NSObject {
     struct CameraSignal {
         var score = 0.0
@@ -129,7 +128,7 @@ final class FrontCameraMonitor: NSObject {
         guard let provider = try? MLDictionaryFeatureProvider(dictionary: [
             "image": MLFeatureValue(pixelBuffer: out),
             "iouThreshold": MLFeatureValue(double: 0.45),
-            "confidenceThreshold": MLFeatureValue(double: 0.15)
+            "confidenceThreshold": MLFeatureValue(double: 0.35)
         ]), let outFeat = try? model.prediction(from: provider),
               let coords = outFeat.featureValue(for: "coordinates")?.multiArrayValue,
               let conf = outFeat.featureValue(for: "confidence")?.multiArrayValue else { return (false, 0, nil) }
@@ -143,7 +142,7 @@ final class FrontCameraMonitor: NSObject {
                 let v = conf[[i, c] as [NSNumber]].doubleValue
                 if v > maxC { maxC = v; maxIdx = c }
             }
-            if maxIdx == 67 && maxC >= 0.20 && maxC > bestConf { // łapie nawet fragment telefonu
+            if maxIdx == 67 && maxC >= 0.40 && maxC > bestConf { // podniesiony próg: wcześniej 0.20 łapał fragmenty/tła
                 let cx = coords[[i, 0] as [NSNumber]].doubleValue
                 let cy = coords[[i, 1] as [NSNumber]].doubleValue
                 let ww = coords[[i, 2] as [NSNumber]].doubleValue
@@ -289,20 +288,21 @@ extension FrontCameraMonitor: AVCaptureVideoDataOutputSampleBufferDelegate {
         s.depthNear = currentSignal.depthNear
 
         var sc = 0.0
-        if white > 0.55 && luma > 0.5 { sc += 3 }                  // świecący ekran — bez wymogu twarzy (nie przeszkadza w czytaniu)
-        if luma > 0.8 { sc += 2 }                                 // kadr zalany
-        if edge > 0.06 && white > 0.2 { sc += 2 }                 // tekst/krawędzie — bez wymogu twarzy
-        if modelHit { sc += 3 }                                   // MobileNet: telefon/ekran/laptop
-        if phoneBackHit { sc += 4 }                               // custom phone-back classifier
-        if yoloHit { sc += 5 }                                    // YOLOv8n: cell phone (COCO 67) — dedykowany, łapie nawet fragment
-        if white > 0.5 { sc += 1 }
-        // face jest tylko informacyjnie — nie gate'uje detekcji (nie musi być widoczna w trakcie czytania)
+        // Złagodzone progi — wcześniej łapało białą ścianę/kartkę jako telefon
+        if white > 0.65 && luma > 0.60 { sc += 2 }                 // był 0.55/0.5 +3
+        if luma > 0.85 { sc += 1 }                                // był 0.8 +2
+        if edge > 0.08 && white > 0.30 { sc += 1 }                // był 0.06/0.2 +2
+        if modelHit { sc += 2 }                                   // był +3, wymaga teraz conf >=0.50
+        if phoneBackHit { sc += 3 }                               // był +4
+        if yoloHit && yoloConf >= 0.45 { sc += 3 }                // był +5 bez progu, teraz tylko pewny cell phone
+        // usunięte: `white >0.5 +1` — podwójnie liczyło biel i powodowało false-positive
+        // face jest tylko informacyjnie — nie gate'uje detekcji
 
         s.score = sc
         currentSignal = s
-        // Pitch/demo: wyższy próg + debounce — mniej false-positive na scenie; produkcja bez zmian
+        // Podniesiony próg dla obu trybów — prod był 3.0 i wywalał na jasnej kartce
         let demo = UserDefaults.standard.bool(forKey: "pitch_demo_mode") || UserDefaults.standard.bool(forKey: "admin_dev_mode")
-        let failAt = demo ? 6.0 : 3.0
+        let failAt = demo ? 7.0 : 6.0
         if sc >= failAt { fireDebounced(demo: demo) }
     }
 
@@ -344,7 +344,7 @@ extension FrontCameraMonitor: AVCaptureVideoDataOutputSampleBufferDelegate {
             if let top = classifier?.results?.first as? VNClassificationObservation {
                 modelLabel = top.identifier
                 modelConf = Double(top.confidence)
-                modelHit = Self.isScreenLike(top.identifier) && top.confidence >= 0.30
+                modelHit = Self.isScreenLike(top.identifier) && top.confidence >= 0.50
             }
             phoneBackHit = false
             phoneBackProb = 0
@@ -353,7 +353,7 @@ extension FrontCameraMonitor: AVCaptureVideoDataOutputSampleBufferDelegate {
             yoloConf = y.conf
             yoloBox = y.box
             if yoloHit, let b = y.box { cachedRect = b }
-            if yoloHit { fire() } // od razu — nie czeka na SCORE/debounce
+            // usunięte natychmiastowe `fire()` - YOLO idzie teraz przez scoring + debounce (score + failAt)
         } catch {
             // Vision/CoreML padło — zostaw poprzedni stan
         }
@@ -443,13 +443,13 @@ extension FrontCameraMonitor: AVCaptureDepthDataOutputDelegate {
             return
         }
         // 2. Ile pikseli w centrum jest dużo bliżej niż baseline (ekran/telefon przed kamerą)
-        let spikeV = max(depthBaseline, 0.001) * 2.0
+        let spikeV = max(depthBaseline, 0.001) * 2.5
         var near = 0
         for v in vals where v > spikeV { near += 1 }
         let nearRatio = Double(near) / Double(vals.count)
-        if nearRatio > 0.45 {
+        if nearRatio > 0.60 {
             depthSpikeCount += 1
-            if nearRatio > 0.75 || depthSpikeCount >= 2 { // bardzo blisko od razu, albo 2 próbki z rzędu (~2 s)
+            if nearRatio > 0.80 || depthSpikeCount >= 2 { // był 0.45/0.75 i 2.0× — teraz 0.60/0.80 i 2.5×
                 depthSpikeCount = 0
                 currentSignal.depthNear = true
                 fire()
