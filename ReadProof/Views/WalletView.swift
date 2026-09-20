@@ -1,10 +1,13 @@
 import SwiftUI
+import AuthenticationServices
 
 struct PassportView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var loc: LocalizationService
+    @StateObject private var auth = AuthService.shared
     @State private var input=""
     @State private var showCopied=false
+    @State private var guestName=""
 
     var body: some View {
         NavigationStack{
@@ -99,7 +102,38 @@ struct PassportView: View {
                     Text("Frontend nie wysyła AI. LLM (OpenRouter free) i Jev (TypeSafe jev-latest) tylko przez backend.").font(.caption2).foregroundStyle(RPColor.muted)
                 }
 
-                Section{ Text("Profil minimal — tylko portfel, język i backend. Statystyki z realnych proofów.").font(.caption).foregroundStyle(RPColor.muted) }
+                Section(header: Text("Konto"), footer: Text(auth.isSignedIn ? "Zalogowany jako \(auth.displayName) (\(auth.user?.authProvider.rawValue ?? "")) — ID używane jako X-User-Id do sesji." : "Sign in with Apple wymaga włączenia capability w Apple Developer Console. Na symulatorze użyj Gościa.").font(.caption2).foregroundStyle(RPColor.muted)) {
+                    if auth.isSignedIn {
+                        HStack{
+                            Image(systemName: auth.user?.authProvider == .apple ? "applelogo" : "person.fill").foregroundStyle(RPColor.primary)
+                            VStack(alignment:.leading, spacing:2){
+                                Text(auth.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(RPColor.ink)
+                                Text(auth.userId ?? "").font(.caption2.monospaced()).foregroundStyle(RPColor.muted).lineLimit(1)
+                                if let tok = auth.user?.sessionToken { Text("session: \(tok.prefix(8))…").font(.caption2.monospaced()).foregroundStyle(RPColor.muted) }
+                            }
+                            Spacer()
+                            Button("Wyloguj", role:.destructive){ auth.signOut() }.font(.caption.weight(.semibold))
+                        }
+                    } else {
+                        SignInWithAppleButton(.signIn, onRequest: { r in r.requestedScopes = [.fullName, .email] }, onCompletion: { res in
+                            Task { await auth.appleSignIn() }
+                        })
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 44)
+                        .cornerRadius(10)
+                        Button{
+                            Task { await auth.appleSignIn() }
+                        } label: { Label("Zaloguj przez Apple", systemImage:"applelogo").font(.subheadline.weight(.semibold)) }
+                        HStack{
+                            TextField("Nick gościa", text:$guestName).font(.caption).autocorrectionDisabled()
+                            Button("Gość"){ auth.devSignIn(nickname: guestName.isEmpty ? nil : guestName); guestName="" }.font(.caption.weight(.bold)).tint(RPColor.primary)
+                        }
+                        if let e = auth.authError { Text(e).font(.caption2).foregroundStyle(.red) }
+                        Text("Gość = DevMode fallback bez Apple capability — działa na symulatorze.").font(.caption2).foregroundStyle(RPColor.muted)
+                    }
+                }
+
+                Section{ Text("Profil minimal — portfel + konto Apple/Gość, język i backend. Statystyki z realnych proofów.").font(.caption).foregroundStyle(RPColor.muted) }
             }
             .listStyle(.insetGrouped)
             .navigationTitle(loc.t("Paszport","Passport"))
