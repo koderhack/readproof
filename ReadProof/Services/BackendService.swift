@@ -292,7 +292,7 @@ final class BackendService: ObservableObject {
     func answerSession(sessionId: String, challengeId: String, answer: Any) async -> Bool {
         (await answerSessionDetailed(sessionId: sessionId, challengeId: challengeId, answer: answer)) != nil
     }
-    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict? }
+    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict?; let correctText: String?; let correctAnswer: Int?; let correctAnswers: [Int]?; let expectedMeaning: String? }
     func answerSessionDetailed(sessionId: String, challengeId: String, answer: Any) async -> AnswerResult? {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")

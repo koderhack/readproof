@@ -1258,7 +1258,19 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
   s.answers[challengeId] = {answer, answeredAt: answeredAt.toISOString(), correct, jev, elapsed};
   s.readingDurationSec = Math.floor((Date.now() - new Date(s.startAt).getTime())/1000);
   db.run(`UPDATE reading_sessions SET answers=?, readingDurationSec=? WHERE id=?`, [JSON.stringify(s.answers), s.readingDurationSec, s.id]);
-  res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec});
+  // correctText dla frontendu — żeby pokazać poprawną odpowiedź po błędzie (kto to powiedział nie miał odpowiedzi)
+  let correctText = (()=> {
+    try{
+      if(ch.type==='multiple_choice'||ch.type==='true_false'||ch.type==='what_next') return ch.options?.[ch.correctAnswer] ?? null;
+      if(ch.type==='multiple_select') return (ch.correctAnswers||[]).map(i=> ch.options?.[i]).filter(Boolean).join(', ') || null;
+      if(ch.type==='find_error') return ch.statements?.[ch.errorIndex] ?? ch.options?.[ch.errorIndex] ?? null;
+      if(ch.type==='ordering'||ch.type==='ranking') return (ch.correctOrder||[]).map(i=> (ch.items?.[i] ?? '')).join(' → ') || null;
+      if(ch.type==='who_said'||ch.type==='match') return ch.pairs?.[0]?.right ?? ch.pairs?.map(p=> `${p.left} → ${p.right}`).join(', ') ?? null;
+      if(ch.type==='open_question'||ch.type==='why_question') return ch.expectedMeaning ?? ch.hint ?? null;
+    }catch(e){ return null; }
+    return null;
+  })();
+  res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec, correctAnswer: ch.correctAnswer, correctAnswers: ch.correctAnswers, correctText, expectedMeaning: ch.expectedMeaning});
   console.log(`[answer] ${s.walletAddress?.slice(0,6)}.. ${challengeId.slice(0,8)} correct=${correct} type=${ch.type} elapsed=${elapsed}s${jev?` jev=${jev.correct?1:0} conf=${(jev.confidence??0).toFixed(2)}`:''}`);
 });
 
