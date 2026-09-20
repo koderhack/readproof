@@ -426,6 +426,33 @@ async function callJev({question, expectedMeaning, userAnswer, context, lang='pl
   return null;
 }
 
+// --- AI-writing detect — czy odpowiedź otwartą napisało AI (ChatGPT/LLM), a nie człowiek ---
+// Fail-open: brak klucza / błąd / timeout => null (nie blokujemy). Próg blokady 0.85.
+async function callAiDetect(question, userAnswer, lang='pl'){
+  if(!OPENROUTER_KEY) return null;
+  if(!userAnswer || String(userAnswer).trim().length < 20) return null; // za krótka na ocenę
+  const prompt = lang==='en'
+  ? `Decide if the following reading-test answer was WRITTEN BY AN AI (ChatGPT/LLM) or BY A HUMAN student. Question: "${question}". Answer: "${userAnswer}". AI tells: essay-like structure, overly formal/generic filler, perfectly balanced sentences, no typos, hedged academic tone. Human tells: short, colloquial, typos, uneven style, personal. Return ONLY JSON: {"ai": true/false, "confidence": 0-1}`
+  : `Oceń, czy poniższa odpowiedź z testu z lektury została NAPISANA PRZEZ AI (ChatGPT/LLM), czy PRZEZ CZŁOWIEKA (ucznia). Pytanie: "${question}". Odpowiedź: "${userAnswer}". Poszlaki AI: wypracowana struktura, nadęty formalny styl, ogólniki, zero literówek, akademicki ton. Poszlaki człowieka: krótko, potocznie, literówki, nierówny styl, osobisty ton. Zwróć TYLKO JSON: {"ai": true/false, "confidence": 0-1}`;
+  try{
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${OPENROUTER_KEY}`,'Content-Type':'application/json','HTTP-Referer':'https://readproof.app'},
+      body: JSON.stringify({model: OPENROUTER_MODEL, messages:[{role:'user',content:prompt}], temperature:0, max_tokens:200}),
+      signal: AbortSignal.timeout(30000)
+    });
+    if(!res.ok) return null;
+    const j = await res.json();
+    const content = j.choices?.[0]?.message?.content;
+    if(!content) return null;
+    const m = content.match(/\{[^}]*\}/);
+    if(!m) return null;
+    const p = JSON.parse(m[0]);
+    if(typeof p.ai !== 'boolean') return null;
+    return {ai: p.ai, confidence: Number(p.confidence)||0};
+  }catch(e){ return null; }
+}
+
 // --- LLM generate challenges — NA ŻYWO w języku urządzenia/nastawionym, nawet gdy tekst książki EN ---
 // Solidny extractor JSON — LLM (OpenRouter free) potrafi dodać fenced code, smy poza {} i zepsuć parsowanie
 function extractJSON(text){
@@ -1276,6 +1303,19 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     s.suspicious = 1;
     s.suspiciousReason = `too_fast_answer: ${ch.id} ${elapsed}s`;
   }
+  // AI-writing: odpowiedź otwarta napisana przez AI (wklejona z ChatGPT) — blokada jak przy cheatowaniu
+  let aiDetected = false;
+  if((ch.type==='open_question'||ch.type==='why_question') && typeof answer==='string' && !s.isDevBypass){
+    const det = await callAiDetect(ch.question, answer, s.lang);
+    if(det && det.ai && det.confidence >= 0.85){
+      aiDetected = true;
+      correct = false;
+      s.suspicious = 1;
+      s.suspiciousReason = `ai_generated_answer: ${ch.id} conf=${det.confidence.toFixed(2)}`;
+      jev = jev ? {...jev, reason: (jev.reason||'') + ` | AI-writing conf=${det.confidence.toFixed(2)}`} : jev;
+      console.log(`[ai-detect] ${s.walletAddress?.slice(0,6)}.. ${ch.id.slice(0,8)} BLOCKED conf=${det.confidence.toFixed(2)}`);
+    }
+  }
   s.answers[challengeId] = {answer, answeredAt: answeredAt.toISOString(), correct, jev, elapsed};
   s.readingDurationSec = Math.floor((Date.now() - new Date(s.startAt).getTime())/1000);
   db.run(`UPDATE reading_sessions SET answers=?, readingDurationSec=? WHERE id=?`, [JSON.stringify(s.answers), s.readingDurationSec, s.id]);
@@ -1291,8 +1331,8 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     }catch(e){ return null; }
     return null;
   })();
-  res.json({challengeId, correct, jev, readingDurationSec: s.readingDurationSec, correctAnswer: ch.correctAnswer, correctAnswers: ch.correctAnswers, correctText, expectedMeaning: ch.expectedMeaning});
-  console.log(`[answer] ${s.walletAddress?.slice(0,6)}.. ${challengeId.slice(0,8)} correct=${correct} type=${ch.type} elapsed=${elapsed}s${jev?` jev=${jev.correct?1:0} conf=${(jev.confidence??0).toFixed(2)}`:''}`);
+  res.json({challengeId, correct, jev, aiDetected, readingDurationSec: s.readingDurationSec, correctAnswer: ch.correctAnswer, correctAnswers: ch.correctAnswers, correctText, expectedMeaning: ch.expectedMeaning});
+  console.log(`[answer] ${s.walletAddress?.slice(0,6)}.. ${challengeId.slice(0,8)} correct=${correct} type=${ch.type} elapsed=${elapsed}s${jev?` jev=${jev.correct?1:0} conf=${(jev.confidence??0).toFixed(2)}`:''}${aiDetected?' AI-BLOCKED':''}`);
 });
 
 // iOS: screenshot / screenRecording → oznacz sesję jako podejrzaną

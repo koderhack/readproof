@@ -27,7 +27,8 @@ a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
 .btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--line)}
 .btn.gold{background:var(--gold);color:#1A1208}
 .section{padding:28px 0}
-.section h2{font-family:Fraunces,serif;font-size:28px;margin:0 0 8px}
+.section h2{font-family:Fraunces,serif;font-size:28px;margin:0 0 8px;display:flex;align-items:center;gap:10px}
+.section h2 .ic{color:var(--primary)}
 .muted{color:var(--muted)} .mono{font-family:IBM Plex Mono,monospace}
 .timeline{border-left:3px solid var(--line);padding-left:16px;margin:8px 0}
 .timeline b{color:var(--primary)}
@@ -39,19 +40,42 @@ a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
 .footer{background:#1F1A14;color:#E8D9B8;padding:22px 0;margin-top:28px;font-size:13px}
 .footer a{color:#FFD78A}
 code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:12px}
+.ic{width:1.1em;height:1.1em;vertical-align:-0.18em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.card .kicker{display:flex;align-items:center;gap:6px}
 @media(max-width:640px){.hero h1{font-size:32px}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+<symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2.5 5 2.5 5 2.5c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9.5c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3z"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+</defs>
+</svg>
 <header class="hero">
   <div class="wrap">
-    <span class="badge">📚 ReadProof • Kolegium • Sigillum • Paszport Literacki</span>
+    <span class="badge"><svg class="ic"><use href="#i-book"/></svg> ReadProof • Kolegium • Sigillum • Paszport Literacki</span>
     <h1>Przeczytaj prawdziwą książkę.<br>Udowodnij zrozumienie. Zdobądź nagrodę.</h1>
     <p class="lead">ReadProof to iOS (SwiftUI) + backend (Node + Solana Devnet) — 5 zadań na rozdział weryfikujących <b>zrozumienie</b>, nie pamięć. Pytania generuje LLM z <b>pełnego tekstu na serwerze</b> (nigdy nie wysyła treści on-chain). Nagrody testowe 5 USDC (Devnet) z pul wydawców. Parchment / burgundy / gold — jak Kolegium, nie kasyno.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
-      <a class="btn gold" href="#wydawcy">Dla wydawców →</a>
-      <a class="btn ghost" href="https://github.com/koderhack/readproof" target="_blank">GitHub</a>
-      <a class="btn ghost" href="https://frog02.mikr.us:32287/health" target="_blank">/health</a>
+      <a class="btn gold" href="#wydawcy">Dla wydawców <svg class="ic"><use href="#i-arrow"/></svg></a>
+      <a class="btn ghost" href="https://github.com/koderhack/readproof" target="_blank"><svg class="ic"><use href="#i-github"/></svg> GitHub</a>
+      <a class="btn ghost" href="https://frog02.mikr.us:32287/health" target="_blank"><svg class="ic"><use href="#i-activity"/></svg> /health</a>
       <span class="kicker" style="color:#FFD78A;align-self:center">kacpersikora.pages.dev/books • Devnet only • privacy-first</span>
     </div>
   </div>
@@ -62,35 +86,35 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
 </div></nav>
 
 <section id="ksiazki" class="section wrap">
-  <h2>Książki — 5 klasyków Gutenberg + kampanie wydawców</h2>
+  <h2><svg class="ic"><use href="#i-book"/></svg> Książki — 5 klasyków Gutenberg + kampanie wydawców</h2>
   <p class="muted">Pełny tekst legalnie z <a href="https://www.gutenberg.org" target="_blank">Project Gutenberg (USA public domain)</a> — w bundlu jako podgląd/źródło dla LLM/Jev, ale główną lekturą jest fizyczna książka. Docelowo każdy wydawca dodaje własną.</p>
   <div class="grid" id="booksGrid">
     <!-- wypełniane JS z /api/books lub fallback -->
   </div>
   <div class="card" style="margin-top:16px">
-    <div class="kicker">Kampanie wydawców (live)</div>
+    <div class="kicker"><svg class="ic"><use href="#i-chart"/></svg> Kampanie wydawców (live)</div>
     <div id="campaigns" class="muted" style="font-size:14px">Ładowanie z /api/publisher/campaigns…</div>
   </div>
 </section>
 
 <section id="jakdziala" class="section wrap">
-  <h2>Jak działa — Proof of Comprehension</h2>
+  <h2><svg class="ic"><use href="#i-spark"/></svg> Jak działa — Proof of Comprehension</h2>
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
-    <div class="card"><div class="kicker">1 • Czytasz</div><h3>Fizyczna książka</h3><p class="muted">Wybierasz rozdział, czytasz w realu. W apce widzisz tylko fragment i hint — nie da się wkleić całości do ChatGPT. Pytania odblokowują się co 5 min (real) / 2 min (demo).</p></div>
-    <div class="card"><div class="kicker">2 • 5 wyzwań</div><h3>Różne typy</h3><p class="muted">ABCD, Prawda/Fałsz, Kto to powiedział, Uporządkuj, Znajdź błąd, Otwarte (Jev TypeSafe <code>jev-latest</code>). LLM losuje 5 z 30 z pełnego tekstu na serwerze.</p></div>
-    <div class="card"><div class="kicker">3 • Weryfikacja</div><h3>Anti-cheat</h3><p class="muted">Kamera front + screenshot/screenRecording + czas + proofHash SHA-256. Jev próg <code>0.28</code> + fallback wiedźma/wróżka. Bez blokady 30 min.</p></div>
-    <div class="card"><div class="kicker">4 • Nagroda</div><h3>Solana Devnet</h3><p class="muted">5/5 → <b>Reading Verified</b>, 3-4/5 → Try Again. Hash + tx na Devnet (treść i odpowiedzi nigdy on-chain).</p></div>
+    <div class="card"><div class="kicker"><svg class="ic"><use href="#i-book"/></svg> 1 • Czytasz</div><h3>Fizyczna książka</h3><p class="muted">Wybierasz rozdział, czytasz w realu. W apce widzisz tylko fragment — nie da się wkleić całości do ChatGPT. Pytania odblokowują się co 5 min (real) / 2 min (demo).</p></div>
+    <div class="card"><div class="kicker"><svg class="ic"><use href="#i-doc"/></svg> 2 • 5 wyzwań</div><h3>Różne typy</h3><p class="muted">ABCD, Prawda/Fałsz, Kto to powiedział, Uporządkuj, Znajdź błąd, Otwarte (Jev TypeSafe <code>jev-latest</code>). LLM losuje 5 z 30 z pełnego tekstu na serwerze.</p></div>
+    <div class="card"><div class="kicker"><svg class="ic"><use href="#i-shield"/></svg> 3 • Weryfikacja</div><h3>Anti-cheat</h3><p class="muted">Kamera front + screenshot/screenRecording + czas + proofHash SHA-256. Jev próg <code>0.28</code> + fallback wiedźma/wróżka. Bez blokady 30 min.</p></div>
+    <div class="card"><div class="kicker"><svg class="ic"><use href="#i-coins"/></svg> 4 • Nagroda</div><h3>Solana Devnet</h3><p class="muted">5/5 → <b>Reading Verified</b>, 3-4/5 → Try Again. Hash + tx na Devnet (treść i odpowiedzi nigdy on-chain).</p></div>
   </div>
   <div class="timeline">
-    <div><b>Serca:</b> 3 ❤️ — 3 złe kończą sesję, ale można od razu ponowić.</div>
+    <div><b>Serca:</b> 3 <svg class="ic" style="color:#C0392B"><use href="#i-heart"/></svg> — 3 złe kończą sesję, ale można od razu ponowić.</div>
     <div><b>Kamera:</b> obserwuje i wykrywa nagrania/zdjęcia z innego telefonu — tylko wskaźnik, bez metryk.</div>
     <div><b>Czas:</b> 5 min / pytanie, bez blokady po błędzie (poprawna odpowiedź pokazywana).</div>
   </div>
 </section>
 
 <section id="wydawcy" class="section wrap">
-  <h2>Dla wydawców — dodaj książkę i funduj nagrody</h2>
-  <p class="muted">Panel: <a href="https://koderhack.github.io/books/publisher/" target="_blank">koderhack.github.io/books/publisher/</a> • API: <code>frog02.mikr.us:32287/api/publisher/*</code></p>
+  <h2><svg class="ic"><use href="#i-wallet"/></svg> Dla wydawców — dodaj książkę i funduj nagrody</h2>
+  <p class="muted">Panel: <a href="/publisher/">kacpersikora.pages.dev/publisher/</a> • API: <code>frog02.mikr.us:32287/api/publisher/*</code></p>
   <div class="grid">
     <div class="card"><h3>1. Dodaj kampanię</h3><p class="kicker">POST /api/publisher/campaigns</p><code>publisherWallet, title, author, isbn, rewardPerProof, coverUrl</code><p class="muted" style="font-size:13px">ISBN 10/13 walidowany, duplikaty dozwolone (osobne pule).</p></div>
     <div class="card"><h3>2. Wgraj treść</h3><p class="kicker">POST /:id/content</p><code>{content: "pełny tekst..."}</code><p class="muted" style="font-size:13px">Hash SHA-256 + contentLength, treść nigdy on-chain, <b>wymagane</b> przed fund/start.</p></div>
@@ -98,14 +122,14 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
     <div class="card"><h3>4. QR na okładce</h3><p class="kicker">GET /:id/qr</p><code>readproof://campaign/:id?isbn=…</code><p class="muted" style="font-size:13px">Drukuj QR, czytelnik skanuje w apce.</p></div>
   </div>
   <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-    <a class="btn" href="https://koderhack.github.io/books/publisher/" target="_blank">Otwórz panel wydawcy</a>
+    <a class="btn" href="/publisher/"><svg class="ic"><use href="#i-chart"/></svg> Otwórz panel wydawcy</a>
     <a class="btn ghost" href="#zasady">Zobacz zasady</a>
   </div>
   <p class="muted" style="font-size:13px;margin-top:10px">Test: Boska Komedia <code>camp-boska001</code> (50 USDC Devnet) — dodana i działa. Wklej <code>publisherWallet</code> z Paszportu (Phantom Devnet) lub syntetyczny Apple.</p>
 </section>
 
 <section id="zasady" class="section wrap">
-  <h2>Zasady dla wydawców — skrót</h2>
+  <h2><svg class="ic"><use href="#i-doc"/></svg> Zasady dla wydawców — skrót</h2>
   <p class="muted">Pełne: <a href="https://github.com/koderhack/readproof/blob/main/PUBLISHER_RULES.md" target="_blank">PUBLISHER_RULES.md</a></p>
   <div class="grid">
     <div class="rule"><h4>1. Prawo do treści</h4><p class="muted" style="font-size:13px">Tylko własne prawa lub public domain (Gutenberg). Plagiat = dezaktywacja.</p></div>
@@ -118,7 +142,7 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
 </section>
 
 <section id="api" class="section wrap">
-  <h2>API — szybki start</h2>
+  <h2><svg class="ic"><use href="#i-activity"/></svg> API — szybki start</h2>
   <table class="table">
     <tr><th>Metoda</th><th>Endpoint</th><th>Opis</th></tr>
     <tr><td class="mono">GET</td><td class="mono">/health</td><td>status, books, jev, publisher</td></tr>
@@ -133,15 +157,15 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
 </section>
 
 <section id="prywatnosc" class="section wrap">
-  <h2>Prywatność i łańcuch</h2>
+  <h2><svg class="ic"><use href="#i-lock"/></svg> Prywatność i łańcuch</h2>
   <div class="card">
     <p class="muted" style="font-size:14px">On-chain <b>nigdy</b>: treść książki, odpowiedzi, prompt. On-chain: <code>wallet, bookId, chapterId, sessionId, score, duration, proofHash, timestamp, verificationVersion</code>. Treść i odpowiedzi server-only (hash). Solana Devnet — testowe USDC/SOL, bez real money.</p>
-    <p class="kicker">Kamera: obserwuje i wykrywa nagrania/zdjęcia z innego telefonu — on-device, zero wysyłki, tylko wskaźnik.</p>
+    <p class="kicker"><svg class="ic"><use href="#i-camera"/></svg> Kamera: obserwuje i wykrywa nagrania/zdjęcia z innego telefonu — on-device, zero wysyłki, tylko wskaźnik.</p>
   </div>
 </section>
 
 <section id="kontakt" class="section wrap">
-  <h2>Kontakt</h2>
+  <h2><svg class="ic"><use href="#i-users"/></svg> Kontakt</h2>
   <p class="muted">GitHub: <a href="https://github.com/koderhack/readproof" target="_blank">koderhack/readproof</a> • Issues / PR • mail: <code>publisher@readproof.app</code> • Apka iOS: TestFlight (wkrótce) • Backend: <code>frog02.mikr.us:32287</code></p>
 </section>
 
@@ -159,7 +183,7 @@ async function load(){
     const grid=document.getElementById('booksGrid'); grid.innerHTML='';
     b.forEach(book=>{
       const div=document.createElement('div'); div.className='card';
-      div.innerHTML=`<div class="kicker">${book.author} • ${book.totalChapters} rozdz.</div><h3>${book.title}</h3><p class="muted" style="font-size:13px">${book.description.slice(0,140)}…</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${book.chapters.map(c=>`<span class="mono" style="font-size:11px;background:#FFF2CC;padding:4px 6px;border-radius:8px">${c.title}</span>`).join('')}<span class="kicker" style="background:#7C1C1C;color:#fff;padding:4px 8px;border-radius:999px">${book.rewardPerChapter}</span></div>`;
+      div.innerHTML=`<div class="kicker"><svg class="ic"><use href="#i-book"/></svg>${book.author} • ${book.totalChapters} rozdz.</div><h3>${book.title}</h3><p class="muted" style="font-size:13px">${book.description.slice(0,140)}…</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${book.chapters.map(c=>`<span class="mono" style="font-size:11px;background:#FFF2CC;padding:4px 6px;border-radius:8px">${c.title}</span>`).join('')}<span class="kicker" style="background:#7C1C1C;color:#fff;padding:4px 8px;border-radius:999px">${book.rewardPerChapter}</span></div>`;
       grid.appendChild(div);
     });
   }catch(e){ document.getElementById('booksGrid').innerHTML='<div class="muted">Fallback: 5 książek Gutenberg (backend chwilowo offline). Alice, Sherlock, Treasure, Tom Sawyer, Around the World.</div>' }
@@ -167,9 +191,9 @@ async function load(){
     const c=await fetch('https://frog02.mikr.us:32287/api/publisher/campaigns').then(r=>r.json());
     const el=document.getElementById('campaigns');
     if(c.campaigns && c.campaigns.length){
-      el.innerHTML = c.campaigns.map(x=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${x.title}</b> — ${x.author} <span class="mono">${x.isbn||''}</span> • <span class="kicker" style="background:${x.status==='active'?'#1E7A4C':'#8A7D6B'};color:#fff;padding:2px 6px;border-radius:999px">${x.status}</span> • ${x.rewardPool} • <a href="https://koderhack.github.io/books/publisher/?campaign=${x.id}" target="_blank">panel</a> • <a href="${x.qr.qrApi}" target="_blank">QR</a></div>`).join('') + `<div class="muted" style="margin-top:8px">Łącznie ${c.count} kampanii</div>`;
+      el.innerHTML = c.campaigns.map(x=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${x.title}</b> — ${x.author} <span class="mono">${x.isbn||''}</span> • <span class="kicker" style="background:${x.status==='active'?'#1E7A4C':'#8A7D6B'};color:#fff;padding:2px 6px;border-radius:999px">${x.status}</span> • ${x.rewardPool} • <a href="/publisher/?campaign=${x.id}">szczegóły</a></div>`).join('') + `<div class="muted" style="margin-top:8px">Łącznie ${c.count} kampanii • <a href="/publisher/">panel wydawcy</a></div>`;
     } else el.textContent='Brak kampanii — dodaj pierwszą w panelu wydawcy.';
-  }catch(e){ document.getElementById('campaigns').textContent='Kampanie chwilowo offline — panel: koderhack.github.io/books/publisher/' }
+  }catch(e){ document.getElementById('campaigns').textContent='Kampanie chwilowo offline — panel: kacpersikora.pages.dev/publisher/' }
 }
 load();
 </script>

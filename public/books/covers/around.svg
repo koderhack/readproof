@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+<rect width="600" height="900" rx="28" fill="#1A7A52"/>
+<rect x="24" y="24" width="552" height="852" rx="20" fill="none" stroke="#C5A15A" stroke-width="4"/>
+<rect x="70" y="90" width="460" height="560" rx="14" fill="#FAF4E4"/>
+<text x="300" y="240" font-size="120" text-anchor="middle">🌍</text>
+<text x="300" y="360" font-family="Georgia,serif" font-size="44" font-weight="bold" text-anchor="middle" fill="#1F1A14">Around the World in 80 Days</text>
+<text x="300" y="410" font-family="Georgia,serif" font-size="28" font-style="italic" text-anchor="middle" fill="#6B5F4E">Jules Verne</text>
+<rect x="150" y="470" width="300" height="4" fill="#C5A15A"/>
+<text x="300" y="540" font-family="Georgia,serif" font-size="22" text-anchor="middle" fill="#7C1C1C">READPROOF • VERIFIED</text>
+<text x="300" y="580" font-family="Georgia,serif" font-size="18" text-anchor="middle" fill="#8A7D6B">Proof of Comprehension</text>
+<text x="300" y="760" font-family="Georgia,serif" font-size="26" text-anchor="middle" fill="#FFFBEB">PUBLIC DOMAIN • GUTENBERG</text>
+<circle cx="300" cy="690" r="26" fill="none" stroke="#C5A15A" stroke-width="3"/>
+<text x="300" y="700" font-size="24" text-anchor="middle">✓</text>
+</svg>

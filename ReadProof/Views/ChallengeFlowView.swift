@@ -214,19 +214,8 @@ struct ChallengeCardDuo: View {
         case .openQuestion,.whyQuestion:
             EmptyView()
         case .ordering,.ranking:
-            VStack(spacing:8){
-                HStack(spacing:6){ Image(systemName:"arrow.up.arrow.down").font(.caption2).foregroundStyle(RPColor.muted2); Text("Przytrzymaj ☰ i przeciągnij (swipe) aby zmienić kolejność").font(.system(size:11, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.muted2)}
-                List{
-                    ForEach(Array(order.enumerated()), id:\.offset){ pos, orig in
-                        HStack(spacing:10){
-                            Image(systemName:"line.3.horizontal").font(.system(size:14, weight:.bold)).foregroundStyle(RPColor.muted2)
-                            Text(challenge.items?[orig] ?? "?").font(.system(size:14, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.duoText)
-                            Spacer()
-                            Text("\(pos+1)").font(.system(size:12, weight:.black, design:.rounded)).foregroundStyle(.white).frame(width:28,height:28).background(RPColor.duoBlue).clipShape(RoundedRectangle(cornerRadius:8))
-                        }.padding(.vertical,4).listRowInsets(EdgeInsets(top:6, leading:12, bottom:6, trailing:12)).listRowSeparator(.hidden).listRowBackground(Color.clear)
-                    }.onMove{ from, to in order.move(fromOffsets: from, toOffset: to) }
-                }.listStyle(.plain).frame(height: CGFloat(max(1, challenge.items?.count ?? 0) * 56 + 12)).scrollDisabled(true).environment(\.editMode, .constant(.active)).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.duoGray, lineWidth:2))
-            }.onAppear{ if order.isEmpty{ order=Array(0..<(challenge.items?.count ?? 0)).shuffled()}}
+            FingerOrderList(order: $order, items: challenge.items ?? [])
+                .onAppear{ if order.isEmpty{ order=Array(0..<(challenge.items?.count ?? 0)).shuffled()}}
         case .match,.whoSaid:
             let pairs=challenge.pairs ?? []; let rights=pairs.map{$0.right}
             VStack(spacing:10){
@@ -273,5 +262,122 @@ struct ChallengeCardDuo: View {
         case .match,.whoSaid: answer = .matched(matchSel)
         case .memory: answer = .single(0)
         }
+    }
+}
+
+// MARK: - Ustawianie kolejności palcem (drag & drop + strzałki)
+struct FingerOrderList: View {
+    @Binding var order: [Int]
+    let items: [String]
+    @State private var draggedOrig: Int? = nil
+    @State private var dragY: CGFloat = 0
+    @State private var dragBase: CGFloat = 0
+
+    private let rowStep: CGFloat = 60
+
+    var body: some View {
+        VStack(spacing:8){
+            HStack(spacing:6){
+                Image(systemName:"hand.draw.fill").font(.caption).foregroundStyle(RPColor.muted2)
+                Text("Przytrzymaj kafelek i przeciągnij palcem w górę / w dół").font(.system(size:11, weight:.semibold, design:.rounded)).foregroundStyle(RPColor.muted2)
+            }
+            VStack(spacing:8){
+                ForEach(Array(order.enumerated()), id:\.element){ pos, orig in
+                    row(pos: pos, orig: orig)
+                }
+            }
+            .padding(8)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius:12))
+            .overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.duoGray, lineWidth:2))
+        }
+    }
+
+    @ViewBuilder
+    func row(pos: Int, orig: Int) -> some View {
+        let isDragging = (draggedOrig == orig)
+        HStack(spacing:10){
+            Image(systemName:"line.3.horizontal")
+                .font(.system(size:16, weight:.bold))
+                .foregroundStyle(isDragging ? RPColor.duoBlue : RPColor.muted2)
+                .padding(8)
+            Text(items.indices.contains(orig) ? items[orig] : "?")
+                .font(.system(size:14, weight:.semibold, design:.rounded))
+                .foregroundStyle(RPColor.duoText)
+                .multilineTextAlignment(.leading)
+            Spacer()
+            VStack(spacing:2){
+                Button{ move(pos: pos, dir: -1) } label:{ Image(systemName:"chevron.up").font(.system(size:12, weight:.black)).foregroundStyle(pos==0 ? RPColor.duoGray : RPColor.duoBlue).padding(6) }.disabled(pos==0)
+                Button{ move(pos: pos, dir: +1) } label:{ Image(systemName:"chevron.down").font(.system(size:12, weight:.black)).foregroundStyle(pos==order.count-1 ? RPColor.duoGray : RPColor.duoBlue).padding(6) }.disabled(pos==order.count-1)
+            }
+            Text("\(pos+1)")
+                .font(.system(size:12, weight:.black, design:.rounded))
+                .foregroundStyle(.white).frame(width:28,height:28)
+                .background(isDragging ? RPColor.duoGreen : RPColor.duoBlue)
+                .clipShape(RoundedRectangle(cornerRadius:8))
+        }
+        .padding(.horizontal,8).padding(.vertical,6)
+        .background(isDragging ? RPColor.duoGreenLight : Color(hex:"#F7F7F7"))
+        .clipShape(RoundedRectangle(cornerRadius:10))
+        .overlay(RoundedRectangle(cornerRadius:10).stroke(isDragging ? RPColor.duoGreen : Color.clear, lineWidth:2))
+        .shadow(color: isDragging ? .black.opacity(0.15) : .clear, radius:8, y:4)
+        .scaleEffect(isDragging ? 1.03 : 1.0)
+        .offset(y: isDragging ? dragY - dragBase : 0)
+        .zIndex(isDragging ? 1 : 0)
+        .contentShape(Rectangle())
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                .onChanged{ v in
+                    if draggedOrig == nil {
+                        draggedOrig = orig
+                        dragBase = 0
+                        dragY = 0
+                        #if canImport(UIKit)
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        #endif
+                    }
+                    dragY = v.translation.height
+                    let relative = dragY - dragBase
+                    if relative > 32 {
+                        moveDragged(by: +1)
+                        dragBase += rowStep
+                    } else if relative < -32 {
+                        moveDragged(by: -1)
+                        dragBase -= rowStep
+                    }
+                }
+                .onEnded{ _ in
+                    withAnimation(.spring(response:0.3, dampingFraction:0.8)){
+                        draggedOrig = nil
+                        dragY = 0
+                        dragBase = 0
+                    }
+                }
+        )
+        .animation(.spring(response:0.3, dampingFraction:0.85), value: order)
+        .animation(.spring(response:0.25, dampingFraction:0.8), value: isDragging)
+    }
+
+    func move(pos: Int, dir: Int){
+        let t = pos + dir
+        guard t >= 0, t < order.count else { return }
+        withAnimation(.spring(response:0.3, dampingFraction:0.8)){
+            order.swapAt(pos, t)
+        }
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
+    }
+
+    func moveDragged(by dir: Int){
+        guard let d = draggedOrig, let cur = order.firstIndex(of: d) else { return }
+        let t = cur + dir
+        guard t >= 0, t < order.count else { return }
+        withAnimation(.spring(response:0.25, dampingFraction:0.85)){
+            order.move(fromOffsets: IndexSet(integer: cur), toOffset: dir > 0 ? t+1 : t)
+        }
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
     }
 }
