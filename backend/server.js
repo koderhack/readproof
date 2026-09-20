@@ -1218,24 +1218,26 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
         const j = await callJev({question:ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: answer, context: ch.context||'', lang: s.lang});
         if(!j) return res.status(503).json({error: s.lang==='en'?'Jev unavailable':'Jev niedostępny — ustaw TYPESAFE_API_KEY'});
         jev = j; correct = jev.correct && jev.confidence >= JEV_THRESHOLD;
-        // Fallback: gdy zdanie znaczy to samo innymi słowami, Jev czasem daje 0.2x — sprawdź overlap słów kluczowych
+        // Fallback: gdy odpowiedź zachowuje sens, akceptuj — nie być restrykcyjnie, ma działać w każdej książce
         if(!correct && typeof answer==='string' && ch.expectedMeaning){
-          const norm = s=> s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,'').split(/\s+/).filter(w=>w.length>3);
+          const norm = s=> s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,'').split(/\s+/).filter(w=>w.length>2);
           const exp = new Set(norm(ch.expectedMeaning));
           const got = new Set(norm(answer));
           let inter=0; for(const w of got) if(exp.has(w)) inter++;
           const overlap = exp.size ? inter/exp.size : 0;
-          // Synonimy wróżka/wiedźma/czarownica/magia/zaczarowane traktuj jako pokrewne — po normalizacji bez polskich znaków
-          const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka","wrozka","babajaga"]);
+          // Synonimy ogólne — wróżka/wiedźma/czarownica/magia + dobra/zła — po normalizacji
+          const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka","wrozka","babajaga","dobra","zla","dobre","zle"]);
           let magicHit = false;
           for(const w of got) if(magicSyns.has(w)) for(const e of exp) if(magicSyns.has(e)) magicHit=true;
-          // wiedźma == dobra wróżka — oba w magicSyns, więc hit; też dobra/wrozka vs zla/wiedzma
-          if(overlap >= 0.30 || magicHit){ correct = true; jev.reason = (jev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''}` }
-          // ostateczny fallback: krótka sensowna odp. >10 znaków i zawiera choć 1 słowo kluczowe z kontekstu
-          if(!correct && answer.trim().length>8){
+          // złagodzone: 0.30 -> 0.15, działa w każdej książce gdy sens zachowany
+          if(overlap >= 0.15 || magicHit){ correct = true; jev.reason = (jev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''} (lenient)` }
+          // lenient: wystarczy >5 znaków i 1 słowo wspólne, próg Jev 0.10 -> 0.05
+          if(!correct && answer.trim().length>5){
             const ctxWords = new Set(norm(ch.context||''));
             let ctxInter=0; for(const w of got) if(ctxWords.has(w) || exp.has(w)) ctxInter++;
-            if(ctxInter>=1 && jev.confidence>=0.10){ correct=true; jev.reason=(jev.reason||'')+` | lenient-context-fallback` }
+            if(ctxInter>=1 && jev.confidence>=0.05){ correct=true; jev.reason=(jev.reason||'')+` | lenient-context-fallback` }
+            // ostatecznie: jeśli Jev dał choć 0.15 i odpowiedź ma >8 znaków, uznaj gdy sens zachowany (overlap >0)
+            if(!correct && jev.confidence>=0.15 && overlap>0 && answer.trim().length>8){ correct=true; jev.reason=(jev.reason||'')+` | ultra-lenient` }
           }
         }
       }
