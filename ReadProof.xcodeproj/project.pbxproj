@@ -15,6 +15,8 @@
 		3514D22B212D2CD53A2D9967 /* ReadingSessionActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38245A384BCFB955A4554FD8 /* ReadingSessionActivity.swift */; };
 		39890C2415E8FA3B19CE19CD /* RemoteCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */; };
 		432D793DC26CD28AA747B601 /* SolanaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */; };
+		514973BBF92F8A4621DB0939 /* WalletService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8533412875E772ECC9604AE /* WalletService.swift */; };
+		53B34B4E690AEAF5C1906EFC /* MobileNet.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = A0BEA041B51F181468AABC23 /* MobileNet.mlmodelc */; };
 		56AC2FA163F30F38BAFA803B /* ReadingSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */; };
 		5B3A556D09EEA33151C0966C /* JevService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BE56E9607E388F080843460 /* JevService.swift */; };
 		6D341BC4239F6E1E2BCF61B0 /* BackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EEE97D6F3B69846E2EC3B37 /* BackendService.swift */; };
@@ -29,6 +31,7 @@
 		B95C0108A73DD1C87B7B3A73 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9893A8AB5A6DB805DC1C427C /* LLMService.swift */; };
 		BB6792CA89AFE82B0B5D201A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E432DC9DCD34C4BE2525539 /* Assets.xcassets */; };
 		BE26B4FC6D5A8B30547470DD /* sherlock.txt in Resources */ = {isa = PBXBuildFile; fileRef = 78868261F5650E1B23869229 /* sherlock.txt */; };
+		C355AA5B5B4EBCA837BE0851 /* yolov8n.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = C83F10F2682E6E719DAF08F1 /* yolov8n.mlmodelc */; };
 		C59A84DA862F874E100D4E20 /* ChallengeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18CF24BC398A3882AAA87F /* ChallengeStore.swift */; };
 		C6C94FD58A890B43E12DD2DD /* PhantomService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721E7288DDEB71158DCB35F8 /* PhantomService.swift */; };
 		C83CB7F34086ABF8B898B5C7 /* challenges.json in Resources */ = {isa = PBXBuildFile; fileRef = 25B99A87961FBD405CCD90D2 /* challenges.json */; };
@@ -72,6 +75,7 @@
 		8E432DC9DCD34C4BE2525539 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		924A5091CF6C655D4DDC88BB /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
 		9893A8AB5A6DB805DC1C427C /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
+		A0BEA041B51F181468AABC23 /* MobileNet.mlmodelc */ = {isa = PBXFileReference; path = MobileNet.mlmodelc; sourceTree = "<group>"; };
 		A164649654C6D62DEF6AE4E5 /* treasure.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = treasure.txt; sourceTree = "<group>"; };
 		A59B218590383061311CF2D0 /* ChallengeFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeFlowView.swift; sourceTree = "<group>"; };
 		AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolanaService.swift; sourceTree = "<group>"; };
@@ -80,6 +84,7 @@
 		B5B57629EE4CD06C4D0858AB /* ReadProofLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadProofLiveActivity.swift; sourceTree = "<group>"; };
 		BE21E5F0DE3F8705B1490D37 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C0B26A94B5446D3F167F13D6 /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
+		C83F10F2682E6E719DAF08F1 /* yolov8n.mlmodelc */ = {isa = PBXFileReference; path = yolov8n.mlmodelc; sourceTree = "<group>"; };
 		CD18CF24BC398A3882AAA87F /* ChallengeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeStore.swift; sourceTree = "<group>"; };
 		CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCoverView.swift; sourceTree = "<group>"; };
 		D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionView.swift; sourceTree = "<group>"; };
@@ -88,6 +93,7 @@
 		EE3B65320B168EBF0FB84EEB /* tomsawyer.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = tomsawyer.txt; sourceTree = "<group>"; };
 		EFC70B9AF8F834E5600A1DC4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F056EE78105F35081E8BC357 /* FrontCameraMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontCameraMonitor.swift; sourceTree = "<group>"; };
+		F8533412875E772ECC9604AE /* WalletService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletService.swift; sourceTree = "<group>"; };
 		F8A775AFB4855136A71FE63E /* ReadProofLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ReadProofLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -162,6 +168,7 @@
 				721E7288DDEB71158DCB35F8 /* PhantomService.swift */,
 				38245A384BCFB955A4554FD8 /* ReadingSessionActivity.swift */,
 				AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */,
+				F8533412875E772ECC9604AE /* WalletService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -197,6 +204,8 @@
 			children = (
 				8E432DC9DCD34C4BE2525539 /* Assets.xcassets */,
 				BE21E5F0DE3F8705B1490D37 /* Info.plist */,
+				A0BEA041B51F181468AABC23 /* MobileNet.mlmodelc */,
+				C83F10F2682E6E719DAF08F1 /* yolov8n.mlmodelc */,
 				31A99F151B141FA92637A83C /* App */,
 				502882C03B29C15C5CF5D7FF /* Models */,
 				38286C2397F476E59AFBADCE /* Resources */,
@@ -288,12 +297,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB6792CA89AFE82B0B5D201A /* Assets.xcassets in Resources */,
+				53B34B4E690AEAF5C1906EFC /* MobileNet.mlmodelc in Resources */,
 				FBC8CBD778F40779898918DC /* alice.txt in Resources */,
 				860337F40D777678BC95EC28 /* around.txt in Resources */,
 				C83CB7F34086ABF8B898B5C7 /* challenges.json in Resources */,
 				BE26B4FC6D5A8B30547470DD /* sherlock.txt in Resources */,
 				7F82B3A10225CFD77E354D5C /* tomsawyer.txt in Resources */,
 				0D60B05787CE3A7DD70795AE /* treasure.txt in Resources */,
+				C355AA5B5B4EBCA837BE0851 /* yolov8n.mlmodelc in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,6 +337,7 @@
 				39890C2415E8FA3B19CE19CD /* RemoteCoverView.swift in Sources */,
 				2D2A1D801723FC44CC2D0B5B /* ResultView.swift in Sources */,
 				432D793DC26CD28AA747B601 /* SolanaService.swift in Sources */,
+				514973BBF92F8A4621DB0939 /* WalletService.swift in Sources */,
 				E712633410B242645B53D6A3 /* WalletView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

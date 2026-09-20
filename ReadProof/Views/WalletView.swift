@@ -32,19 +32,27 @@ struct PassportView: View {
 
                 if !appState.wallet.isConnected {
                     Section(loc.t("Połącz","Connect")){
-                        Button{
-                            PhantomService.openPhantom()
-                        } label: {
-                            Label(loc.t("Otwórz Phantom","Open Phantom"), systemImage:"wallet.pass.fill")
+                        Text("Wybierz portfel — działa z każdym Solana wallet, nie tylko Phantom").font(.caption2).foregroundStyle(RPColor.muted)
+                        ForEach([WalletProvider.phantom, .solflare, .backpack, .glow, .magicEden, .brave, .walletConnect], id:\.id) { p in
+                            Button{
+                                WalletService.open(p)
+                            } label: {
+                                Label(p.displayName, systemImage: p.icon)
+                            }
                         }
+                        Button{
+                            if let u = URL(string: "https://solana.com/ecosystem/explore?categories=wallet") { UIApplication.shared.open(u) }
+                        } label: { Label("Więcej portfeli (Solana Explorer)", systemImage:"ellipsis.circle") }
+                        Divider()
                         HStack{
-                            TextField("Solana address (Devnet)", text:$input)
+                            TextField("Solana address (Devnet) — wklej z dowolnego portfela", text:$input)
                                 .font(.caption.monospaced()).foregroundStyle(RPColor.ink).autocorrectionDisabled().textInputAutocapitalization(.never)
                             Button(loc.t("Połącz","Connect")){
-                                guard PhantomService.isValidSolanaAddress(input) else { return }
+                                guard WalletService.isValidSolanaAddress(input) else { return }
                                 appState.connectWallet(address: input); input=""
-                            }.disabled(!PhantomService.isValidSolanaAddress(input))
+                            }.disabled(!WalletService.isValidSolanaAddress(input))
                         }
+                        Text("Gotowy SDK: Reown AppKit (WalletConnect v2) — dodaj SPM `reown-swift` + REOWN_PROJECT_ID, a przycisk WalletConnect otworzy 300+ portfeli jednym SDK. Teraz działa deeplink + wklejenie adresu.").font(.caption2).foregroundStyle(RPColor.muted)
                         if let addr = appState.wallet.address, let url = URL(string:"https://explorer.solana.com/address/\(addr)?cluster=devnet"){
                             Link(destination: url){ Label("Explorer Devnet", systemImage:"link") }
                         }
