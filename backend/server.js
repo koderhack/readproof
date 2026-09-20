@@ -106,7 +106,24 @@ async function ensurePoolAtLeast20(chapterId, lang='pl'){
     }
   }
   if(pool.length < 5) throw new Error(`Pula pytań dla ${chapterId} za mała (${pool.length}) — wygeneruj via POST /api/generate`);
-  return pool;
+  return pool.map(normalizeChallenge);
+}
+function normalizeChallenge(c){
+  if(!c||typeof c!=='object') return c;
+  const n={...c};
+  // snake_case -> camelCase + boolean -> int dla true_false
+  if(n.correct_answer!==undefined && n.correctAnswer===undefined){
+    n.correctAnswer = typeof n.correct_answer==='boolean' ? (n.correct_answer?1:0) : n.correct_answer;
+    delete n.correct_answer;
+  }
+  if(n.correct_answers!==undefined && n.correctAnswers===undefined){ n.correctAnswers=n.correct_answers; delete n.correct_answers; }
+  if(n.correct_order!==undefined && n.correctOrder===undefined){ n.correctOrder=n.correct_order; delete n.correct_order; }
+  if(n.error_index!==undefined && n.errorIndex===undefined){ n.errorIndex=n.error_index; delete n.error_index; }
+  if(n.expected_meaning!==undefined && n.expectedMeaning===undefined){ n.expectedMeaning=n.expected_meaning; delete n.expected_meaning; }
+  // true_false boolean string -> int
+  if(n.type==='true_false' && typeof n.correctAnswer==='boolean') n.correctAnswer = n.correctAnswer?1:0;
+  if(n.type==='true_false' && typeof n.correctAnswer==='string') n.correctAnswer = (n.correctAnswer==='true'||n.correctAnswer==='Prawda')?1:0;
+  return n;
 }
 async function pickForSession(chapterId, lang='pl'){
   const pool = await ensurePoolAtLeast20(chapterId, lang);
@@ -1160,7 +1177,7 @@ app.post('/api/sessions/start', async (req,res)=>{
     const unlockAt = new Date(c.releaseAt).getTime();
     const locked = unlockAt > now;
     if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: lang==='en'?'Reading — unlocks soon':'Czytanie — odblokuje się wkrótce'};
-    return {...c, locked:false};
+    return {...normalizeChallenge(c), locked:false};
   });
   res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, isDevBypass, lang, timing: isDevBypass ? SESSION_TIMING_DEV : (isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL), challenges: masked, poolSize: (challengesByChapter[chapterId]||[]).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
   console.log(`[start] ${wallet?.slice(0,6)}.. ${bookId}/${chapterId} lang=${lang} demo=${isDemo} dev=${isDevBypass} pool=${(challengesByChapter[chapterId]||[]).length} session=${id.slice(0,8)}`);
@@ -1181,7 +1198,7 @@ app.get('/api/sessions/:id', (req,res)=>{
   const masked = s.challenges.map(c=>{
     const locked = new Date(c.releaseAt).getTime() > now;
     if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: s.lang==='en'?'Keep reading…':'Czytaj dalej…'};
-    return {...c, locked:false};
+    return {...normalizeChallenge(c), locked:false};
   });
   const readingDurationSec = Math.floor((now - new Date(s.startAt).getTime())/1000);
   res.json({...s, readingDurationSec, challenges: masked});
@@ -1191,8 +1208,9 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
   const s = sessionsMem.get(req.params.id);
   if(!s) return res.status(404).json({error:'session not found'});
   const {challengeId, answer} = req.body;
-  const ch = s.challenges.find(c=>c.id===challengeId);
+  let ch = s.challenges.find(c=>c.id===challengeId);
   if(!ch) return res.status(404).json({error:'challenge not in session'});
+  ch = normalizeChallenge(ch);
   if(new Date(ch.releaseAt).getTime() > Date.now()) return res.status(423).json({error:'challenge still locked — keep reading', releaseAt: ch.releaseAt});
   if(s.answers[challengeId]) return res.status(409).json({error:'already answered'});
   let correct=false; let jev=null;
