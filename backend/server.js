@@ -1250,8 +1250,8 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     correct = false;
     jev = jev ? {...jev, reason: (jev.reason||"") + " | overtime (>180s)"} : jev;
   }
-  // bardzo szybka odpowiedź (<3s) na trudne — sygnał suspicious (nie dotyczy dev/demo — insta-test)
-  if(elapsed < 3 && (ch.type==='open_question'||ch.type==='why_question') && !s.isDevBypass){
+  // zbyt szybka odpowiedź — wcześniej <3s dawało false-positive gdy user zna odpowiedź; złagodzone do <1s
+  if(elapsed < 1 && (ch.type==='open_question'||ch.type==='why_question') && !s.isDevBypass){
     s.suspicious = 1;
     s.suspiciousReason = `too_fast_answer: ${ch.id} ${elapsed}s`;
   }

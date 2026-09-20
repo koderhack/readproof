@@ -170,7 +170,7 @@ struct ReadingSessionView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar) // dół menu znika na czas sesji — nie da się przełączyć zakładki
         .onReceive(timer) { _ in now = Date(); cameraOK = cameraMonitor.isActive; cameraSignal = cameraMonitor.currentSignal; cameraFrames = cameraMonitor.videoFrames }
-        .onAppear { cameraMonitor.onScreenDetected = { failOnSuspicion(type: "frontCameraScreen") }; observeScreenshots() }
+        .onAppear { cameraMonitor.onScreenDetected = { print("[camera] wykryto ekran — nie oznaczam od razu jako podejrzana (złagodzone, wcześniej false-positive gdy nic nie zrobiono)") }; observeScreenshots() }
         .onDisappear { stopLive() }
         .navigationDestination(isPresented: $showResult) { if let p=proof{ ResultMinimalView(book:book, chapter:chapter, results:[], proof:p)}}
     }
