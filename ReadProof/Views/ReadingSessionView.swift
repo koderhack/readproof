@@ -90,7 +90,7 @@ struct ReadingSessionView: View {
                                 Task {
                                     let ok = await BackendService.shared.answerSessionDetailed(sessionId: sessionId ?? "", challengeId: active.id, answer: ans)
                                     let correct = ok?.correct ?? false
-                                    if !correct { lastCorrectText = correctAnswerText(for: active) }
+                                    if !correct { lastCorrectText = ok?.correctText ?? correctAnswerText(for: active) }
                                     lastResult = (active.id, correct)
                                     if correct {
                                         try? await Task.sleep(nanoseconds: 900_000_000)
@@ -231,10 +231,12 @@ struct ReadingSessionView: View {
 
     func correctAnswerText(for ch: BackendService.SessionChallenge) -> String? {
         if let idx = ch.correctAnswer, let opts = ch.options, idx >= 0, idx < opts.count { return opts[idx] }
-        if let idxs = ch.correctAnswers, let opts = ch.options { return idxs.compactMap{ $0 < opts.count ? opts[$0] : nil }.joined(separator: ", ") }
+        if let idxs = ch.correctAnswers, let opts = ch.options, !idxs.isEmpty { return idxs.compactMap{ $0 < opts.count ? opts[$0] : nil }.joined(separator: ", ") }
+        if let pairs = ch.pairs, !pairs.isEmpty { return pairs.map{ "\($0.left) → \($0.right)" }.joined(separator: ", ") }
         if let exp = ch.expectedMeaning, !exp.isEmpty { return exp }
         if let hint = ch.hint, !hint.isEmpty { return hint }
         if let err = ch.errorIndex, let stmts = ch.statements, err < stmts.count { return stmts[err] }
+        if let items = ch.items, let order = ch.correctOrder, !order.isEmpty { return order.map{ $0 < items.count ? items[$0] : "" }.joined(separator: " → ") }
         return nil
     }
     func isLocked(_ ch: BackendService.SessionChallenge) -> Bool {
@@ -389,7 +391,7 @@ struct UnlockCard: View {
     @State private var text=""
     @State private var sel:Int?
     @State private var multi:Set<Int>=[]
-    var isOpen: Bool { challenge.type == .openQuestion || challenge.type == .whyQuestion }
+    var isOpen: Bool { challenge.type == .openQuestion || challenge.type == .whyQuestion || challenge.type == .whoSaid }
     var isDisabled: Bool { answered != nil }
     var body: some View {
         VStack(alignment:.leading, spacing:8){
