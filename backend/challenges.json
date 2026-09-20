@@ -40,7 +40,7 @@
           "reward": "5 USDC"
         }
       ],
-      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780141439761-L.jpg"
+      "coverUrl": "https://kacpersikora.pages.dev/books/covers/alice.png"
     },
     {
       "id": "sherlock",
@@ -73,7 +73,7 @@
           "reward": "5 USDC"
         }
       ],
-      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780140439077-L.jpg"
+      "coverUrl": "https://kacpersikora.pages.dev/books/covers/sherlock.png"
     },
     {
       "id": "treasure",
@@ -106,7 +106,7 @@
           "reward": "5 USDC"
         }
       ],
-      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780141439563-L.jpg"
+      "coverUrl": "https://kacpersikora.pages.dev/books/covers/treasure.png"
     },
     {
       "id": "tomsawyer",
@@ -139,7 +139,7 @@
           "reward": "5 USDC"
         }
       ],
-      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780140434009-L.jpg"
+      "coverUrl": "https://kacpersikora.pages.dev/books/covers/tomsawyer.png"
     },
     {
       "id": "around",
@@ -172,7 +172,7 @@
           "reward": "5 USDC"
         }
       ],
-      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780141439967-L.jpg"
+      "coverUrl": "https://kacpersikora.pages.dev/books/covers/around.png"
     }
   ],
   "challengesByChapter": {

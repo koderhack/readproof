@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ReadProof — Książki • Proof of Comprehension</title>
-<meta name="description" content="ReadProof — przeczytaj prawdziwą książkę, udowodnij zrozumienie, zgarnij nagrodę (Solana Devnet). 5 książek Gutenberg + kampanie wydawców. Parchment / burgundy / gold.">
+<meta name="description" content="ReadProof — nie wiadomo, czy przeczytałeś. Wiadomo, czy zrozumiałeś. Proof of Comprehension: 5 zadań na rozdział, nagrody Solana Devnet.">
+<link rel="icon" type="image/png" href="./icons/readproof-icon.png">
+<link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,600;9..144,0,800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -69,9 +71,9 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
 </svg>
 <header class="hero">
   <div class="wrap">
-    <span class="badge"><svg class="ic"><use href="#i-book"/></svg> ReadProof • Kolegium • Sigillum • Paszport Literacki</span>
-    <h1>Przeczytaj prawdziwą książkę.<br>Udowodnij zrozumienie. Zdobądź nagrodę.</h1>
-    <p class="lead">ReadProof to iOS (SwiftUI) + backend (Node + Solana Devnet) — 5 zadań na rozdział weryfikujących <b>zrozumienie</b>, nie pamięć. Pytania generuje LLM z <b>pełnego tekstu na serwerze</b> (nigdy nie wysyła treści on-chain). Nagrody testowe 5 USDC (Devnet) z pul wydawców. Parchment / burgundy / gold — jak Kolegium, nie kasyno.</p>
+    <span class="badge"><img src="./icons/readproof-icon.png" alt="ReadProof" style="width:22px;height:22px;border-radius:6px;vertical-align:-5px"> ReadProof • Kolegium • Sigillum • Paszport Literacki</span>
+    <h1>Nie wiadomo, czy przeczytałeś.<br>Wiadomo, czy zrozumiałeś.</h1>
+    <p class="lead">ReadProof to iOS (SwiftUI) + backend (Node + Solana Devnet) — 5 zadań na rozdział weryfikujących <b>zrozumienie</b>, nie pamięć. Pytania generuje LLM z <b>pełnego tekstu na serwerze</b> (nigdy nie wysyła treści on-chain). Odpowiedzi wklejone z AI blokują sesję jak cheatowanie. Nagrody testowe 5 USDC (Devnet) z pul wydawców.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
       <a class="btn gold" href="#wydawcy">Dla wydawców <svg class="ic"><use href="#i-arrow"/></svg></a>
       <a class="btn ghost" href="https://github.com/koderhack/readproof" target="_blank"><svg class="ic"><use href="#i-github"/></svg> GitHub</a>
@@ -82,7 +84,7 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
 </header>
 
 <nav class="nav"><div class="wrap">
-  <a href="#ksiazki">Książki</a><a href="#jakdziala">Jak działa</a><a href="#wydawcy">Wydawcy</a><a href="#zasady">Zasady</a><a href="#api">API</a><a href="#prywatnosc">Prywatność</a><a href="#kontakt">Kontakt</a>
+  <a href="#ksiazki">Książki</a><a href="#jakdziala">Jak działa</a><a href="#anty-ai">Anty-AI</a><a href="#ikona">Ikona</a><a href="#wydawcy">Wydawcy</a><a href="#zasady">Zasady</a><a href="#api">API</a><a href="#prywatnosc">Prywatność</a><a href="#kontakt">Kontakt</a>
 </div></nav>
 
 <section id="ksiazki" class="section wrap">
@@ -109,6 +111,27 @@ code{background:#FFF2CC;padding:1px 6px;border-radius:6px;font-family:IBM Plex M
     <div><b>Serca:</b> 3 <svg class="ic" style="color:#C0392B"><use href="#i-heart"/></svg> — 3 złe kończą sesję, ale można od razu ponowić.</div>
     <div><b>Kamera:</b> obserwuje i wykrywa nagrania/zdjęcia z innego telefonu — tylko wskaźnik, bez metryk.</div>
     <div><b>Czas:</b> 5 min / pytanie, bez blokady po błędzie (poprawna odpowiedź pokazywana).</div>
+  </div>
+</section>
+
+<section id="anty-ai" class="section wrap">
+  <h2>Anty-AI — wklejone z ChatGPT blokuje sesję</h2>
+  <div class="card">
+    <p class="muted" style="font-size:14px">Odpowiedzi otwarte przechodzą przez <b>sight on AI writing</b>: heurystyka lokalna (frazy LLM PL/EN, formatowanie markdown/listy, równe zdania, wypełniacze) + sędzia LLM (OpenRouter free, próg 0.85). Wynik <code>ai_generated_answer</code> → <code>correct=false</code>, sesja <code>suspicious=1</code>, status <b>Failed</b> — dokładnie jak przy screenshot / screenRecording / too_fast. Można od razu ponowić, własnymi słowami.</p>
+    <p class="kicker">Szczegóły: <a href="https://frog02.mikr.us:32287/api/ai-detector/info" target="_blank">/api/ai-detector/info</a> • werdykt w <code>POST /api/sessions/:id/answer → {aiDetected, blocked}</code> i <code>POST /api/evaluate → 422</code></p>
+  </div>
+</section>
+
+<section id="ikona" class="section wrap">
+  <h2>Ikona — zielona, profesjonalna</h2>
+  <p class="muted">Główna ikona apki (iOS AppIcon + favicon strony) i 5 propozycji wariantów. Kliknij, aby zobaczyć w pełnym rozmiarze.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    <div class="card" style="text-align:center;border:2px solid var(--gold)"><a href="./icons/readproof-icon.png" target="_blank"><img src="./icons/readproof-icon.png" alt="ReadProof — ikona główna" style="width:100%;border-radius:12px"></a><div class="kicker" style="margin-top:8px">★ Główna — w apce i na stronie</div></div>
+    <div class="card" style="text-align:center"><a href="./icons/proposal-1.png" target="_blank"><img src="./icons/proposal-1.png" alt="Propozycja 1" style="width:100%;border-radius:12px" loading="lazy"></a><div class="kicker" style="margin-top:8px">Propozycja 1 — złota zakładka</div></div>
+    <div class="card" style="text-align:center"><a href="./icons/proposal-2.png" target="_blank"><img src="./icons/proposal-2.png" alt="Propozycja 2" style="width:100%;border-radius:12px" loading="lazy"></a><div class="kicker" style="margin-top:8px">Propozycja 2 — jasna zieleń</div></div>
+    <div class="card" style="text-align:center"><a href="./icons/proposal-3.png" target="_blank"><img src="./icons/proposal-3.png" alt="Propozycja 3" style="width:100%;border-radius:12px" loading="lazy"></a><div class="kicker" style="margin-top:8px">Propozycja 3 — duży check</div></div>
+    <div class="card" style="text-align:center"><a href="./icons/proposal-4.png" target="_blank"><img src="./icons/proposal-4.png" alt="Propozycja 4" style="width:100%;border-radius:12px" loading="lazy"></a><div class="kicker" style="margin-top:8px">Propozycja 4 — minimalna pieczęć</div></div>
+    <div class="card" style="text-align:center"><a href="./icons/proposal-5.png" target="_blank"><img src="./icons/proposal-5.png" alt="Propozycja 5" style="width:100%;border-radius:12px" loading="lazy"></a><div class="kicker" style="margin-top:8px">Propozycja 5 — parchment-first</div></div>
   </div>
 </section>
 
@@ -183,7 +206,8 @@ async function load(){
     const grid=document.getElementById('booksGrid'); grid.innerHTML='';
     b.forEach(book=>{
       const div=document.createElement('div'); div.className='card';
-      div.innerHTML=`<div class="kicker"><svg class="ic"><use href="#i-book"/></svg>${book.author} • ${book.totalChapters} rozdz.</div><h3>${book.title}</h3><p class="muted" style="font-size:13px">${book.description.slice(0,140)}…</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${book.chapters.map(c=>`<span class="mono" style="font-size:11px;background:#FFF2CC;padding:4px 6px;border-radius:8px">${c.title}</span>`).join('')}<span class="kicker" style="background:#7C1C1C;color:#fff;padding:4px 8px;border-radius:999px">${book.rewardPerChapter}</span></div>`;
+      const cover = book.coverUrl ? `<img src="${book.coverUrl}" alt="Okladka" style="width:100%;border-radius:10px;margin-bottom:8px" loading="lazy" onerror="this.remove()">` : '';
+      div.innerHTML=cover+`<div class="kicker"><svg class="ic"><use href="#i-book"/></svg>${book.author} • ${book.totalChapters} rozdz.</div><h3>${book.title}</h3><p class="muted" style="font-size:13px">${book.description.slice(0,140)}…</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${book.chapters.map(c=>`<span class="mono" style="font-size:11px;background:#FFF2CC;padding:4px 6px;border-radius:8px">${c.title}</span>`).join('')}<span class="kicker" style="background:#7C1C1C;color:#fff;padding:4px 8px;border-radius:999px">${book.rewardPerChapter}</span></div>`;
       grid.appendChild(div);
     });
   }catch(e){ document.getElementById('booksGrid').innerHTML='<div class="muted">Fallback: 5 książek Gutenberg (backend chwilowo offline). Alice, Sherlock, Treasure, Tom Sawyer, Around the World.</div>' }

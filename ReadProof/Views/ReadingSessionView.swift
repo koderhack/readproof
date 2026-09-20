@@ -13,6 +13,8 @@ struct ReadingSessionView: View {
     @State private var challenges: [BackendService.SessionChallenge] = []
     @State private var answers: [String: Any] = [:]
     @State private var completed: Set<String> = []
+    @State private var failed: Set<String> = [] // źle odpowiedziane — znikają, pokazujemy następne
+    var answeredCount: Int { completed.count + failed.count }
     @State private var now = Date()
     @State private var error: String?
     @State private var suspicious = false
@@ -59,12 +61,12 @@ struct ReadingSessionView: View {
                         rulesCard
                     } else {
                         // 1 pytanie na ekran — jak Duolingo, nie lista
-                    if let active = challenges.first(where: { !isLocked($0) && !completed.contains($0.id) }) {
+                    if let active = challenges.first(where: { !isLocked($0) && !completed.contains($0.id) && !failed.contains($0.id) }) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text(active.type?.displayName ?? "Challenge").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
                                 Spacer()
-                                Text("Pytanie \(completed.count+1)/\(challenges.count)").font(.caption2.weight(.bold)).foregroundStyle(RPColor.muted)
+                                Text("Pytanie \(answeredCount+1)/\(challenges.count)").font(.caption2.weight(.bold)).foregroundStyle(RPColor.muted)
                             }
                             if let q = active.question {
                                 Text(q).font(.headline).foregroundStyle(RPColor.ink).textSelection(.disabled)
@@ -108,19 +110,26 @@ struct ReadingSessionView: View {
                                         return
                                     }
                                     if correct {
+                                        try? await Task.sleep(nanoseconds: 900_000_000)
+                                        completed.insert(active.id)
+                                        lastResult = nil; lastCorrectText = nil
+                                        updateLive()
+                                    } else {
                                         hearts -= 1
                                         if hearts <= 0 {
                                             try? await Task.sleep(nanoseconds: 2_000_000_000)
                                             await completeWithWrong()
                                         } else {
-                                            // pokaż poprawną odpowiedź dłużej, nie blokuj od razu czerwonym na cały ekran
+                                            // ŹLE: pokaż poprawną odpowiedź dłużej, potem pytanie ZNIKA i wchodzi następne
                                             try? await Task.sleep(nanoseconds: 2_500_000_000)
+                                            failed.insert(active.id)
                                             lastResult = nil; lastCorrectText = nil
-                                            answers.removeValue(forKey: active.id)
+                                            updateLive()
                                         }
                                     }
                                 }
                             })
+                            .id(active.id)
                         }
                         .padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.primary, lineWidth: 1.5))
                         .blur(radius: isCaptured ? 16 : 0)
@@ -137,18 +146,18 @@ struct ReadingSessionView: View {
                                 }.clipShape(RoundedRectangle(cornerRadius:14))
                             }
                         }
-                    } else if let next = challenges.filter({ isLocked($0) && !completed.contains($0.id) }).sorted(by: { ($0.releaseAt ?? "") < ($1.releaseAt ?? "") }).first {
+                    } else if let next = challenges.filter({ isLocked($0) && !completed.contains($0.id) && !failed.contains($0.id) }).sorted(by: { ($0.releaseAt ?? "") < ($1.releaseAt ?? "") }).first {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack { Image(systemName: "book.fill").foregroundStyle(RPColor.muted2); Text(next.hint ?? loc.t("Czytaj dalej…","Keep reading…")).font(.subheadline).foregroundStyle(RPColor.muted) }
                                 .padding(12).background(Color(hex:"#F9FAFB")).clipShape(RoundedRectangle(cornerRadius:12)).textSelection(.disabled)
                             HStack { Spacer(); Text(loc.t("Następne za","Next in") + " \(countdown(next))").font(.caption.monospaced()).foregroundStyle(RPColor.muted) }
                         }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
                     }
-                    if completed.count >= 1 || challenges.allSatisfy({ completed.contains($0.id) }) {
+                    if answeredCount >= 1 || challenges.allSatisfy({ completed.contains($0.id) || failed.contains($0.id) }) {
                         Button {
                             Task { await complete() }
                         } label: {
-                            Text(completed.count == challenges.count ? "ZAKOŃCZ I ZWERYFIKUJ" : "ZAKOŃCZ WCZEŚNIEJ (\(completed.count)/\(challenges.count))").font(.headline).frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.primary).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:12))
+                            Text(answeredCount == challenges.count ? "ZAKOŃCZ I ZWERYFIKUJ" : "ZAKOŃCZ WCZEŚNIEJ (\(answeredCount)/\(challenges.count))").font(.headline).frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.primary).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:12))
                         }
                     }
                     } // else cooldown
@@ -213,9 +222,9 @@ struct ReadingSessionView: View {
                         .padding(.horizontal,8).padding(.vertical,3)
                         .background(RPColor.primary).clipShape(Capsule())
                 }
-                Text("\(completed.count)/\(challenges.count)").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
+                Text("\(answeredCount)/\(challenges.count)").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
             }
-            ProgressView(value: Double(completed.count), total: Double(max(challenges.count,1))).tint(RPColor.primary)
+            ProgressView(value: Double(answeredCount), total: Double(max(challenges.count,1))).tint(RPColor.primary)
             Text("Nie pokazujemy 5 pytań od razu — odblokowują się co ~2 min (demo) / 5 min (real). Nie da się wkleić całości do ChatGPT. Masz 3 ❤️ — 3 złe odpowiedzi kończą sesję; screenshot/telefon kończy od razu. Bez blokady czasowej.").font(.caption2).foregroundStyle(RPColor.muted)
         }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
     }
@@ -295,10 +304,10 @@ struct ReadingSessionView: View {
             if let cid = campaignId {
                 let s = try await BackendService.shared.startCampaignSession(campaignId: cid, walletAddress: wallet)
                 guard let sid = s.sessionId, let chs = s.challenges else { throw BackendService.GenError.parse }
-                sessionId = sid; challenges = chs; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false
+                sessionId = sid; challenges = chs; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; failed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false; error = nil
             } else {
                 let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
-                sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false
+                sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; failed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false; error = nil
             }
             ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: s.challenges.count)
             cameraMonitor.start() // anty-zdjęcie drugim telefonem — dopiero gdy sesja naprawdę ruszyła
@@ -311,7 +320,7 @@ struct ReadingSessionView: View {
     }
     func updateLive(){
         let next = challenges.first{ isLocked($0) }.flatMap{ $0.releaseAt}.flatMap{ ISO8601DateFormatter().date(from:$0) }.map{ max(0, Int($0.timeIntervalSince(now)))} ?? 0
-        ReadingSessionActivityManager.shared.update(completed: completed.count, total: challenges.count, nextUnlockIn: next, status: completed.count==challenges.count ? "verifying" : "reading")
+        ReadingSessionActivityManager.shared.update(completed: answeredCount, total: challenges.count, nextUnlockIn: next, status: answeredCount==challenges.count ? "verifying" : "reading")
     }
     func stopLive(){ ReadingSessionActivityManager.shared.end(status: proof?.status.rawValue ?? "ended"); cameraMonitor.stop() }
     func completeWithWrong() async {
@@ -329,12 +338,19 @@ struct ReadingSessionView: View {
         }
     }
     func complete() async {
-        guard let id=sessionId else { return }
+        guard let id=sessionId else { error="Brak sesji — zacznij test od nowa"; return }
         if let p = await BackendService.shared.completeSession(sessionId: id) {
             proof = p; showResult = true
             appState.saveProof(p)
             stopLive()
-        } else { error="Nie udało się zakończyć — sprawdź Jev/TYPESAFE_API_KEY" }
+        } else {
+            // PRAWDZIWY powód z backendu zamiast mylącego "sprawdź Jev"
+            if let d = BackendService.shared.lastError, !d.isEmpty {
+                error = "Nie udało się zakończyć: \(d.prefix(300))"
+            } else {
+                error = "Nie udało się zakończyć — sprawdź połączenie z backendem i spróbuj ponownie"
+            }
+        }
     }
     func failOnSuspicion(type: String) {
         suspicious=true

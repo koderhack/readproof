@@ -164,7 +164,7 @@ final class BackendService: ObservableObject {
         return try JSONDecoder().decode(CampaignStartResponse.self, from: d)
     }
 
-    // MARK: - Jev via backend
+    // MARK: - Jev via backend (z AI-detector: 422 = tekst z AI, blokada jak cheating)
     func evaluateViaBackend(question: String, expectedMeaning: String, userAnswer: String, context: String) async -> JevVerdict? {
         guard let url = URL(string: "\(api)/api/evaluate") else { return nil }
         var req = URLRequest(url: url); req.httpMethod = "POST"; req.setValue("application/json", forHTTPHeaderField: "Content-Type"); req.setValue(langHeader, forHTTPHeaderField: "X-Lang"); req.timeoutInterval = 12
@@ -172,7 +172,14 @@ final class BackendService: ObservableObject {
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         do {
             let (d, r) = try await data(for: req)
-            guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+            let status = (r as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 422 {
+                // AI-writing — backend zablokował jak cheating
+                let msg = (try? JSONSerialization.jsonObject(with: d) as? [String:Any])?["reason"] as? String
+                await MainActor.run { self.lastError = msg ?? "Wykryto tekst AI — napisz własnymi słowami" }
+                return JevVerdict(correct: false, confidence: 0, reason: "ai_blocked")
+            }
+            guard status == 200 else { return nil }
             return try JSONDecoder().decode(JevVerdict.self, from: d)
         } catch { return nil }
     }
@@ -336,7 +343,7 @@ final class BackendService: ObservableObject {
     func answerSession(sessionId: String, challengeId: String, answer: Any) async -> Bool {
         (await answerSessionDetailed(sessionId: sessionId, challengeId: challengeId, answer: answer)) != nil
     }
-    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict?; let aiDetected: Bool?; let correctText: String?; let correctAnswer: Int?; let correctAnswers: [Int]?; let expectedMeaning: String? }
+    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict?; let aiDetected: Bool?; let blocked: Bool?; let blockReason: String?; let correctText: String?; let correctAnswer: Int?; let correctAnswers: [Int]?; let expectedMeaning: String? }
     func answerSessionDetailed(sessionId: String, challengeId: String, answer: Any) async -> AnswerResult? {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
