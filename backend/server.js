@@ -1269,7 +1269,7 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
       if(ch.type==='find_error') return ch.statements?.[ch.errorIndex] ?? ch.options?.[ch.errorIndex] ?? null;
       if(ch.type==='ordering'||ch.type==='ranking') return (ch.correctOrder||[]).map(i=> (ch.items?.[i] ?? '')).join(' → ') || null;
       if(ch.type==='who_said'||ch.type==='match') return ch.pairs?.[0]?.right ?? ch.pairs?.map(p=> `${p.left} → ${p.right}`).join(', ') ?? null;
-      if(ch.type==='open_question'||ch.type==='why_question') return ch.expectedMeaning ?? ch.hint ?? null;
+      if(ch.type==='open_question'||ch.type==='why_question') return ch.expectedMeaning ?? null;
     }catch(e){ return null; }
     return null;
   })();

@@ -234,7 +234,6 @@ struct ReadingSessionView: View {
         if let idxs = ch.correctAnswers, let opts = ch.options, !idxs.isEmpty { return idxs.compactMap{ $0 < opts.count ? opts[$0] : nil }.joined(separator: ", ") }
         if let pairs = ch.pairs, !pairs.isEmpty { return pairs.map{ "\($0.left) → \($0.right)" }.joined(separator: ", ") }
         if let exp = ch.expectedMeaning, !exp.isEmpty { return exp }
-        if let hint = ch.hint, !hint.isEmpty { return hint }
         if let err = ch.errorIndex, let stmts = ch.statements, err < stmts.count { return stmts[err] }
         if let items = ch.items, let order = ch.correctOrder, !order.isEmpty { return order.map{ $0 < items.count ? items[$0] : "" }.joined(separator: " → ") }
         return nil
