@@ -169,51 +169,14 @@ struct ReadingSessionView: View {
     }
 
     var cameraStatus: some View {
-        let dev = UserDefaults.standard.bool(forKey:"admin_dev_mode")
-        return VStack(alignment: .leading, spacing: 6) {
-            if !cameraOK {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("KAMERA WYŁĄCZONA — detekcja anti-screenshot NIEAKTYWNA", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption.weight(.bold)).foregroundStyle(.red)
-                    Text("To nie działa na symulatorze (brak kamery). Na iPhonie: pozwól na dostęp do kamery w Ustawieniach, wróć i naciśnij „Ponów start kamery”.")
-                        .font(.caption2).foregroundStyle(RPColor.muted)
-                    HStack(spacing: 8) {
-                        Button { cameraMonitor.start() } label: { Label("Ponów start kamery", systemImage: "arrow.clockwise").font(.caption2.weight(.bold)) }
-                            .buttonStyle(.bordered).tint(RPColor.primary)
-                        Button { if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) } }
-                             label: { Label("Otwórz Ustawienia", systemImage: "gear").font(.caption2.weight(.bold)) }
-                            .buttonStyle(.bordered).tint(RPColor.muted2)
-                    }
-                }.padding(8).background(Color.red.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            Label(cameraOK ? "Kamera anty-screen: AKTYWNA (front + Face ID depth)" : "Kamera anty-screen: OFF — brak uprawnienia lub brak przedniej kamery (symulator)", systemImage: cameraOK ? "camera.fill" : "camera")
-                .font(.caption2).foregroundStyle(cameraOK ? RPColor.muted : RPColor.muted2)
-            Text("Nie zasłaniaj obiektywu przedniej kamery (u góry ekranu). Twarz nie musi być cały czas widoczna — czytaj normalnie.")
-                .font(.caption2).foregroundStyle(RPColor.muted2).fixedSize(horizontal: false, vertical: true)
-            if dev {
-                Toggle("Podgląd kamery (debug)", isOn: $showCameraPreview).font(.caption.weight(.bold)).tint(RPColor.primary)
-                if showCameraPreview {
-                    CameraPreviewView(monitor: cameraMonitor) // live podgląd + czerwony box = wykryty ekran (Vision)
-                        .frame(height: 220).clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(RPColor.line))
-                }
-                Button { failOnSuspicion(type: "frontCameraScreenTest") } label: {
-                    Label("Symuluj drugi telefon (test failsafe)", systemImage: "iphone.gen3").font(.caption.weight(.bold))
-                }
-                .buttonStyle(.bordered)
-                .tint(RPColor.primary)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(String(format:"SCORE %.1f / %.0f — fail gdy >= %.0f", cameraSignal.score, (UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode")) ? 6.0 : 3.0, (UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode")) ? 6.0 : 3.0))
-                        .font(.caption2.monospaced()).foregroundStyle(cameraSignal.score >= ((UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode")) ? 6.0 : 3.0) ? .red : RPColor.muted)
-                    Text("klatki wideo: \(cameraFrames) • twarze: \(cameraSignal.faceCount) • prostokąt: \(cameraSignal.bigRect ? "TAK":"nie") • jasność: \(String(format:"%.0f%%", cameraSignal.bright*100)) • krawędzie: \(String(format:"%.0f%%", cameraSignal.edge*100)) • luma: \(String(format:"%.2f", cameraSignal.luma)) • depth: \(cameraSignal.depthActive ? (cameraSignal.depthNear ? "BLISKO" : "aktywna(\(cameraSignal.depthFrames) klatek)") : "BRAK depth")\(cameraMonitor.stalled ? " ⚠️ STALL" : "")")
-                        .font(.caption2.monospaced()).foregroundStyle(RPColor.muted)
-                    Text("MobileNet: \(cameraSignal.modelHit ? "TELEFON/EKRAN" : (cameraSignal.modelLabel.map{ "\"\($0)\"" } ?? "–")) \(String(format:"%.2f", cameraSignal.modelConf))")
-                        .font(.caption2.monospaced()).foregroundStyle(cameraSignal.modelHit ? .red : RPColor.muted)
-                    Text("YOLOv8n: \(cameraSignal.yoloHit ? "TELEFON \(String(format:"%.2f", cameraSignal.yoloConf))" : "–")\(cameraSignal.yoloBox.map{ b in String(format:" box %.2f,%.2f", b.midX, b.midY)} ?? "")")
-                        .font(.caption2.monospaced()).foregroundStyle(cameraSignal.yoloHit ? .red : RPColor.muted)
-                }
-            }
-        }.padding(10).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:10))
+        HStack(spacing: 6) {
+            Circle().fill(cameraOK ? Color.green : RPColor.muted.opacity(0.4)).frame(width: 8, height: 8)
+            Text(cameraOK ? "Kamera aktywna" : "Kamera wyłączona").font(.caption2.weight(.medium)).foregroundStyle(RPColor.muted)
+            Spacer()
+            Image(systemName: cameraOK ? "video.fill" : "video.slash.fill").font(.caption2).foregroundStyle(RPColor.muted)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(RPColor.card).clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     var header: some View {
@@ -246,8 +209,6 @@ struct ReadingSessionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label("Możesz korzystać tylko z książki — zabronione są podpowiedzi (AI, ChatGPT, notatki, drugi telefon).", systemImage: "book.fill").font(.caption).foregroundStyle(RPColor.ink)
                 Label("Aplikacja posiada zabezpieczenia wykrywające screenshoty i nagrywanie ekranu.", systemImage: "eye.slash.fill").font(.caption).foregroundStyle(RPColor.ink)
-                Label("Kamera pozostaje włączona, aby wyeliminować / zminimalizować możliwość zrobienia zdjęcia innym telefonem.", systemImage: "camera.fill").font(.caption).foregroundStyle(RPColor.ink)
-                Label("Obraz z kamery nie wychodzi poza telefon — przetwarzanie on-device, zero zapisu, zero wysyłki.", systemImage: "lock.shield.fill").font(.caption).foregroundStyle(RPColor.ink)
             }
             Text("Kontynuując, potwierdzasz że zapoznałeś się z zasadami.").font(.caption2).foregroundStyle(RPColor.muted)
             Button {
