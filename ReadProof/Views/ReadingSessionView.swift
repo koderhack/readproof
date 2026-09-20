@@ -73,7 +73,7 @@ struct ReadingSessionView: View {
                                     Image(systemName: fb.correct ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
                                     VStack(alignment:.leading, spacing:2){
                                         Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t(hearts<=0 ? "Źle — koniec serc" : "Źle — straciłeś serce","Wrong — lost a heart")).font(.headline.weight(.bold))
-                                        if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — spróbuj ponownie za 30 min","Session ended — retry in 30 min") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
+                                        if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — możesz spróbować ponownie od razu","Session ended — you can retry right away") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
                                     }
                                     Spacer()
                                 }
@@ -236,7 +236,7 @@ struct ReadingSessionView: View {
                 Text("\(completed.count)/\(challenges.count)").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
             }
             ProgressView(value: Double(completed.count), total: Double(max(challenges.count,1))).tint(RPColor.primary)
-            Text("Nie pokazujemy 5 pytań od razu — odblokowują się co ~20-25s (demo) / 3-5min (real). Nie da się wkleić całości do ChatGPT. Masz 3 ❤️ — 3 złe odpowiedzi kończą sesję; screenshot/telefon kończy od razu.").font(.caption2).foregroundStyle(RPColor.muted)
+            Text("Nie pokazujemy 5 pytań od razu — odblokowują się co ~2 min (demo) / 5 min (real). Nie da się wkleić całości do ChatGPT. Masz 3 ❤️ — 3 złe odpowiedzi kończą sesję; screenshot/telefon kończy od razu. Bez blokady czasowej.").font(.caption2).foregroundStyle(RPColor.muted)
         }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
     }
 
@@ -276,25 +276,26 @@ struct ReadingSessionView: View {
     }
     func blockedCard(_ until: Date) -> some View {
         let left = max(0, Int(until.timeIntervalSince(now)))
+        let _ = left // zachowane dla kompatybilności, ale ignorowane — brak blokady
         return VStack(alignment: .center, spacing: 12) {
             Image(systemName: "lock.fill").font(.system(size: 34)).foregroundStyle(RPColor.primary)
             Text(loc.t("Blokada po oszukanej próbie","Locked after suspicious attempt")).font(.headline).foregroundStyle(RPColor.ink)
-            Text(loc.t("Jedna błędna odpowiedź lub screenshot kończy sesję i blokuje ponowne podejście na 30 minut.","A wrong answer or screenshot ends the session and blocks retry for 30 minutes."))
+            Text(loc.t("Jedna błędna odpowiedź lub screenshot kończy sesję — możesz zacząć nową od razu, bez czekania.","A wrong answer or screenshot ends the session — you can start a new one right away."))
                 .font(.caption).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
             VStack(spacing: 2) {
-                Text(loc.t("Możesz spróbować ponownie za","Retry available in")).font(.caption).foregroundStyle(RPColor.muted)
-                Text(cooldownRemaining(until)).font(.system(size: 40, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(RPColor.ink)
+                Text(loc.t("Ponowna próba dostępna od razu","Retry available now")).font(.caption).foregroundStyle(RPColor.muted)
+                if left > 0 {
+                    Text(cooldownRemaining(until)).font(.system(size: 40, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(RPColor.ink)
+                }
             }.padding(.vertical, 4)
             Button {
                 Task { await start() }
             } label: {
-                Text(left <= 0 ? loc.t("SPRÓBUJ PONOWNIE","TRY AGAIN") : loc.t("Odblokowanie za","Unlocks in") + " \(cooldownRemaining(until))")
+                Text(loc.t("SPRÓBUJ PONOWNIE","TRY AGAIN"))
                     .font(.headline).frame(maxWidth:.infinity).padding(.vertical,14)
             }
             .buttonStyle(BurgundyButtonStyle())
-            .disabled(left > 0)
-            .opacity(left > 0 ? 0.5 : 1)
-            Text(loc.t("Blokada 30 min: zalecany jest prawdziwy wysiłek czytelniczy — tryb anti-ChatGPT.","30-min lock: real reading effort required — anti-ChatGPT mode.")).font(.caption2).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+            Text(loc.t("Bez blokady czasowej — więcej minut na każde pytanie (5 min).","No time lock — more minutes per question (5 min).")).font(.caption2).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
         }
         .padding(18).frame(maxWidth:.infinity, alignment: .center)
         .background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.primary, lineWidth:1.5))

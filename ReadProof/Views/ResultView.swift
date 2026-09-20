@@ -8,7 +8,7 @@ struct ResultMinimalView: View {
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var isVerified: Bool { proof.status == .verified || proof.status == .comprehensionVerified }
     var isFailed: Bool { proof.status == .failed }
-    var blockedUntil: Date { proof.timestamp.addingTimeInterval(30*60) }
+    var blockedUntil: Date { proof.timestamp.addingTimeInterval(0) } // bez blokady — od razu ponawianie
     var body: some View {
         ScrollView{
             VStack(spacing:16){
@@ -68,19 +68,17 @@ struct ResultMinimalView: View {
         }.padding(.vertical,8)
     }
     var cooldownCard: some View {
-        let left = max(0, Int(blockedUntil.timeIntervalSince(now)))
-        let mm = left/60, ss = left%60
         return VStack(alignment:.leading, spacing:10){
-            HStack{ Label("BLOKADA 30 MINUT", systemImage:"lock.fill").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(Color.red); Spacer() }
+            HStack{ Label("SESJA ZAKOŃCZONA", systemImage:"xmark.circle.fill").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(Color.red); Spacer() }
             HStack(spacing:8){
-                Image(systemName:"hourglass").font(.system(size:22)).foregroundStyle(Color.red)
+                Image(systemName:"arrow.counterclockwise").font(.system(size:22)).foregroundStyle(Color.red)
                 VStack(alignment:.leading, spacing:2){
-                    Text("Sesja zablokowana po błędnej/oszukanej próbie").font(.system(size:13, weight:.semibold)).foregroundStyle(RPColor.ink)
-                    Text("Ponownie za \(String(format:"%02d:%02d", mm, ss))").font(.system(size:22, weight:.bold, design:.rounded)).monospacedDigit().foregroundStyle(RPColor.ink)
+                    Text("Błędna odpowiedź lub screenshot — możesz spróbować ponownie od razu").font(.system(size:13, weight:.semibold)).foregroundStyle(RPColor.ink)
+                    Text("Bez blokady czasowej — 5 min na każde pytanie").font(.system(size:12)).foregroundStyle(RPColor.muted)
                 }
                 Spacer()
             }
-            Text("Celowo uniemożliwiamy zgadywanie i wklejanie do AI — prawdziwy wysiłek czytelniczy.").font(.system(size:11)).foregroundStyle(RPColor.muted)
+            Text("Bez zgadywania — pytania wymagają przeczytania, ale bez kary czasowej.").font(.system(size:11)).foregroundStyle(RPColor.muted)
         }.padding(16).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:16)).overlay(RoundedRectangle(cornerRadius:16).stroke(Color.red.opacity(0.5)))
     }
     var rewardCard: some View {
@@ -143,8 +141,8 @@ struct ResultMinimalView: View {
     var actions: some View {
         VStack(spacing:10){
             if isFailed {
-                Button{ dismiss() } label:{ HStack{ Image(systemName:"arrow.left"); Text("Wróć do książki").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).foregroundStyle(.white).background(RPColor.inkFixed).clipShape(RoundedRectangle(cornerRadius:14))}
-                Text("Ponowne podejście będzie możliwe po odliczeniu blokady 30 minut.").font(.system(size:11)).foregroundStyle(RPColor.muted)
+                Button{ dismiss() } label:{ HStack{ Image(systemName:"arrow.left"); Text("Wróć do książki — spróbuj od razu").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).foregroundStyle(.white).background(RPColor.inkFixed).clipShape(RoundedRectangle(cornerRadius:14))}
+                Text("Możesz spróbować ponownie od razu — bez blokady.").font(.system(size:11)).foregroundStyle(RPColor.muted)
             } else {
                 Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName: proof.txSignature == nil ? "checkmark.seal" : "wallet.pass"); Text(proof.txSignature == nil ? "Dowód gotowy (demo — bez live USDC)" : "Wypłać \(proof.reward ?? "5 USDC") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.inkFixed).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
                 HStack(spacing:10){

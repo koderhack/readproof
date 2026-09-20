@@ -124,9 +124,9 @@ async function pickForSession(chapterId, lang='pl'){
   for(const jev of jevs){ if(jevCount>=2) break; if(!picked.find(p=>p.id===jev.id)){ picked[picked.length%5]=jev; jevCount++; } }
   return picked.slice(0,5);
 }
-const SESSION_TIMING_DEMO = [0, 30, 60, 90, 120];
+const SESSION_TIMING_DEMO = [0, 120, 240, 360, 480];
 const SESSION_TIMING_DEV = [0, 0, 0, 0, 0]; // admin dev mode — natychmiastowe odblokowanie
-const SESSION_TIMING_REAL = [0, 30, 60, 90, 120]; // 30s/pytanie jak test z lektury — pasek postępu, nie blokada 5min
+const SESSION_TIMING_REAL = [0, 300, 600, 900, 1200]; // 5 min / pytanie — bez blokady czasowej, spokojne czytanie
 
 function buildSessionChallenges(picked, startAt, isDemo){
   const timing = isDemo ? SESSION_TIMING_DEMO : SESSION_TIMING_REAL;
@@ -1097,32 +1097,9 @@ app.post('/api/sessions/start', async (req,res)=>{
   const DEV_PASSWORD = process.env.DEV_PASSWORD || 'hackathon2026@';
   const isDevBypass = (req.headers['x-dev-mode'] === '1' && req.headers['x-dev-password'] === DEV_PASSWORD) || (req.body.devBypass === true && req.body.devPassword === DEV_PASSWORD);
   // 1) Jednodniowa blokada po 3 oszustwach w 24h — bez litości, weryfikowalne on-chain
-  if(!isDevBypass){
-    const cntRows = await new Promise((res,rej)=>{
-      const sql = useMySQL ? `SELECT COUNT(*) as cnt, MAX(endAt) as lastEnd FROM readproof_sessions WHERE walletAddress=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)` : `SELECT COUNT(*) as cnt, MAX(endAt) as lastEnd FROM reading_sessions WHERE walletAddress=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-24 hours')`;
-      const cb=(e,rows)=> e?rej(e):res(rows);
-      if(useMySQL) mysqlPool.query(sql, [wallet]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.get(sql, [wallet], (e,row)=> e?rej(e):res([row]));
-    }).catch(()=>[]);
-    const cnt = Number(cntRows?.[0]?.cnt || 0);
-    if(cnt >= 3){
-      const lastEnd = cntRows[0]?.lastEnd || cntRows[0]?.lastEnd;
-      const last = lastEnd ? new Date(lastEnd) : new Date();
-      const retryAfter = Math.ceil((last.getTime() + 24*60*60*1000 - Date.now())/1000);
-      return res.status(429).json({error: 'Blokada 1 dnia po 3 oszukanych próbach', retryAfter: Math.max(retryAfter,0), blockedUntil: new Date(last.getTime()+24*60*60*1000).toISOString()});
-    }
-  }
-  // 2) cooldown 30 min po błędnej/oszukanej sesji (pomijany w dev/test mode — do testów bez czekania)
-  const cooldownRows = await new Promise((res,rej)=>{
-    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
-    const cb=(e,rows)=> e?rej(e):res(rows);
-    if(useMySQL) mysqlPool.query(sql, [wallet, chapterId]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.all(sql, [wallet, chapterId], cb);
-  }).catch(()=>[]);
-  if(!isDevBypass && cooldownRows && cooldownRows.length>0){
-    const last = cooldownRows[0];
-    const end = new Date(last.endAt || last.endAt);
-    const retryAfter = Math.ceil((end.getTime() + 30*60*1000 - Date.now())/1000);
-    return res.status(429).json({error: 'Blokada 30 min po błędnej/oszukanej próbie (1 sygnał = wypadnięcie)', retryAfter, blockedUntil: new Date(end.getTime()+30*60*1000).toISOString()});
-  }
+  // Bloki czasowe wyłączone na życzenie — bez 24h ani 30 min cooldownu (swobodne ponawianie)
+  // if(!isDevBypass){ ... 24h ... } - disabled
+  // cooldown 30 min - disabled (wcześniej: 1 błędna = blokada 30 min)
   // 3) 1 lektura = 1 prawidłowy dowód — prawidłowe nie duplikuj (złe mogą być wielokrotne)
   if(!isDevBypass){
     const already = await new Promise((res,rej)=>{
@@ -1441,30 +1418,7 @@ app.post('/api/proofs', async (req,res)=>{
   }
   const DEV_PASSWORD2 = process.env.DEV_PASSWORD || 'hackathon2026@';
   const isDev2 = (req.headers['x-dev-mode'] === '1' && req.headers['x-dev-password'] === DEV_PASSWORD2) || (req.body.devBypass === true && req.body.devPassword === DEV_PASSWORD2);
-  if(!isDev2){
-    const cntRows2 = await new Promise((res,rej)=>{
-      const sql = useMySQL ? `SELECT COUNT(*) as cnt, MAX(endAt) as lastEnd FROM readproof_sessions WHERE walletAddress=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)` : `SELECT COUNT(*) as cnt, MAX(endAt) as lastEnd FROM reading_sessions WHERE walletAddress=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-24 hours')`;
-      const cb=(e,rows)=> e?rej(e):res(rows);
-      if(useMySQL) mysqlPool.query(sql, [wallet]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.get(sql, [wallet], (e,row)=> e?rej(e):res([row]));
-    }).catch(()=>[]);
-    if(Number(cntRows2?.[0]?.cnt||0) >=3){
-      const lastEnd = cntRows2[0]?.lastEnd; const last = lastEnd ? new Date(lastEnd) : new Date();
-      const retryAfter = Math.ceil((last.getTime()+24*60*60*1000 - Date.now())/1000);
-      return res.status(429).json({error:'Blokada 1 dnia po 3 oszukanych próbach', retryAfter:Math.max(retryAfter,0), blockedUntil:new Date(last.getTime()+24*60*60*1000).toISOString()});
-    }
-  }
-  // cooldown 30 min po błędnej/oszukanej sesji (pomijany w test mode)
-  const cooldownRows = await new Promise((res,rej)=>{
-    const sql = useMySQL ? `SELECT * FROM readproof_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND endAt > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE) ORDER BY endAt DESC LIMIT 1` : `SELECT * FROM reading_sessions WHERE walletAddress=? AND chapterId=? AND (status='Failed' OR suspicious=1) AND datetime(endAt) > datetime('now','-30 minutes') ORDER BY endAt DESC LIMIT 1`;
-    const cb=(e,rows)=> e?rej(e):res(rows);
-    if(useMySQL) mysqlPool.query(sql, [wallet, chapterId]).then(([rows])=>cb(null,rows)).catch(e=>rej(e)); else db.all(sql, [wallet, chapterId], cb);
-  }).catch(()=>[]);
-  if(!isDev2 && cooldownRows && cooldownRows.length>0){
-    const last = cooldownRows[0];
-    const end = new Date(last.endAt || last.endAt);
-    const retryAfter = Math.ceil((end.getTime() + 30*60*1000 - Date.now())/1000);
-    return res.status(429).json({error: 'Blokada 30 min po błędnej/oszukanej próbie (1 sygnał = wypadnięcie)', retryAfter, blockedUntil: new Date(end.getTime()+30*60*1000).toISOString()});
-  }
+  // Bloki czasowe wyłączone — bez 24h / 30 min (swobodne ponawianie i więcej minut na pytanie)
   const pool=challengesByChapter[chapterId] || [];
   // we expect answers is either map or array of {challengeId, answer}
   let results=[];

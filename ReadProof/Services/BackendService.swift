@@ -358,7 +358,7 @@ final class BackendService: ObservableObject {
             case .badURL:return "Bad URL"
             case .api(let m):return m
             case .parse:return "Parse error"
-            case .cooldown(let retryAfter, _):return "Blokada 30 min po błędnej/oszukanej próbie — spróbuj ponownie za \(Int(retryAfter)) s."}
+            case .cooldown(let retryAfter, _):return "Spróbuj ponownie za \(Int(retryAfter)) s."}
         } }
 }
 
