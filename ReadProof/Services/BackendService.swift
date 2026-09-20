@@ -38,11 +38,16 @@ final class BackendService: ObservableObject {
     var devMode: Bool { UserDefaults.standard.bool(forKey: "admin_dev_mode") }
     var devPassword: String { UserDefaults.standard.string(forKey: "admin_dev_password") ?? "" }
     var appleSessionToken: String? { UserDefaults.standard.string(forKey: "apple_session_token") }
-    var appleUserIdStored: String? { UserDefaults.standard.string(forKey: "apple_user_id") ?? AuthService.shared.userId }
+    // nonisolated — UserDefaults, nie AuthService (MainActor) żeby nie było isolation error
+    var appleUserIdStored: String? {
+        if let s = UserDefaults.standard.string(forKey: "apple_user_id"), !s.isEmpty { return s }
+        if let data = UserDefaults.standard.data(forKey: "user_profile_v1"),
+           let p = try? JSONDecoder().decode(UserProfile.self, from: data), !p.id.isEmpty { return p.id }
+        return nil
+    }
     private func attachAuthHeaders(to req: inout URLRequest){
         if let tok = appleSessionToken, !tok.isEmpty { req.setValue("Bearer \(tok)", forHTTPHeaderField: "Authorization") }
         if let uid = appleUserIdStored, !uid.isEmpty { req.setValue(uid, forHTTPHeaderField: "X-User-Id"); req.setValue(uid, forHTTPHeaderField: "X-Apple-User") }
-        else if let uid = AuthService.shared.userId, !uid.isEmpty { req.setValue(uid, forHTTPHeaderField: "X-User-Id") }
     }
 
     // szyfrowane połączenie — self-signed na localhost akceptujemy w dev (jak NSAllowsArbitraryLoads)
@@ -190,7 +195,6 @@ final class BackendService: ObservableObject {
     func fetchProofs(userId: String? = nil, wallet: String? = nil) async -> [ReadingProof]? {
         var qs: [String] = []
         if let u = userId ?? appleUserIdStored, !u.isEmpty { qs.append("userId=\(u.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? u)") }
-        else if let u = AuthService.shared.userId, !u.isEmpty { qs.append("userId=\(u.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? u)") }
         if let w = wallet, !w.isEmpty { qs.append("wallet=\(w.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? w)") }
         let q = qs.isEmpty ? "" : "?" + qs.joined(separator: "&")
         guard let url = URL(string: "\(api)/api/proofs\(q)") else { return nil }
@@ -256,8 +260,8 @@ final class BackendService: ObservableObject {
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
         if devMode { req.setValue("1", forHTTPHeaderField:"X-Dev-Mode"); req.setValue(devPassword, forHTTPHeaderField:"X-Dev-Password") }
         attachAuthHeaders(to: &req)
-        // prefer explicit userId param, else stored Apple id
-        let effectiveUserId = userId ?? appleUserIdStored ?? AuthService.shared.userId
+        // prefer explicit userId param, else stored Apple id (nonisolated via UserDefaults)
+        let effectiveUserId = userId ?? appleUserIdStored
         var body: [String: Any] = ["bookId":bookId,"chapterId":chapterId,"walletAddress":walletAddress, "devBypass": devMode, "devPassword": devPassword]
         if let u = effectiveUserId, !u.isEmpty { body["userId"] = u; req.setValue(u, forHTTPHeaderField: "X-User-Id") }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
