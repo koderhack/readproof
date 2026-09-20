@@ -391,8 +391,13 @@ struct UnlockCard: View {
     @State private var text=""
     @State private var sel:Int?
     @State private var multi:Set<Int>=[]
+    @State private var order: [Int] = []
     var isOpen: Bool { challenge.type == .openQuestion || challenge.type == .whyQuestion || challenge.type == .whoSaid }
     var isDisabled: Bool { answered != nil }
+    private func moveOrder(from: Int, to: Int){
+        guard from != to, from >= 0, to >= 0, from < order.count, to < order.count else { return }
+        var o = order; o.insert(o.remove(at: from), at: to); _order.wrappedValue = o
+    }
     var body: some View {
         VStack(alignment:.leading, spacing:8){
             if isOpen {
@@ -420,8 +425,26 @@ struct UnlockCard: View {
                 }
                 Button("Zatwierdź"){ if let s=sel{ onSubmit(s) } }.disabled(isDisabled || sel==nil).buttonStyle(BurgundyButtonStyle()).opacity(isDisabled || sel==nil ? 0.5 : 1)
             } else if challenge.type == .ordering || challenge.type == .ranking {
-                Text("Przeciągnij aby zmienić kolejność — w pełnej sesji").font(.caption).foregroundStyle(RPColor.muted)
-                Button("Zatwierdź kolejność"){ onSubmit([0,1,2,3]) }.buttonStyle(BurgundyButtonStyle()).disabled(isDisabled)
+                let items = challenge.items ?? []
+                VStack(alignment:.leading, spacing:8){
+                    ForEach(Array(order.enumerated()), id:\.element){ idx, itemIdx in
+                        HStack{
+                            Text("\(idx+1).").font(.caption.weight(.bold)).foregroundStyle(RPColor.muted).frame(width:20)
+                            Text(itemIdx < items.count ? items[itemIdx] : "").font(.system(size:13)).foregroundStyle(RPColor.ink)
+                            Spacer()
+                            if !isDisabled {
+                                VStack(spacing:4){
+                                    Button{ moveOrder(from: idx, to: idx-1) } label:{ Image(systemName:"chevron.up").font(.caption2) }.disabled(idx==0)
+                                    Button{ moveOrder(from: idx, to: idx+1) } label:{ Image(systemName:"chevron.down").font(.caption2) }.disabled(idx==order.count-1)
+                                }.tint(RPColor.primary)
+                            }
+                        }
+                        .padding(8).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:8)).overlay(RoundedRectangle(cornerRadius:8).stroke(RPColor.line))
+                    }
+                    if isDisabled, let ct = correctText { Text("Poprawna kolejność: \(ct)").font(.caption.weight(.semibold)).foregroundStyle(RPColor.success).padding(.top,4) }
+                }
+                .onAppear{ if order.isEmpty { order = Array(0..<items.count) } }
+                Button("Zatwierdź kolejność"){ onSubmit(order) }.buttonStyle(BurgundyButtonStyle()).disabled(isDisabled)
             } else {
                 let opts: [String] = {
                     if let o = challenge.options, !o.isEmpty { return o }

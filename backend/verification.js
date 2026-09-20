@@ -27,9 +27,11 @@ function runChecks(s, now, isDev) {
   else checks.push({ name: 'not_suspicious', passed: true });
 
   const dur = Math.floor((now - new Date(s.startAt).getTime()) / 1000);
-  const minimalSec = s.isDemo ? 60 : Math.floor((s.expectedReadingMin || 12) * 60 * 0.66);
-  // dev bypass + demo: limit czasu nie dotyczy (natychmiastowe odblokowanie)
-  checks.push({ name: 'min_duration', passed: isDev || dur >= minimalSec, detail: isDev ? 'dev bypass' : `${dur}s >= ${minimalSec}s` });
+  const minimalSec = s.isDemo ? 30 : Math.floor((s.expectedReadingMin || 12) * 60 * 0.35);
+  // złagodzone: wczoraj 0.66 było za ostre + demo 60s blokowało szybkie testy; teraz 0.35 i perfect score zwalnia z czasu
+  const scoreForMin = Object.values(s.answers || {}).filter((a) => a && a.correct).length;
+  const minPassed = isDev || dur >= minimalSec || scoreForMin === s.challenges.length;
+  checks.push({ name: 'min_duration', passed: minPassed, detail: isDev ? 'dev bypass' : `${dur}s >= ${minimalSec}s${scoreForMin===s.challenges.length?' (perfect score)':''}` });
 
   return {
     checks,
