@@ -1,1754 +1,2461 @@
 {
-  "books": [
+ "books": [
+  {
+   "id": "alice",
+   "title": "Alice's Adventures in Wonderland",
+   "author": "Lewis Carroll",
+   "coverEmoji": "🐰",
+   "description": "Pełny tekst z domeny publicznej (Project Gutenberg #11). Idealna do Reading Proof — sprawdza pamięć szczegółów i logikę snu. 12 rozdziałów w pełnym tekście, w MVP 3 rozdziały z 10 challenge'y każdy.",
+   "totalChapters": 3,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/11",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "alice.txt",
+   "chapters": [
     {
-      "id": "alice",
-      "title": "Alice's Adventures in Wonderland",
-      "author": "Lewis Carroll",
-      "coverEmoji": "🐰",
-      "description": "Pełny tekst z domeny publicznej (Project Gutenberg #11). Idealna do Reading Proof — sprawdza pamięć szczegółów i logikę snu. 12 rozdziałów w pełnym tekście, w MVP 3 rozdziały z 10 challenge'y każdy.",
-      "totalChapters": 3,
-      "rewardPerChapter": "5 USDC",
-      "sourceUrl": "https://www.gutenberg.org/ebooks/11",
-      "license": "Public domain — Project Gutenberg",
-      "fullTextFile": "alice.txt",
-      "chapters": [
-        {
-          "id": "alice-ch1",
-          "bookId": "alice",
-          "index": 1,
-          "title": "Down the Rabbit-Hole",
-          "summary": "Alicja goni Białego Królika i wpada do króliczej nory. Spotyka drzwi, klucz i napój 'Drink Me'.",
-          "contextExcerpt": "Alice was beginning to get very tired of sitting by her sister... suddenly a White Rabbit with pink eyes ran close by her. 'Oh dear! Oh dear! I shall be too late!' — Alice Ch.1 public domain (Gutenberg).",
-          "reward": "5 USDC"
-        },
-        {
-          "id": "alice-ch2",
-          "bookId": "alice",
-          "index": 2,
-          "title": "The Pool of Tears",
-          "summary": "Alicja rośnie i maleje po wypiciu napojów, zalewa łzami pokój.",
-          "contextExcerpt": "Curiouser and curiouser! She ate a little bit, and said anxiously 'Which way? Which way?' — Alice Ch.2 Gutenberg.",
-          "reward": "5 USDC"
-        },
-        {
-          "id": "alice-ch3",
-          "bookId": "alice",
-          "index": 3,
-          "title": "A Caucus-Race and a Long Tale",
-          "summary": "Ptaki i mysz organizują wyścig bez zasad aby się wysuszyć.",
-          "contextExcerpt": "They were indeed a queer-looking party... The Dodo said 'Everybody has won, and all must have prizes.' — Alice Ch.3 Gutenberg.",
-          "reward": "5 USDC"
-        }
-      ],
-      "coverUrl": "https://kacpersikora.pages.dev/books/covers/alice.png"
+     "id": "alice-ch1",
+     "bookId": "alice",
+     "index": 1,
+     "title": "Down the Rabbit-Hole",
+     "summary": "Alicja goni Białego Królika i wpada do króliczej nory. Spotyka drzwi, klucz i napój 'Drink Me'.",
+     "contextExcerpt": "Alice was beginning to get very tired of sitting by her sister... suddenly a White Rabbit with pink eyes ran close by her. 'Oh dear! Oh dear! I shall be too late!' — Alice Ch.1 public domain (Gutenberg).",
+     "reward": "5 USDC"
     },
     {
-      "id": "sherlock",
-      "title": "The Adventures of Sherlock Holmes",
-      "author": "Arthur Conan Doyle",
-      "coverEmoji": "🕵️",
-      "description": "Pełny tekst z domeny publicznej (Gutenberg #1661). 12 opowiadań. W MVP: 'A Scandal in Bohemia' i 'The Red-Headed League' — dedukcja, szczegóły, motywacje postaci.",
-      "totalChapters": 2,
-      "rewardPerChapter": "5 USDC",
-      "sourceUrl": "https://www.gutenberg.org/ebooks/1661",
-      "license": "Public domain — Project Gutenberg",
-      "fullTextFile": "sherlock.txt",
-      "chapters": [
-        {
-          "id": "sherlock-ch1",
-          "bookId": "sherlock",
-          "index": 1,
-          "title": "A Scandal in Bohemia",
-          "summary": "Król Czech prosi Holmesa o odzyskanie zdjęcia od Irene Adler. Holmes przebiera się i przechytrza diwę, ale ona go przechytrza.",
-          "contextExcerpt": "To Sherlock Holmes she is always the woman... Irene Adler, née Norton, contralto... 'You will excuse this mask,' continued our strange visitor. — Sherlock Ch.1 Gutenberg.",
-          "reward": "5 USDC"
-        },
-        {
-          "id": "sherlock-ch2",
-          "bookId": "sherlock",
-          "index": 2,
-          "title": "The Red-Headed League",
-          "summary": "Jabez Wilson dostaje absurdalną pracę — przepisywanie encyklopedii za 4 funty tygodniowo. Kryje się napad na bank.",
-          "contextExcerpt": "I had called upon my friend Mr. Sherlock Holmes... 'My life... is spent in a very quiet manner... I am his assistant, Vincent Spaulding.' — Sherlock Ch.2 Gutenberg.",
-          "reward": "5 USDC"
-        }
-      ],
-      "coverUrl": "https://kacpersikora.pages.dev/books/covers/sherlock.png"
+     "id": "alice-ch2",
+     "bookId": "alice",
+     "index": 2,
+     "title": "The Pool of Tears",
+     "summary": "Alicja rośnie i maleje po wypiciu napojów, zalewa łzami pokój.",
+     "contextExcerpt": "Curiouser and curiouser! She ate a little bit, and said anxiously 'Which way? Which way?' — Alice Ch.2 Gutenberg.",
+     "reward": "5 USDC"
     },
     {
-      "id": "treasure",
-      "title": "Treasure Island",
-      "author": "Robert Louis Stevenson",
-      "coverEmoji": "🏴‍☠️",
-      "description": "Pełny tekst z domeny publicznej (Gutenberg #120). Klasyka przygodowa — mapa, mutiny, Long John Silver. Pełna treść w apce, challenge z fragmentów.",
-      "totalChapters": 2,
-      "rewardPerChapter": "5 USDC",
-      "sourceUrl": "https://www.gutenberg.org/ebooks/120",
-      "license": "Public domain — Project Gutenberg",
-      "fullTextFile": "treasure.txt",
-      "chapters": [
-        {
-          "id": "treasure-ch1",
-          "bookId": "treasure",
-          "index": 1,
-          "title": "The Old Sea-Dog at the Admiral Benbow",
-          "summary": "Do gospody przybywa tajemniczy marynarz z skrzynią i mapą. Jim Hawkins poznaje strach załogi przed jedną nogą.",
-          "contextExcerpt": "SQUIRE TRELAWNEY, Dr. Livesey, and the rest of these gentlemen... I remember him as if it were yesterday... the old seaman with a sabre cut... 'The Old Sea-Dog at the Admiral Benbow' — Gutenberg #120",
-          "reward": "5 USDC"
-        },
-        {
-          "id": "treasure-ch2",
-          "bookId": "treasure",
-          "index": 2,
-          "title": "Black Dog Appears and Disappears",
-          "summary": "Pojawia się Black Dog, konfrontacja z Billy Bonesem. Pierwsze przeczucie spisku.",
-          "contextExcerpt": "Black Dog appears... 'You had better save your threats,' said the captain... — Treasure Island Ch.2 Gutenberg",
-          "reward": "5 USDC"
-        }
-      ],
-      "coverUrl": "https://kacpersikora.pages.dev/books/covers/treasure.png"
-    },
-    {
-      "id": "tomsawyer",
-      "title": "The Adventures of Tom Sawyer",
-      "author": "Mark Twain",
-      "coverEmoji": "🎣",
-      "description": "Pełny tekst z domeny publicznej (Gutenberg #74). Przygody Toma, Hucka, malowanie płotu i ucieczka na wyspę. Test z humoru Twaina.",
-      "totalChapters": 2,
-      "rewardPerChapter": "5 USDC",
-      "sourceUrl": "https://www.gutenberg.org/ebooks/74",
-      "license": "Public domain — Project Gutenberg",
-      "fullTextFile": "tomsawyer.txt",
-      "chapters": [
-        {
-          "id": "tom-ch1",
-          "bookId": "tomsawyer",
-          "index": 1,
-          "title": "Y-o-u-u Tom! — The Fence",
-          "summary": "Tom zmuszony malować płot, sprytnie sprzedaje przywilej kolegom.",
-          "contextExcerpt": "'Y-o-u-u Tom!' No answer... Tom appeared with a bucket of whitewash... 'Does a boy get a chance to whitewash a fence every day?' — Tom Sawyer Ch.1-2 Gutenberg",
-          "reward": "5 USDC"
-        },
-        {
-          "id": "tom-ch2",
-          "bookId": "tomsawyer",
-          "index": 2,
-          "title": "The Jackson's Island Adventure",
-          "summary": "Tom, Huck i Joe uciekają na wyspę udając piratów, miasteczko myśli że utonęli.",
-          "contextExcerpt": "Tom, Joe Harper and Huck Finn escape to Jackson's Island... 'They swam to an island and lived as pirates' — Tom Sawyer Gutenberg",
-          "reward": "5 USDC"
-        }
-      ],
-      "coverUrl": "https://kacpersikora.pages.dev/books/covers/tomsawyer.png"
-    },
-    {
-      "id": "around",
-      "title": "Around the World in Eighty Days",
-      "author": "Jules Verne",
-      "coverEmoji": "🌍",
-      "description": "Pełny tekst z domeny publicznej (Gutenberg #103). Zakład Phileasa Fogga o 80 dni dookoła świata — pociągi, parowce i Fix.",
-      "totalChapters": 2,
-      "rewardPerChapter": "5 USDC",
-      "sourceUrl": "https://www.gutenberg.org/ebooks/103",
-      "license": "Public domain — Project Gutenberg",
-      "fullTextFile": "around.txt",
-      "chapters": [
-        {
-          "id": "around-ch1",
-          "bookId": "around",
-          "index": 1,
-          "title": "Phileas Fogg Bets £20,000",
-          "summary": "Fogg, dżentelmen Reform Club, zakłada się że okrąży świat w 80 dni. Passepartout nowym służącym.",
-          "contextExcerpt": "Mr. Phileas Fogg lived, in Savile Row, Burlington Gardens... 'The world has grown smaller, since a man can now go round it ten times more quickly...' — Around Ch.1 Gutenberg",
-          "reward": "5 USDC"
-        },
-        {
-          "id": "around-ch2",
-          "bookId": "around",
-          "index": 2,
-          "title": "Passepartout and Detective Fix",
-          "summary": "Fix bierze Fogga za złodzieja Banku Anglii i zaczyna pościg. Passepartout gubi się w czasie.",
-          "contextExcerpt": "Detective Fix... 'He fits the description of the robber...' — Around Ch.2-6 Gutenberg",
-          "reward": "5 USDC"
-        }
-      ],
-      "coverUrl": "https://kacpersikora.pages.dev/books/covers/around.png"
+     "id": "alice-ch3",
+     "bookId": "alice",
+     "index": 3,
+     "title": "A Caucus-Race and a Long Tale",
+     "summary": "Ptaki i mysz organizują wyścig bez zasad aby się wysuszyć.",
+     "contextExcerpt": "They were indeed a queer-looking party... The Dodo said 'Everybody has won, and all must have prizes.' — Alice Ch.3 Gutenberg.",
+     "reward": "5 USDC"
     }
-  ],
-  "challengesByChapter": {
-    "alice-ch1": [
-      {
-        "id": "c1-1",
-        "type": "multiple_choice",
-        "question": "Dlaczego Alicja ruszyła za Białym Królikiem?",
-        "context": "Ch.1 Down the Rabbit-Hole — pełny tekst Gutenberg #11",
-        "options": [
-          "Bo miała mapę",
-          "Bo Królik mówił że się spóźni i wyjął zegarek",
-          "Bo zgubiła siostrę",
-          "Bo szukała herbaty"
-        ],
-        "correctAnswer": 1,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c1-2",
-        "type": "true_false",
-        "question": "Alicja w rozdziale 1 wypija napój z etykietą 'Drink Me' i zaczyna się zmieniać.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 1,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c1-3",
-        "type": "open_question",
-        "question": "Własnymi słowami: dlaczego drzwi w korytarzu były problemem dla Alicji?",
-        "context": "Korytarz pełen drzwi, złoty kluczyk, za małe drzwi",
-        "expectedMeaning": "Drzwi były zamknięte lub za małe; kluczyk nie pasował / Alicja była za duża lub za mała",
-        "difficulty": "medium"
-      },
-      {
-        "id": "c1-4",
-        "type": "ordering",
-        "question": "Ułóż wydarzenia w kolejności (Ch.1)",
-        "items": [
-          "Alicja widzi Królika z zegarkiem",
-          "Wpada do króliczej nory",
-          "Znajduje szklany stolik ze złotym kluczykiem",
-          "Pije z butelki 'Drink Me'"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "c1-5",
-        "type": "who_said",
-        "question": "Kto powiedział: 'Oh dear! Oh dear! I shall be too late!'?",
-        "pairs": [
-          {
-            "left": "Oh dear! Oh dear! I shall be too late!",
-            "right": "Biały Królik"
-          },
-          {
-            "left": "Curiouser and curiouser!",
-            "right": "Alicja"
-          },
-          {
-            "left": "Drink Me",
-            "right": "Etykieta na butelce"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "c1-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 prawdziwe zdania o rozdziale 1",
-        "options": [
-          "Alicja spada bardzo długo i rozmyśla",
-          "Alicja od razu znajduje wyjście z korytarza",
-          "Królik nosi kamizelkę i zegarek",
-          "Alicja spotyka Królową Kier"
-        ],
-        "correctAnswers": [
-          0,
-          2
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "c1-7",
-        "type": "what_next",
-        "question": "Co dzieje się tuż po tym gdy Alicja rośnie za bardzo?",
-        "options": [
-          "Zaczyna płakać bo nie mieści się",
-          "Natychmiast wraca do domu",
-          "Spotyka Kota z Cheshire",
-          "Zasypia"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      },
-      {
-        "id": "c1-8",
-        "type": "find_error",
-        "question": "Znajdź zdanie NIEZGODNE z rozdziałem 1",
-        "statements": [
-          "Biały Królik ma różowe oczy i zegarek",
-          "Korytarz ma wiele drzwi i szklany stolik",
-          "Alicja zjada ciastko 'Eat Me' i maleje (to jest w Ch.1)",
-          "Alicja gra w krykieta z Królową"
-        ],
-        "errorIndex": 3,
-        "difficulty": "medium"
-      },
-      {
-        "id": "c1-9",
-        "type": "why_question",
-        "question": "Dlaczego Alicja decyduje się napić z butelki mimo że nie wie co to jest?",
-        "context": "Butelka 'Drink Me', Alicja rozważa czy jest trująca",
-        "expectedMeaning": "Sprawdziła że nie ma oznaczenia 'poison', jest ciekawa, liczy że pomoże jej przejść przez drzwi",
-        "difficulty": "hard"
-      },
-      {
-        "id": "c1-10",
-        "type": "match",
-        "question": "Dopasuj obiekt do jego roli",
-        "pairs": [
-          {
-            "left": "Złoty kluczyk",
-            "right": "Otwiera małe drzwiczki"
-          },
-          {
-            "left": "Butelka 'Drink Me'",
-            "right": "Zmienia rozmiar Alicji"
-          },
-          {
-            "left": "Królicza nora",
-            "right": "Wejście do podziemnego korytarza"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ch1_multiple_choice",
-        "type": "multiple_choice",
-        "question": "Co zrobiła Alicja z pustym słoikiem po pomarańczowej marmoladzie podczas spadania?",
-        "difficulty": "łatwy",
-        "options": [
-          "Wyrzuciła go w dół, żeby sprawdzić, jak jest głęboko.",
-          "Włożyła go do jednej z szafek, obok których spadała.",
-          "Zatrzymała go i zabrała ze sobą na dno studni.",
-          "Rozbiła go o ścianę studni."
-        ],
-        "correct_answer": "Włożyła go do jednej z szafek, obok których spadała.",
-        "chapterId": "alice-ch1"
-      },
-      {
-        "id": "ch2_true_false",
-        "type": "true_false",
-        "question": "Biały Królik miał różowe oczy i wyjął zegarek z kieszeni kamizelki.",
-        "difficulty": "łatwy",
-        "correct_answer": true,
-        "chapterId": "alice-ch1"
-      },
-      {
-        "id": "ch3_who_said",
-        "type": "who_said",
-        "question": "Kto wypowiedział słowa: „Oh dear! Oh dear! I shall be late!”?",
-        "difficulty": "łatwy",
-        "quote": "Oh dear! Oh dear! I shall be late!",
-        "options": [
-          "Alicja",
-          "Biały Królik",
-          "Siostra Alicji",
-          "Narrator"
-        ],
-        "correct_answer": "Biały Królik",
-        "chapterId": "alice-ch1"
-      },
-      {
-        "id": "ch4_ordering",
-        "type": "ordering",
-        "question": "Uporządkuj wydarzenia w kolejności, w jakiej występują we fragmencie.",
-        "difficulty": "średni",
-        "items": [
-          "Alicja widzi szafki i półki w studni.",
-          "Alicja rozważa robienie łańcuszka ze stokrotek.",
-          "Biały Królik biegnie blisko Alicji.",
-          "Alicja wpada do króliczej nory.",
-          "Królik wyjmuje zegarek z kieszeni kamizelki."
-        ],
-        "correct_order": [
-          1,
-          2,
-          4,
-          3,
-          0
-        ],
-        "chapterId": "alice-ch1"
-      },
-      {
-        "id": "ch5_why_question",
-        "type": "why_question",
-        "question": "Dlaczego Alicja nie upuściła słoika z pomarańczową marmoladą, gdy spadała?",
-        "difficulty": "średni",
-        "expectedMeaning": "Alicja bała się, że jeśli upuści słoik, może kogoś zabić, kto znajduje się pod nią w studni.",
-        "chapterId": "alice-ch1"
-      }
-    ],
-    "alice-ch2": [
-      {
-        "id": "c2-1",
-        "type": "multiple_choice",
-        "question": "Co Alicja robi gdy jest zbyt duża i zalewa pokój łzami?",
-        "options": [
-          "Śmieje się",
-          "Płacze i tworzy kałużę łez",
-          "Ucieka przez okno",
-          "Woła siostrę"
-        ],
-        "correctAnswer": 1,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c2-2",
-        "type": "true_false",
-        "question": "Alicja w Ch.2 spotyka ponownie Białego Królika który bierze ją za swoją służącą.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      },
-      {
-        "id": "c2-3",
-        "type": "open_question",
-        "question": "Dlaczego Alicja mówi 'Curiouser and curiouser!'?",
-        "context": "Ch.2 zmiany rozmiaru",
-        "expectedMeaning": "Bo rzeczy stają się coraz dziwniejsze — jej ciało rośnie/maleje w nieprzewidywalny sposób",
-        "difficulty": "medium"
-      },
-      {
-        "id": "c2-4",
-        "type": "ordering",
-        "question": "Kolejność zdarzeń w Ch.2",
-        "items": [
-          "Alicja próbuje Wachlarz Królika i maleje",
-          "Wpada do kałuży łez",
-          "Spotyka Myszę",
-          "Mysz próbuje wysuszyć towarzystwo"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "c2-5",
-        "type": "multiple_select",
-        "question": "Które 2 zwierzęta pojawiają się w Ch.2-3?",
-        "options": [
-          "Mysz",
-          "Dodo",
-          "Smok",
-          "Jednorożec"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "c2-6",
-        "type": "why_question",
-        "question": "Dlaczego Mysz się obraża na Alicję?",
-        "context": "Alicja mówi o kotach, Mysz nie lubi kotów",
-        "expectedMeaning": "Alicja wspomina kota Dinah i koty w ogóle, a Mysz boi się / nienawidzi kotów",
-        "difficulty": "medium"
-      },
-      {
-        "id": "c2-7",
-        "type": "what_next",
-        "question": "Co dzieje się po tym jak Alicja i zwierzęta są mokre?",
-        "options": [
-          "Organizują Caucus-Race",
-          "Idą na herbatkę",
-          "Wracają do domu",
-          "Zasypiają"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c2-8",
-        "type": "find_error",
-        "question": "Znajdź błąd o Ch.2",
-        "statements": [
-          "Alicja maleje po wachlarzu",
-          "Alicja płynie we własnych łzach",
-          "Biały Królik gubi rękawiczki",
-          "Alicja zostaje Królową"
-        ],
-        "errorIndex": 3,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c2-9",
-        "type": "match",
-        "question": "Dopasuj postać do zachowania",
-        "pairs": [
-          {
-            "left": "Alicja",
-            "right": "Płacze i tworzy kałużę"
-          },
-          {
-            "left": "Biały Królik",
-            "right": "Gubi wachlarz i rękawiczki"
-          },
-          {
-            "left": "Mysz",
-            "right": "Ucieka gdy mowa o kotach"
-          }
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "c2-10",
-        "type": "who_said",
-        "question": "Kto mówi o 'curiouser and curiouser'?",
-        "pairs": [
-          {
-            "left": "Curiouser and curiouser!",
-            "right": "Alicja"
-          },
-          {
-            "left": "Oh my ears and whiskers!",
-            "right": "Biały Królik"
-          }
-        ],
-        "difficulty": "easy"
-      }
-    ],
-    "alice-ch3": [
-      {
-        "id": "c3-1",
-        "type": "multiple_choice",
-        "question": "Czym jest Caucus-Race według Dodo?",
-        "options": [
-          "Wyścig z nagrodami dla wszystkich",
-          "Wyścig tylko dla ptaków",
-          "Wyścig bez mety",
-          "Wyścig z przeszkodami"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c3-2",
-        "type": "true_false",
-        "question": "W Caucus-Race każdy wygrywa i każdy dostaje nagrodę.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c3-3",
-        "type": "open_question",
-        "question": "Jak Dodo rozwiązuje problem wysuszenia towarzystwa?",
-        "context": "Mokra grupa po kałuży łez",
-        "expectedMeaning": "Organizuje Caucus-Race — bieganie w kółko bez zasad, potem nagrody",
-        "difficulty": "medium"
-      },
-      {
-        "id": "c3-4",
-        "type": "ordering",
-        "question": "Kolejność Caucus-Race",
-        "items": [
-          "Dodo ogłasza wyścig",
-          "Wszyscy biegają bez początku/końca",
-          "Dodo ogłasza że wszyscy wygrali",
-          "Alicja wręcza cukierki jako nagrody"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "c3-5",
-        "type": "why_question",
-        "question": "Dlaczego Alicja musi dać własną nagrodę?",
-        "context": "Brak nagród, Alicja ma cukierki",
-        "expectedMeaning": "Nie ma przygotowanych nagród, Dodo każe Alicji dać coś z kieszeni, potem ona dostaje własny pierścionek",
-        "difficulty": "hard"
-      },
-      {
-        "id": "c3-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 cechy Caucus-Race",
-        "options": [
-          "Brak zasad startu/mety",
-          "Sędziuje Dodo",
-          "Wygrywa najszybszy",
-          "Trwa 5 minut dokładnie"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "c3-7",
-        "type": "what_next",
-        "question": "Co robi Mysz po wyścigu?",
-        "options": [
-          "Opowiada długą smutną historię",
-          "Idzie spać",
-          "Zjada nagrody",
-          "Uciekają wszyscy"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      },
-      {
-        "id": "c3-8",
-        "type": "find_error",
-        "question": "Znajdź błąd o Ch.3",
-        "statements": [
-          "Dodo organizuje wyścig",
-          "Wszyscy dostają cukierki od Alicji",
-          "Mysz opowiada o kocie i psie",
-          "Alicja spotyka Królową Kier"
-        ],
-        "errorIndex": 3,
-        "difficulty": "easy"
-      },
-      {
-        "id": "c3-9",
-        "type": "match",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "Dodo",
-            "right": "Sędzia wyścigu"
-          },
-          {
-            "left": "Mysz",
-            "right": "Opowiada Long Tale"
-          },
-          {
-            "left": "Alicja",
-            "right": "Daje nagrody"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "c3-10",
-        "type": "who_said",
-        "question": "Kto mówi 'Everybody has won, and all must have prizes'?",
-        "pairs": [
-          {
-            "left": "Everybody has won, and all must have prizes",
-            "right": "Dodo"
-          },
-          {
-            "left": "I am so tired of swimming",
-            "right": "Alicja"
-          }
-        ],
-        "difficulty": "easy"
-      }
-    ],
-    "sherlock-ch1": [
-      {
-        "id": "s1-1",
-        "type": "multiple_choice",
-        "question": "Kto prosi Holmesa o pomoc w 'A Scandal in Bohemia'?",
-        "options": [
-          "Król Czech",
-          "Premier",
-          "Watson",
-          "Irene Adler"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "s1-2",
-        "type": "true_false",
-        "question": "Irene Adler przechytrza Holmesa i zatrzymuje zdjęcie.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      },
-      {
-        "id": "s1-3",
-        "type": "open_question",
-        "question": "Dlaczego Holmes nazywa Irene 'the woman'?",
-        "context": "Podziw dla jej inteligencji",
-        "expectedMeaning": "Bo jako jedyna przechytrzyła Holmesa, dorównuje mu inteligencją, budzi szacunek",
-        "difficulty": "medium"
-      },
-      {
-        "id": "s1-4",
-        "type": "ordering",
-        "question": "Ułóż plan Holmesa w kolejności",
-        "items": [
-          "Przebiera się za stajennego",
-          "Śledzi Irene do kościoła",
-          "Inscenizuje pożar aby znaleźć zdjęcie",
-          "Wraca po zdjęcie ale skrytka pusta"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "s1-5",
-        "type": "who_said",
-        "question": "Kto mówi 'To Sherlock Holmes she is always the woman'?",
-        "pairs": [
-          {
-            "left": "To Sherlock Holmes she is always the woman",
-            "right": "Watson / narrator"
-          },
-          {
-            "left": "You will excuse this mask",
-            "right": "Król Czech"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "s1-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 cechy Irene Adler",
-        "options": [
-          "Śpiewaczka / aktorka",
-          "Przechytrza Holmesa",
-          "Jest służącą króla",
-          "Mieszka na Baker Street"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "s1-7",
-        "type": "why_question",
-        "question": "Dlaczego Holmes inscenizuje alarm pożarowy?",
-        "context": "Chce znaleźć skrytkę ze zdjęciem",
-        "expectedMeaning": "Wie że kobieta w panice spojrzy / pobiegnie do najcenniejszej rzeczy — zdjęcia",
-        "difficulty": "medium"
-      },
-      {
-        "id": "s1-8",
-        "type": "find_error",
-        "question": "Znajdź błąd o 'Scandal in Bohemia'",
-        "statements": [
-          "Król Czech chce odzyskać kompromitujące zdjęcie",
-          "Holmes przebiera się za księdza na ślubie Irene",
-          "Irene ucieka z mężem Nortonem",
-          "Holmes odzyskuje zdjęcie"
-        ],
-        "errorIndex": 3,
-        "difficulty": "medium"
-      },
-      {
-        "id": "s1-9",
-        "type": "match",
-        "question": "Dopasuj postać do roli",
-        "pairs": [
-          {
-            "left": "Wilhelm von Ormstein",
-            "right": "Król Czech / klient"
-          },
-          {
-            "left": "Irene Adler",
-            "right": "Przechytrza Holmesa"
-          },
-          {
-            "left": "Godfrey Norton",
-            "right": "Mąż Irene, prawnik"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "s1-10",
-        "type": "what_next",
-        "question": "Co Holmes dostaje/robi na końcu zamiast nagrody?",
-        "options": [
-          "Prosi o fotografię Irene",
-          "Bierze złoto",
-          "Zatrzymuje pierścień króla",
-          "Nic nie chce"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      }
-    ],
-    "sherlock-ch2": [
-      {
-        "id": "s2-1",
-        "type": "multiple_choice",
-        "question": "Na czym polega praca w Red-Headed League?",
-        "options": [
-          "Przepisywanie encyklopedii",
-          "Liczenie włosów",
-          "Sprzedaż farby",
-          "Pilnowanie banku"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "s2-2",
-        "type": "true_false",
-        "question": "Jabez Wilson zostaje wybrany ze względu na rude włosy.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "s2-3",
-        "type": "open_question",
-        "question": "Jaki jest prawdziwy cel Red-Headed League?",
-        "context": "Tunel do banku",
-        "expectedMeaning": "Odciągnąć Wilsona ze sklepu aby przekopać tunel do banku City & Suburban i ukraść złoto",
-        "difficulty": "medium"
-      },
-      {
-        "id": "s2-4",
-        "type": "ordering",
-        "question": "Kolejność odkrycia Holmesa",
-        "items": [
-          "Bada kolana spodni Wilsona",
-          "Odwiedza sklep i puka laską w chodnik",
-          "Idzie na koncert z Watsonem",
-          "Czatuje z policją w banku"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "hard"
-      },
-      {
-        "id": "s2-5",
-        "type": "who_said",
-        "question": "Kto mówi 'I am his assistant, Vincent Spaulding'?",
-        "pairs": [
-          {
-            "left": "I am his assistant, Vincent Spaulding",
-            "right": "Jabez Wilson o pomocniku"
-          },
-          {
-            "left": "It is quite a three pipe problem",
-            "right": "Holmes"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "s2-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 fakty o Spaulding / John Clay",
-        "options": [
-          "To John Clay — kryminalista",
-          "Kopie tunel",
-          "Jest policjantem",
-          "To brat Wilsona"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "s2-7",
-        "type": "why_question",
-        "question": "Dlaczego ogłoszenie wymaga tylko rudych włosów?",
-        "context": "Selekcja ofiary",
-        "expectedMeaning": "Aby zwabić Wilsona (rudy) i mieć pretekst do codziennego usuwania go ze sklepu na godziny",
-        "difficulty": "medium"
-      },
-      {
-        "id": "s2-8",
-        "type": "find_error",
-        "question": "Znajdź błąd o Red-Headed League",
-        "statements": [
-          "Wilson dostaje 4 funty tygodniowo",
-          "Liga nagle się rozwiązuje",
-          "Holmes odkrywa że to napad na bank",
-          "Wilson zostaje wspólnikiem banku"
-        ],
-        "errorIndex": 3,
-        "difficulty": "easy"
-      },
-      {
-        "id": "s2-9",
-        "type": "match",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "Jabez Wilson",
-            "right": "Lombard / rudy klient"
-          },
-          {
-            "left": "Vincent Spaulding / John Clay",
-            "right": "Kopie tunel"
-          },
-          {
-            "left": "Duncan Ross / William Morris",
-            "right": "Fałszywy organizator Ligi"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "s2-10",
-        "type": "what_next",
-        "question": "Co dzieje się w banku na końcu?",
-        "options": [
-          "Policja łapie Clay i Archie Rossa",
-          "Wilson dostaje awans",
-          "Bank płonie",
-          "Holmes gubi sprawę"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      }
-    ],
-    "treasure-ch1": [
-      {
-        "id": "tr1-1",
-        "type": "multiple_choice",
-        "question": "Kto przybywa do Admiral Benbow na początku?",
-        "options": [
-          "Billy Bones — stary marynarz ze skrzynią",
-          "Long John Silver",
-          "Jim's mother",
-          "Doctor Livesey"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr1-2",
-        "type": "true_false",
-        "question": "Billy Bones boi się mężczyzny z jedną nogą.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr1-3",
-        "type": "open_question",
-        "question": "Dlaczego marynarze w gospodzie boją się Billy Bonesa?",
-        "context": "Groźny, pijany, opowieści o morzu",
-        "expectedMeaning": "Jest agresywny, tajemniczy, opowiada straszne historie, grozi, ma reputację pirata",
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr1-4",
-        "type": "ordering",
-        "question": "Kolejność Ch.1",
-        "items": [
-          "Przybycie Billy Bonesa",
-          "Prośba o obserwowanie wybrzeża",
-          "Jim przynosi rum",
-          "Czarna plama pojawia się w rozmowach"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr1-5",
-        "type": "who_said",
-        "question": "Kto mówi o 'one-legged man'?",
-        "pairs": [
-          {
-            "left": "The one-legged man I fear",
-            "right": "Billy Bones"
-          },
-          {
-            "left": "Squire Trelawney will hear of this",
-            "right": "Dr Livesey"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr1-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 przedmioty Billy Bonesa",
-        "options": [
-          "Skrzynia morska",
-          "Mapa skarbów",
-          "Złoty zegarek",
-          "Kulawy papuga"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr1-7",
-        "type": "why_question",
-        "question": "Dlaczego Jim pomaga mimo strachu?",
-        "expectedMeaning": "Ciekawość, obowiązek wobec gościa, chęć przygody, lojalność wobec matki/gospody",
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr1-8",
-        "type": "find_error",
-        "question": "Znajdź błąd o Treasure Island Ch.1",
-        "statements": [
-          "Gospoda to Admiral Benbow",
-          "Billy Bones dostaje Black Spot",
-          "Jim jest narratorem",
-          "Pojawia się Kapitan Hook"
-        ],
-        "errorIndex": 3,
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr1-9",
-        "type": "match",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "Billy Bones",
-            "right": "Stary marynarz z mapą"
-          },
-          {
-            "left": "Jim Hawkins",
-            "right": "Syn gospodyni, narrator"
-          },
-          {
-            "left": "Black Dog",
-            "right": "Pierwszy intruz"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr1-10",
-        "type": "what_next",
-        "question": "Co dzieje się po śmierci Billy Bonesa?",
-        "options": [
-          "Jim znajduje mapę w skrzyni",
-          "Jim ucieka do Londynu",
-          "Piraci palą gospodę",
-          "Jim zostaje kapitanem"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      }
-    ],
-    "treasure-ch2": [
-      {
-        "id": "tr2-1",
-        "type": "multiple_choice",
-        "question": "Kto to Black Dog?",
-        "options": [
-          "Dawny kompan Billy Bonesa",
-          "Lekarz",
-          "Ojciec Jima",
-          "Celnicy"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr2-2",
-        "type": "true_false",
-        "question": "Black Dog i Billy walczą na noże w gospodzie.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr2-3",
-        "type": "open_question",
-        "question": "Co zdradza walka Black Dog vs Bones o ich przeszłości?",
-        "expectedMeaning": "Znali się z załogi Flinta, piracka przeszłość, długi i strach przed zemstą",
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr2-4",
-        "type": "ordering",
-        "question": "Kolejność Ch.2",
-        "items": [
-          "Przybycie Black Dog",
-          "Rozpoznanie i bójka",
-          "Ucieczka Black Doga",
-          "Atak apopleksji u Bonesa"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr2-5",
-        "type": "who_said",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "You are a coward",
-            "right": "Black Dog do Bonesa"
-          },
-          {
-            "left": "I'll have that chest",
-            "right": "Black Dog"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr2-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 konsekwencje wizyty Black Doga",
-        "options": [
-          "Bones dostaje udar",
-          "Jim boi się bardziej",
-          "Gospoda zostaje nagrodzona",
-          "Pojawia się wojsko"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr2-7",
-        "type": "why_question",
-        "question": "Dlaczego Bones boi się po wizycie jeszcze bardziej?",
-        "expectedMeaning": "To znak że dawna załoga go znalazła, Black Spot blisko, piraci nadchodzą",
-        "difficulty": "medium"
-      },
-      {
-        "id": "tr2-8",
-        "type": "find_error",
-        "question": "Znajdź błąd",
-        "statements": [
-          "Black Dog zna Billy Bonesa",
-          "Jim słyszy ich rozmowę",
-          "Bones wygrywa walkę i Black Dog ucieka",
-          "Black Dog zostaje aresztowany przez Jima"
-        ],
-        "errorIndex": 3,
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr2-9",
-        "type": "match",
-        "question": "Dopasuj ranę do osoby",
-        "pairs": [
-          {
-            "left": "Billy Bones",
-            "right": "Udar / nóż"
-          },
-          {
-            "left": "Black Dog",
-            "right": "Cięcie po walce"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "tr2-10",
-        "type": "what_next",
-        "question": "Co zapowiada Ch.2?",
-        "options": [
-          "Nadejście niewidomego Pew i Black Spot",
-          "Powrót spokojnego życia",
-          "Jim idzie do szkoły",
-          "Bones wyzdrowieje"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      }
-    ],
-    "tom-ch1": [
-      {
-        "id": "to1-1",
-        "type": "multiple_choice",
-        "question": "Na czym polega kara Toma na początku?",
-        "options": [
-          "Malowanie płotu na biało",
-          "Rąbanie drewna",
-          "Pisanie wypracowania",
-          "Sprzątanie strychu"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "to1-2",
-        "type": "true_false",
-        "question": "Tom zamienia karę w przywilej i każe kolegom płacić za malowanie.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "to1-3",
-        "type": "open_question",
-        "question": "Jak Tom przekonuje Bena że malowanie jest super?",
-        "expectedMeaning": "Udaje że to sztuka i przywilej, że nie każdy może, że to przyjemność, reverse psychology",
-        "difficulty": "medium"
-      },
-      {
-        "id": "to1-4",
-        "type": "ordering",
-        "question": "Kolejność malowania",
-        "items": [
-          "Ciotka każe malować",
-          "Ben Rogers się nabija",
-          "Tom udaje artystę",
-          "Ben płaci jabłkiem za malowanie"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "to1-5",
-        "type": "who_said",
-        "question": "Kto mówi 'Does a boy get a chance to whitewash a fence every day?'",
-        "pairs": [
-          {
-            "left": "Does a boy get a chance to whitewash a fence every day?",
-            "right": "Tom Sawyer"
-          },
-          {
-            "left": "Y-o-u-u Tom!",
-            "right": "Ciotka Polly"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "to1-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 co Tom dostaje za płot",
-        "options": [
-          "Jabłko",
-          "Latawiec / kulki",
-          "Złoty medal",
-          "Konia"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "to1-7",
-        "type": "why_question",
-        "question": "Dlaczego Twain pokazuje tę scenę?",
-        "expectedMeaning": "Pokazuje spryt Toma, psychologię perswazji, humor, krytykę pracy dzieci",
-        "difficulty": "medium"
-      },
-      {
-        "id": "to1-8",
-        "type": "find_error",
-        "question": "Znajdź błąd o Ch.1-2",
-        "statements": [
-          "Tom mieszka z ciotką Polly",
-          "Ben Rogers maluje za jabłko",
-          "Tom nienawidzi malowania i odmawia fortelu",
-          "Tom zbiera skarby od kolegów"
-        ],
-        "errorIndex": 2,
-        "difficulty": "easy"
-      },
-      {
-        "id": "to1-9",
-        "type": "match",
-        "question": "Dopasuj postać",
-        "pairs": [
-          {
-            "left": "Tom Sawyer",
-            "right": "Spryciarz od płotu"
-          },
-          {
-            "left": "Ben Rogers",
-            "right": "Płaci za malowanie"
-          },
-          {
-            "left": "Ciotka Polly",
-            "right": "Każe malować płot"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "to1-10",
-        "type": "what_next",
-        "question": "Co Tom robi z bogactwem po płocie?",
-        "options": [
-          "Idzie na cmentarz / pokazuje się w kościele",
-          "Kupuje dom",
-          "Ucieka z miasta",
-          "Zostaje nauczycielem"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      }
-    ],
-    "tom-ch2": [
-      {
-        "id": "to2-1",
-        "type": "multiple_choice",
-        "question": "Dokąd uciekają Tom, Huck i Joe?",
-        "options": [
-          "Jackson's Island",
-          "Treasure Island",
-          "Netherfield",
-          "Sherwood"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "to2-2",
-        "type": "true_false",
-        "question": "Chłopcy udają piratów a miasteczko myśli że utonęli.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "to2-3",
-        "type": "open_question",
-        "question": "Dlaczego ucieczka na wyspę jest dla nich atrakcyjna?",
-        "expectedMeaning": "Wolność, przygoda, ucieczka od zasad dorosłych, bycie piratem, niezależność",
-        "difficulty": "medium"
-      },
-      {
-        "id": "to2-4",
-        "type": "ordering",
-        "question": "Kolejność wyspy",
-        "items": [
-          "Ucieczka łódką nocą",
-          "Życie piratów na wyspie",
-          "Miasteczko żałoba / pogrzeb",
-          "Powrót i zaskoczenie na pogrzebie"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "to2-5",
-        "type": "who_said",
-        "question": "Kto jest narratorem?",
-        "pairs": [
-          {
-            "left": "Narrator trzecioosobowy o Tomie",
-            "right": "Mark Twain / narrator"
-          },
-          {
-            "left": "We are pirates!",
-            "right": "Tom i Huck"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "to2-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 członków załogi piratów",
-        "options": [
-          "Tom Sawyer",
-          "Huck Finn",
-          "Injun Joe",
-          "Becky Thatcher"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "to2-7",
-        "type": "why_question",
-        "question": "Dlaczego wracają na własny pogrzeb?",
-        "expectedMeaning": "Tęsknota, chęć efektu, zabawa i chwała, Tom lubi dramat",
-        "difficulty": "medium"
-      },
-      {
-        "id": "to2-8",
-        "type": "find_error",
-        "question": "Znajdź błąd",
-        "statements": [
-          "Uciekają na Jackson's Island",
-          "Palą ognisko i kradną jedzenie",
-          "Zostają uznani za zmarłych",
-          "Zostają na wyspie na zawsze"
-        ],
-        "errorIndex": 3,
-        "difficulty": "easy"
-      },
-      {
-        "id": "to2-9",
-        "type": "match",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "Joe Harper",
-            "right": "Drugi pirat wyspy"
-          },
-          {
-            "left": "Huck Finn",
-            "right": "Bezdomny pirat"
-          },
-          {
-            "left": "Ciotka Polly",
-            "right": "Płacze na pogrzebie"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "to2-10",
-        "type": "what_next",
-        "question": "Co po powrocie?",
-        "options": [
-          "Bohaterowie miasteczka, zazdrość kolegów",
-          "Kara chłosty",
-          "Wygnanie",
-          "Tom zostaje kapitanem statku"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      }
-    ],
-    "around-ch1": [
-      {
-        "id": "ar1-1",
-        "type": "multiple_choice",
-        "question": "Ile wynosi zakład Fogga?",
-        "options": [
-          "£20,000",
-          "£5,000",
-          "$35",
-          "£100,000"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar1-2",
-        "type": "true_false",
-        "question": "Phileas Fogg mieszka w Savile Row i jest członkiem Reform Club.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar1-3",
-        "type": "open_question",
-        "question": "Dlaczego Fogg przyjmuje zakład o 80 dni?",
-        "expectedMeaning": "Wierzy w postęp techniki (kolej, parowce), precyzję i że świat się skurczył, chce udowodnić kalkulację",
-        "difficulty": "medium"
-      },
-      {
-        "id": "ar1-4",
-        "type": "ordering",
-        "question": "Kolejność Ch.1",
-        "items": [
-          "Dyskusja w Reform Club o 80 dni",
-          "Fogg zakłada się o £20k",
-          "Zatrudnia Passepartout",
-          "Wyruszają 2 października o 20:45"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "ar1-5",
-        "type": "who_said",
-        "question": "Kto mówi 'The world has grown smaller'?",
-        "pairs": [
-          {
-            "left": "The world has grown smaller...",
-            "right": "Dyskusja w Reform Club (Fogg/obserwator)"
-          },
-          {
-            "left": "I am called Passepartout",
-            "right": "Służący Fogga"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar1-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 cechy Fogga",
-        "options": [
-          "Punktualny pedant",
-          "Bogaty dżentelmen",
-          "Pirat",
-          "Roztrzepany artysta"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar1-7",
-        "type": "why_question",
-        "question": "Dlaczego Passepartout chce pracować u Fogga?",
-        "expectedMeaning": "Szuka spokojnej posady u uporządkowanego pana, po burzliwej karierze cyrkowej",
-        "difficulty": "medium"
-      },
-      {
-        "id": "ar1-8",
-        "type": "find_error",
-        "question": "Znajdź błąd",
-        "statements": [
-          "Zakład: 80 dni dookoła świata",
-          "Fogg wyrusza z Londynu",
-          "Fogg jest biednym marynarzem",
-          "Stawka to połowa majątku Fogga"
-        ],
-        "errorIndex": 2,
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar1-9",
-        "type": "match",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "Phileas Fogg",
-            "right": "Dżentelmen Reform Club"
-          },
-          {
-            "left": "Passepartout",
-            "right": "Francuski służący"
-          },
-          {
-            "left": "Reform Club",
-            "right": "Miejsce zakładu"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar1-10",
-        "type": "what_next",
-        "question": "Co tuż po zakładzie?",
-        "options": [
-          "Fogg i Passepartout ruszają do Dover / Suez",
-          "Fogg idzie spać",
-          "Fogg przegrywa od razu",
-          "Passepartout rezygnuje"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      }
-    ],
-    "around-ch2": [
-      {
-        "id": "ar2-1",
-        "type": "multiple_choice",
-        "question": "Kto ściga Fogga jako domniemanego złodzieja?",
-        "options": [
-          "Detektyw Fix",
-          "Holmes",
-          "Passepartout",
-          "Bankier"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar2-2",
-        "type": "true_false",
-        "question": "W Banku Anglii skradziono £55,000 i Fix podejrzewa Fogga.",
-        "options": [
-          "Prawda",
-          "Fałsz"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar2-3",
-        "type": "open_question",
-        "question": "Dlaczego Fix myli Fogga ze złodziejem?",
-        "expectedMeaning": "Rysopis pasuje, Fogg ma dużo gotówki, nagłe wyjazdy, tajemniczy tryb życia",
-        "difficulty": "medium"
-      },
-      {
-        "id": "ar2-4",
-        "type": "ordering",
-        "question": "Kolejność pościgu",
-        "items": [
-          "Kradzież w Banku Anglii",
-          "Fix dostaje depeszę w Suezie",
-          "Fix obserwuje Fogga i Passepartout",
-          "Fix płynie za nimi dalej"
-        ],
-        "correctOrder": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "difficulty": "medium"
-      },
-      {
-        "id": "ar2-5",
-        "type": "who_said",
-        "question": "Dopasuj",
-        "pairs": [
-          {
-            "left": "He fits the description exactly",
-            "right": "Fix o Foggu"
-          },
-          {
-            "left": "We shall see",
-            "right": "Fix"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar2-6",
-        "type": "multiple_select",
-        "question": "Wybierz 2 środki transportu Fogga (ogólnie książka)",
-        "options": [
-          "Parowiec",
-          "Kolej",
-          "Balon na chwilę",
-          "Rower"
-        ],
-        "correctAnswers": [
-          0,
-          1
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar2-7",
-        "type": "why_question",
-        "question": "Dlaczego Passepartout jest problemem dla Fogga (czas)?",
-        "expectedMeaning": "Gubi się, nie rozumie czasu/pośpiechu, robi dygresje, Fix go wykorzystuje",
-        "difficulty": "medium"
-      },
-      {
-        "id": "ar2-8",
-        "type": "find_error",
-        "question": "Znajdź błąd",
-        "statements": [
-          "Fix ściga Fogga do Suezu i dalej",
-          "Passepartout traci rozum czasu",
-          "Fogg leci samolotem od początku",
-          "Zakład trwa 80 dni"
-        ],
-        "errorIndex": 2,
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar2-9",
-        "type": "match",
-        "question": "Dopasuj trasę",
-        "pairs": [
-          {
-            "left": "Suez",
-            "right": "Fix spotyka Fogga"
-          },
-          {
-            "left": "Bombaj",
-            "right": "Słonie i świątynia"
-          },
-          {
-            "left": "Londyn",
-            "right": "Start/meta"
-          }
-        ],
-        "difficulty": "easy"
-      },
-      {
-        "id": "ar2-10",
-        "type": "what_next",
-        "question": "Co robi Fix gdy nie ma nakazu?",
-        "options": [
-          "Czeka na nakaz i śledzi Fogga",
-          "Aresztuje od razu",
-          "Wraca do Londynu",
-          "Pomaga Foggowi"
-        ],
-        "correctAnswer": 0,
-        "difficulty": "medium"
-      }
-    ]
+   ],
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/alice.png"
+  },
+  {
+   "id": "sherlock",
+   "title": "The Adventures of Sherlock Holmes",
+   "author": "Arthur Conan Doyle",
+   "coverEmoji": "🕵️",
+   "description": "Pełny tekst z domeny publicznej (Gutenberg #1661). 12 opowiadań. W MVP: 'A Scandal in Bohemia' i 'The Red-Headed League' — dedukcja, szczegóły, motywacje postaci.",
+   "totalChapters": 2,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/1661",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "sherlock.txt",
+   "chapters": [
+    {
+     "id": "sherlock-ch1",
+     "bookId": "sherlock",
+     "index": 1,
+     "title": "A Scandal in Bohemia",
+     "summary": "Król Czech prosi Holmesa o odzyskanie zdjęcia od Irene Adler. Holmes przebiera się i przechytrza diwę, ale ona go przechytrza.",
+     "contextExcerpt": "To Sherlock Holmes she is always the woman... Irene Adler, née Norton, contralto... 'You will excuse this mask,' continued our strange visitor. — Sherlock Ch.1 Gutenberg.",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "sherlock-ch2",
+     "bookId": "sherlock",
+     "index": 2,
+     "title": "The Red-Headed League",
+     "summary": "Jabez Wilson dostaje absurdalną pracę — przepisywanie encyklopedii za 4 funty tygodniowo. Kryje się napad na bank.",
+     "contextExcerpt": "I had called upon my friend Mr. Sherlock Holmes... 'My life... is spent in a very quiet manner... I am his assistant, Vincent Spaulding.' — Sherlock Ch.2 Gutenberg.",
+     "reward": "5 USDC"
+    }
+   ],
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/sherlock.png"
+  },
+  {
+   "id": "treasure",
+   "title": "Treasure Island",
+   "author": "Robert Louis Stevenson",
+   "coverEmoji": "🏴‍☠️",
+   "description": "Pełny tekst z domeny publicznej (Gutenberg #120). Klasyka przygodowa — mapa, mutiny, Long John Silver. Pełna treść w apce, challenge z fragmentów.",
+   "totalChapters": 2,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/120",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "treasure.txt",
+   "chapters": [
+    {
+     "id": "treasure-ch1",
+     "bookId": "treasure",
+     "index": 1,
+     "title": "The Old Sea-Dog at the Admiral Benbow",
+     "summary": "Do gospody przybywa tajemniczy marynarz z skrzynią i mapą. Jim Hawkins poznaje strach załogi przed jedną nogą.",
+     "contextExcerpt": "SQUIRE TRELAWNEY, Dr. Livesey, and the rest of these gentlemen... I remember him as if it were yesterday... the old seaman with a sabre cut... 'The Old Sea-Dog at the Admiral Benbow' — Gutenberg #120",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "treasure-ch2",
+     "bookId": "treasure",
+     "index": 2,
+     "title": "Black Dog Appears and Disappears",
+     "summary": "Pojawia się Black Dog, konfrontacja z Billy Bonesem. Pierwsze przeczucie spisku.",
+     "contextExcerpt": "Black Dog appears... 'You had better save your threats,' said the captain... — Treasure Island Ch.2 Gutenberg",
+     "reward": "5 USDC"
+    }
+   ],
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/treasure.png"
+  },
+  {
+   "id": "tomsawyer",
+   "title": "The Adventures of Tom Sawyer",
+   "author": "Mark Twain",
+   "coverEmoji": "🎣",
+   "description": "Pełny tekst z domeny publicznej (Gutenberg #74). Przygody Toma, Hucka, malowanie płotu i ucieczka na wyspę. Test z humoru Twaina.",
+   "totalChapters": 2,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/74",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "tomsawyer.txt",
+   "chapters": [
+    {
+     "id": "tom-ch1",
+     "bookId": "tomsawyer",
+     "index": 1,
+     "title": "Y-o-u-u Tom! — The Fence",
+     "summary": "Tom zmuszony malować płot, sprytnie sprzedaje przywilej kolegom.",
+     "contextExcerpt": "'Y-o-u-u Tom!' No answer... Tom appeared with a bucket of whitewash... 'Does a boy get a chance to whitewash a fence every day?' — Tom Sawyer Ch.1-2 Gutenberg",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "tom-ch2",
+     "bookId": "tomsawyer",
+     "index": 2,
+     "title": "The Jackson's Island Adventure",
+     "summary": "Tom, Huck i Joe uciekają na wyspę udając piratów, miasteczko myśli że utonęli.",
+     "contextExcerpt": "Tom, Joe Harper and Huck Finn escape to Jackson's Island... 'They swam to an island and lived as pirates' — Tom Sawyer Gutenberg",
+     "reward": "5 USDC"
+    }
+   ],
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/tomsawyer.png"
+  },
+  {
+   "id": "around",
+   "title": "Around the World in Eighty Days",
+   "author": "Jules Verne",
+   "coverEmoji": "🌍",
+   "description": "Pełny tekst z domeny publicznej (Gutenberg #103). Zakład Phileasa Fogga o 80 dni dookoła świata — pociągi, parowce i Fix.",
+   "totalChapters": 2,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/103",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "around.txt",
+   "chapters": [
+    {
+     "id": "around-ch1",
+     "bookId": "around",
+     "index": 1,
+     "title": "Phileas Fogg Bets £20,000",
+     "summary": "Fogg, dżentelmen Reform Club, zakłada się że okrąży świat w 80 dni. Passepartout nowym służącym.",
+     "contextExcerpt": "Mr. Phileas Fogg lived, in Savile Row, Burlington Gardens... 'The world has grown smaller, since a man can now go round it ten times more quickly...' — Around Ch.1 Gutenberg",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "around-ch2",
+     "bookId": "around",
+     "index": 2,
+     "title": "Passepartout and Detective Fix",
+     "summary": "Fix bierze Fogga za złodzieja Banku Anglii i zaczyna pościg. Passepartout gubi się w czasie.",
+     "contextExcerpt": "Detective Fix... 'He fits the description of the robber...' — Around Ch.2-6 Gutenberg",
+     "reward": "5 USDC"
+    }
+   ],
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/around.png"
+  },
+  {
+   "id": "grimm",
+   "title": "Bajki Braci Grimm",
+   "author": "Bracia Grimm (tłum. E. Hunt, Gutenberg #5314)",
+   "coverEmoji": "🐺",
+   "description": "Kopciuszek, Czerwony Kapturek i Śpiąca Królewna w oryginalnych wersjach Grimm — mroczniej niż w Disneyu. Teksty EN (Gutenberg), pytania PL.",
+   "totalChapters": 3,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/5314",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "grimm.txt",
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/grimm.png",
+   "chapters": [
+    {
+     "id": "grimm-ch1",
+     "bookId": "grimm",
+     "index": 1,
+     "title": "Cinderella (Kopciuszek)",
+     "summary": "Po śmierci mamy Kopciuszek służy macosze i siostrom. Leszczyna na grobie mamy i biały ptak spełniają życzenia; bal królewicza, północ, zgubiony pantofelek.",
+     "contextExcerpt": "21 Cinderella — The wife of a rich man fell sick... 'Dear child, be good and pious, and then the good God will always protect thee' — Gutenberg #5314",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "grimm-ch2",
+     "bookId": "grimm",
+     "index": 2,
+     "title": "Little Red-Cap (Czerwony Kapturek)",
+     "summary": "Dziewczynka w czerwonej czapeczce niesie chorej babci placek i wino. Wilk podstępem dociera pierwszy; myśliwy ratuje obie, brzuch wilka wypełniają kamienie.",
+     "contextExcerpt": "26 Little Red-Cap — Once she gave her a little cap of red velvet... so she was always called 'Little Red-Cap.' — Gutenberg #5314",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "grimm-ch3",
+     "bookId": "grimm",
+     "index": 3,
+     "title": "Briar-Rose (Śpiąca Królewna)",
+     "summary": "Trzynasta wróżka rzuca klątwę wrzeciona; królewna śpi 100 lat za cierniowym żywopłotem, aż przybywa królewicz.",
+     "contextExcerpt": "50 Briar-Rose — a frog crept out of the water... 'Your wish shall be fulfilled; before a year has gone by, you shall have a daughter.' — Gutenberg #5314",
+     "reward": "5 USDC"
+    }
+   ]
+  },
+  {
+   "id": "andersen",
+   "title": "Baśnie Andersena",
+   "author": "Hans Christian Andersen (Gutenberg #27200)",
+   "coverEmoji": "🧜‍♀️",
+   "description": "Mała syrenka, Królowa Śniegu i Brzydkie kaczątko — najsłynniejsze baśnie świata. Teksty EN (Gutenberg), pytania PL.",
+   "totalChapters": 3,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/27200",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "andersen.txt",
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/andersen.png",
+   "chapters": [
+    {
+     "id": "andersen-ch1",
+     "bookId": "andersen",
+     "index": 1,
+     "title": "The Little Mermaid (Mała syrenka)",
+     "summary": "Syrenka ratuje tonącego królewicza i oddaje głos morskiej czarownicy za nogi. Do wschodu słońca musi zdobyć jego miłość, inaczej zamieni się w pianę.",
+     "contextExcerpt": "THE LITTLE MERMAID — Far out in the ocean... There dwell the Sea King and his subjects. — Gutenberg #27200",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "andersen-ch2",
+     "bookId": "andersen",
+     "index": 2,
+     "title": "The Snow Queen (Królowa Śniegu)",
+     "summary": "Odłamek diabelskiego zwierciadła trafia Kaja w oko i serce. Chłopiec odjeżdża z Królową Śniegu, a Gerda wyrusza go szukać; jej łzy topią odłamek.",
+     "contextExcerpt": "THE SNOW QUEEN — he made a looking-glass which had the power of making everything good... dwindle to nothing — Gutenberg #27200",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "andersen-ch3",
+     "bookId": "andersen",
+     "index": 3,
+     "title": "The Ugly Duckling (Brzydkie kaczątko)",
+     "summary": "Wyśmiewane pisklę przetrzymuje zimę i wiosną odkrywa, że jest łabędziem. Opowieść o odrzuceniu i przemianie.",
+     "contextExcerpt": "THE UGLY DUCKLING — It was lovely summer weather in the country, and the golden corn... looked beautiful. — Gutenberg #27200",
+     "reward": "5 USDC"
+    }
+   ]
+  },
+  {
+   "id": "oz",
+   "title": "The Wonderful Wizard of Oz",
+   "author": "L. Frank Baum (Gutenberg #55)",
+   "coverEmoji": "🌪️",
+   "description": "Dorotka, Toto i cyklon nad Kansas. Początek drogi z żółtej cegły — Manczkinowie, Dobra Czarownica z Północy i srebrne pantofelki.",
+   "totalChapters": 2,
+   "rewardPerChapter": "5 USDC",
+   "sourceUrl": "https://www.gutenberg.org/ebooks/55",
+   "license": "Public domain — Project Gutenberg",
+   "fullTextFile": "oz.txt",
+   "coverUrl": "https://kacpersikora.pages.dev/books/covers/oz.png",
+   "chapters": [
+    {
+     "id": "oz-ch1",
+     "bookId": "oz",
+     "index": 1,
+     "title": "The Cyclone (Cyklon)",
+     "summary": "Szare Kansas, szary dom. Cyklon porywa domek z Dorotką i Totem; rodzina chowa się w piwnicy cyklonowej.",
+     "contextExcerpt": "The Cyclone — Dorothy lived in the midst of the great Kansas prairies, with Uncle Henry... and Aunt Em... — Gutenberg #55",
+     "reward": "5 USDC"
+    },
+    {
+     "id": "oz-ch2",
+     "bookId": "oz",
+     "index": 2,
+     "title": "The Council with the Munchkins (Rada z Manczkinami)",
+     "summary": "Domek ląduje na Złej Czarownicy ze Wschodu. Manczkinowie świętują, Dobra Czarownica z Północy daje Dorotce srebrne pantofelki i wskazuje drogę z żółtej cegły.",
+     "contextExcerpt": "The Council with the Munchkins — She was awakened by a shock... Toto put his cold little nose into her face — Gutenberg #55",
+     "reward": "5 USDC"
+    }
+   ]
   }
+ ],
+ "challengesByChapter": {
+  "alice-ch1": [
+   {
+    "id": "c1-1",
+    "type": "multiple_choice",
+    "question": "Dlaczego Alicja ruszyła za Białym Królikiem?",
+    "context": "Ch.1 Down the Rabbit-Hole — pełny tekst Gutenberg #11",
+    "options": [
+     "Bo miała mapę",
+     "Bo Królik mówił że się spóźni i wyjął zegarek",
+     "Bo zgubiła siostrę",
+     "Bo szukała herbaty"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c1-2",
+    "type": "true_false",
+    "question": "Alicja w rozdziale 1 wypija napój z etykietą 'Drink Me' i zaczyna się zmieniać.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c1-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: dlaczego drzwi w korytarzu były problemem dla Alicji?",
+    "context": "Korytarz pełen drzwi, złoty kluczyk, za małe drzwi",
+    "expectedMeaning": "Drzwi były zamknięte lub za małe; kluczyk nie pasował / Alicja była za duża lub za mała",
+    "difficulty": "medium"
+   },
+   {
+    "id": "c1-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia w kolejności (Ch.1)",
+    "items": [
+     "Alicja widzi Królika z zegarkiem",
+     "Wpada do króliczej nory",
+     "Znajduje szklany stolik ze złotym kluczykiem",
+     "Pije z butelki 'Drink Me'"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "c1-5",
+    "type": "who_said",
+    "question": "Kto powiedział: 'Oh dear! Oh dear! I shall be too late!'?",
+    "pairs": [
+     {
+      "left": "Oh dear! Oh dear! I shall be too late!",
+      "right": "Biały Królik"
+     },
+     {
+      "left": "Curiouser and curiouser!",
+      "right": "Alicja"
+     },
+     {
+      "left": "Drink Me",
+      "right": "Etykieta na butelce"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "c1-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 prawdziwe zdania o rozdziale 1",
+    "options": [
+     "Alicja spada bardzo długo i rozmyśla",
+     "Alicja od razu znajduje wyjście z korytarza",
+     "Królik nosi kamizelkę i zegarek",
+     "Alicja spotyka Królową Kier"
+    ],
+    "correctAnswers": [
+     0,
+     2
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "c1-7",
+    "type": "what_next",
+    "question": "Co dzieje się tuż po tym gdy Alicja rośnie za bardzo?",
+    "options": [
+     "Zaczyna płakać bo nie mieści się",
+     "Natychmiast wraca do domu",
+     "Spotyka Kota z Cheshire",
+     "Zasypia"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "c1-8",
+    "type": "find_error",
+    "question": "Znajdź zdanie NIEZGODNE z rozdziałem 1",
+    "statements": [
+     "Biały Królik ma różowe oczy i zegarek",
+     "Korytarz ma wiele drzwi i szklany stolik",
+     "Alicja zjada ciastko 'Eat Me' i maleje (to jest w Ch.1)",
+     "Alicja gra w krykieta z Królową"
+    ],
+    "errorIndex": 3,
+    "difficulty": "medium"
+   },
+   {
+    "id": "c1-9",
+    "type": "why_question",
+    "question": "Dlaczego Alicja decyduje się napić z butelki mimo że nie wie co to jest?",
+    "context": "Butelka 'Drink Me', Alicja rozważa czy jest trująca",
+    "expectedMeaning": "Sprawdziła że nie ma oznaczenia 'poison', jest ciekawa, liczy że pomoże jej przejść przez drzwi",
+    "difficulty": "hard"
+   },
+   {
+    "id": "c1-10",
+    "type": "match",
+    "question": "Dopasuj obiekt do jego roli",
+    "pairs": [
+     {
+      "left": "Złoty kluczyk",
+      "right": "Otwiera małe drzwiczki"
+     },
+     {
+      "left": "Butelka 'Drink Me'",
+      "right": "Zmienia rozmiar Alicji"
+     },
+     {
+      "left": "Królicza nora",
+      "right": "Wejście do podziemnego korytarza"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ch1_multiple_choice",
+    "type": "multiple_choice",
+    "question": "Co zrobiła Alicja z pustym słoikiem po pomarańczowej marmoladzie podczas spadania?",
+    "difficulty": "łatwy",
+    "options": [
+     "Wyrzuciła go w dół, żeby sprawdzić, jak jest głęboko.",
+     "Włożyła go do jednej z szafek, obok których spadała.",
+     "Zatrzymała go i zabrała ze sobą na dno studni.",
+     "Rozbiła go o ścianę studni."
+    ],
+    "correct_answer": "Włożyła go do jednej z szafek, obok których spadała.",
+    "chapterId": "alice-ch1"
+   },
+   {
+    "id": "ch2_true_false",
+    "type": "true_false",
+    "question": "Biały Królik miał różowe oczy i wyjął zegarek z kieszeni kamizelki.",
+    "difficulty": "łatwy",
+    "correct_answer": true,
+    "chapterId": "alice-ch1"
+   },
+   {
+    "id": "ch3_who_said",
+    "type": "who_said",
+    "question": "Kto wypowiedział słowa: „Oh dear! Oh dear! I shall be late!”?",
+    "difficulty": "łatwy",
+    "quote": "Oh dear! Oh dear! I shall be late!",
+    "options": [
+     "Alicja",
+     "Biały Królik",
+     "Siostra Alicji",
+     "Narrator"
+    ],
+    "correct_answer": "Biały Królik",
+    "chapterId": "alice-ch1"
+   },
+   {
+    "id": "ch4_ordering",
+    "type": "ordering",
+    "question": "Uporządkuj wydarzenia w kolejności, w jakiej występują we fragmencie.",
+    "difficulty": "średni",
+    "items": [
+     "Alicja widzi szafki i półki w studni.",
+     "Alicja rozważa robienie łańcuszka ze stokrotek.",
+     "Biały Królik biegnie blisko Alicji.",
+     "Alicja wpada do króliczej nory.",
+     "Królik wyjmuje zegarek z kieszeni kamizelki."
+    ],
+    "correct_order": [
+     1,
+     2,
+     4,
+     3,
+     0
+    ],
+    "chapterId": "alice-ch1"
+   },
+   {
+    "id": "ch5_why_question",
+    "type": "why_question",
+    "question": "Dlaczego Alicja nie upuściła słoika z pomarańczową marmoladą, gdy spadała?",
+    "difficulty": "średni",
+    "expectedMeaning": "Alicja bała się, że jeśli upuści słoik, może kogoś zabić, kto znajduje się pod nią w studni.",
+    "chapterId": "alice-ch1"
+   }
+  ],
+  "alice-ch2": [
+   {
+    "id": "c2-1",
+    "type": "multiple_choice",
+    "question": "Co Alicja robi gdy jest zbyt duża i zalewa pokój łzami?",
+    "options": [
+     "Śmieje się",
+     "Płacze i tworzy kałużę łez",
+     "Ucieka przez okno",
+     "Woła siostrę"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c2-2",
+    "type": "true_false",
+    "question": "Alicja w Ch.2 spotyka ponownie Białego Królika który bierze ją za swoją służącą.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "c2-3",
+    "type": "open_question",
+    "question": "Dlaczego Alicja mówi 'Curiouser and curiouser!'?",
+    "context": "Ch.2 zmiany rozmiaru",
+    "expectedMeaning": "Bo rzeczy stają się coraz dziwniejsze — jej ciało rośnie/maleje w nieprzewidywalny sposób",
+    "difficulty": "medium"
+   },
+   {
+    "id": "c2-4",
+    "type": "ordering",
+    "question": "Kolejność zdarzeń w Ch.2",
+    "items": [
+     "Alicja próbuje Wachlarz Królika i maleje",
+     "Wpada do kałuży łez",
+     "Spotyka Myszę",
+     "Mysz próbuje wysuszyć towarzystwo"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "c2-5",
+    "type": "multiple_select",
+    "question": "Które 2 zwierzęta pojawiają się w Ch.2-3?",
+    "options": [
+     "Mysz",
+     "Dodo",
+     "Smok",
+     "Jednorożec"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "c2-6",
+    "type": "why_question",
+    "question": "Dlaczego Mysz się obraża na Alicję?",
+    "context": "Alicja mówi o kotach, Mysz nie lubi kotów",
+    "expectedMeaning": "Alicja wspomina kota Dinah i koty w ogóle, a Mysz boi się / nienawidzi kotów",
+    "difficulty": "medium"
+   },
+   {
+    "id": "c2-7",
+    "type": "what_next",
+    "question": "Co dzieje się po tym jak Alicja i zwierzęta są mokre?",
+    "options": [
+     "Organizują Caucus-Race",
+     "Idą na herbatkę",
+     "Wracają do domu",
+     "Zasypiają"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c2-8",
+    "type": "find_error",
+    "question": "Znajdź błąd o Ch.2",
+    "statements": [
+     "Alicja maleje po wachlarzu",
+     "Alicja płynie we własnych łzach",
+     "Biały Królik gubi rękawiczki",
+     "Alicja zostaje Królową"
+    ],
+    "errorIndex": 3,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c2-9",
+    "type": "match",
+    "question": "Dopasuj postać do zachowania",
+    "pairs": [
+     {
+      "left": "Alicja",
+      "right": "Płacze i tworzy kałużę"
+     },
+     {
+      "left": "Biały Królik",
+      "right": "Gubi wachlarz i rękawiczki"
+     },
+     {
+      "left": "Mysz",
+      "right": "Ucieka gdy mowa o kotach"
+     }
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "c2-10",
+    "type": "who_said",
+    "question": "Kto mówi o 'curiouser and curiouser'?",
+    "pairs": [
+     {
+      "left": "Curiouser and curiouser!",
+      "right": "Alicja"
+     },
+     {
+      "left": "Oh my ears and whiskers!",
+      "right": "Biały Królik"
+     }
+    ],
+    "difficulty": "easy"
+   }
+  ],
+  "alice-ch3": [
+   {
+    "id": "c3-1",
+    "type": "multiple_choice",
+    "question": "Czym jest Caucus-Race według Dodo?",
+    "options": [
+     "Wyścig z nagrodami dla wszystkich",
+     "Wyścig tylko dla ptaków",
+     "Wyścig bez mety",
+     "Wyścig z przeszkodami"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c3-2",
+    "type": "true_false",
+    "question": "W Caucus-Race każdy wygrywa i każdy dostaje nagrodę.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c3-3",
+    "type": "open_question",
+    "question": "Jak Dodo rozwiązuje problem wysuszenia towarzystwa?",
+    "context": "Mokra grupa po kałuży łez",
+    "expectedMeaning": "Organizuje Caucus-Race — bieganie w kółko bez zasad, potem nagrody",
+    "difficulty": "medium"
+   },
+   {
+    "id": "c3-4",
+    "type": "ordering",
+    "question": "Kolejność Caucus-Race",
+    "items": [
+     "Dodo ogłasza wyścig",
+     "Wszyscy biegają bez początku/końca",
+     "Dodo ogłasza że wszyscy wygrali",
+     "Alicja wręcza cukierki jako nagrody"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "c3-5",
+    "type": "why_question",
+    "question": "Dlaczego Alicja musi dać własną nagrodę?",
+    "context": "Brak nagród, Alicja ma cukierki",
+    "expectedMeaning": "Nie ma przygotowanych nagród, Dodo każe Alicji dać coś z kieszeni, potem ona dostaje własny pierścionek",
+    "difficulty": "hard"
+   },
+   {
+    "id": "c3-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 cechy Caucus-Race",
+    "options": [
+     "Brak zasad startu/mety",
+     "Sędziuje Dodo",
+     "Wygrywa najszybszy",
+     "Trwa 5 minut dokładnie"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "c3-7",
+    "type": "what_next",
+    "question": "Co robi Mysz po wyścigu?",
+    "options": [
+     "Opowiada długą smutną historię",
+     "Idzie spać",
+     "Zjada nagrody",
+     "Uciekają wszyscy"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "c3-8",
+    "type": "find_error",
+    "question": "Znajdź błąd o Ch.3",
+    "statements": [
+     "Dodo organizuje wyścig",
+     "Wszyscy dostają cukierki od Alicji",
+     "Mysz opowiada o kocie i psie",
+     "Alicja spotyka Królową Kier"
+    ],
+    "errorIndex": 3,
+    "difficulty": "easy"
+   },
+   {
+    "id": "c3-9",
+    "type": "match",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "Dodo",
+      "right": "Sędzia wyścigu"
+     },
+     {
+      "left": "Mysz",
+      "right": "Opowiada Long Tale"
+     },
+     {
+      "left": "Alicja",
+      "right": "Daje nagrody"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "c3-10",
+    "type": "who_said",
+    "question": "Kto mówi 'Everybody has won, and all must have prizes'?",
+    "pairs": [
+     {
+      "left": "Everybody has won, and all must have prizes",
+      "right": "Dodo"
+     },
+     {
+      "left": "I am so tired of swimming",
+      "right": "Alicja"
+     }
+    ],
+    "difficulty": "easy"
+   }
+  ],
+  "sherlock-ch1": [
+   {
+    "id": "s1-1",
+    "type": "multiple_choice",
+    "question": "Kto prosi Holmesa o pomoc w 'A Scandal in Bohemia'?",
+    "options": [
+     "Król Czech",
+     "Premier",
+     "Watson",
+     "Irene Adler"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "s1-2",
+    "type": "true_false",
+    "question": "Irene Adler przechytrza Holmesa i zatrzymuje zdjęcie.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "s1-3",
+    "type": "open_question",
+    "question": "Dlaczego Holmes nazywa Irene 'the woman'?",
+    "context": "Podziw dla jej inteligencji",
+    "expectedMeaning": "Bo jako jedyna przechytrzyła Holmesa, dorównuje mu inteligencją, budzi szacunek",
+    "difficulty": "medium"
+   },
+   {
+    "id": "s1-4",
+    "type": "ordering",
+    "question": "Ułóż plan Holmesa w kolejności",
+    "items": [
+     "Przebiera się za stajennego",
+     "Śledzi Irene do kościoła",
+     "Inscenizuje pożar aby znaleźć zdjęcie",
+     "Wraca po zdjęcie ale skrytka pusta"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "s1-5",
+    "type": "who_said",
+    "question": "Kto mówi 'To Sherlock Holmes she is always the woman'?",
+    "pairs": [
+     {
+      "left": "To Sherlock Holmes she is always the woman",
+      "right": "Watson / narrator"
+     },
+     {
+      "left": "You will excuse this mask",
+      "right": "Król Czech"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "s1-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 cechy Irene Adler",
+    "options": [
+     "Śpiewaczka / aktorka",
+     "Przechytrza Holmesa",
+     "Jest służącą króla",
+     "Mieszka na Baker Street"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "s1-7",
+    "type": "why_question",
+    "question": "Dlaczego Holmes inscenizuje alarm pożarowy?",
+    "context": "Chce znaleźć skrytkę ze zdjęciem",
+    "expectedMeaning": "Wie że kobieta w panice spojrzy / pobiegnie do najcenniejszej rzeczy — zdjęcia",
+    "difficulty": "medium"
+   },
+   {
+    "id": "s1-8",
+    "type": "find_error",
+    "question": "Znajdź błąd o 'Scandal in Bohemia'",
+    "statements": [
+     "Król Czech chce odzyskać kompromitujące zdjęcie",
+     "Holmes przebiera się za księdza na ślubie Irene",
+     "Irene ucieka z mężem Nortonem",
+     "Holmes odzyskuje zdjęcie"
+    ],
+    "errorIndex": 3,
+    "difficulty": "medium"
+   },
+   {
+    "id": "s1-9",
+    "type": "match",
+    "question": "Dopasuj postać do roli",
+    "pairs": [
+     {
+      "left": "Wilhelm von Ormstein",
+      "right": "Król Czech / klient"
+     },
+     {
+      "left": "Irene Adler",
+      "right": "Przechytrza Holmesa"
+     },
+     {
+      "left": "Godfrey Norton",
+      "right": "Mąż Irene, prawnik"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "s1-10",
+    "type": "what_next",
+    "question": "Co Holmes dostaje/robi na końcu zamiast nagrody?",
+    "options": [
+     "Prosi o fotografię Irene",
+     "Bierze złoto",
+     "Zatrzymuje pierścień króla",
+     "Nic nie chce"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   }
+  ],
+  "sherlock-ch2": [
+   {
+    "id": "s2-1",
+    "type": "multiple_choice",
+    "question": "Na czym polega praca w Red-Headed League?",
+    "options": [
+     "Przepisywanie encyklopedii",
+     "Liczenie włosów",
+     "Sprzedaż farby",
+     "Pilnowanie banku"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "s2-2",
+    "type": "true_false",
+    "question": "Jabez Wilson zostaje wybrany ze względu na rude włosy.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "s2-3",
+    "type": "open_question",
+    "question": "Jaki jest prawdziwy cel Red-Headed League?",
+    "context": "Tunel do banku",
+    "expectedMeaning": "Odciągnąć Wilsona ze sklepu aby przekopać tunel do banku City & Suburban i ukraść złoto",
+    "difficulty": "medium"
+   },
+   {
+    "id": "s2-4",
+    "type": "ordering",
+    "question": "Kolejność odkrycia Holmesa",
+    "items": [
+     "Bada kolana spodni Wilsona",
+     "Odwiedza sklep i puka laską w chodnik",
+     "Idzie na koncert z Watsonem",
+     "Czatuje z policją w banku"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "hard"
+   },
+   {
+    "id": "s2-5",
+    "type": "who_said",
+    "question": "Kto mówi 'I am his assistant, Vincent Spaulding'?",
+    "pairs": [
+     {
+      "left": "I am his assistant, Vincent Spaulding",
+      "right": "Jabez Wilson o pomocniku"
+     },
+     {
+      "left": "It is quite a three pipe problem",
+      "right": "Holmes"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "s2-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 fakty o Spaulding / John Clay",
+    "options": [
+     "To John Clay — kryminalista",
+     "Kopie tunel",
+     "Jest policjantem",
+     "To brat Wilsona"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "s2-7",
+    "type": "why_question",
+    "question": "Dlaczego ogłoszenie wymaga tylko rudych włosów?",
+    "context": "Selekcja ofiary",
+    "expectedMeaning": "Aby zwabić Wilsona (rudy) i mieć pretekst do codziennego usuwania go ze sklepu na godziny",
+    "difficulty": "medium"
+   },
+   {
+    "id": "s2-8",
+    "type": "find_error",
+    "question": "Znajdź błąd o Red-Headed League",
+    "statements": [
+     "Wilson dostaje 4 funty tygodniowo",
+     "Liga nagle się rozwiązuje",
+     "Holmes odkrywa że to napad na bank",
+     "Wilson zostaje wspólnikiem banku"
+    ],
+    "errorIndex": 3,
+    "difficulty": "easy"
+   },
+   {
+    "id": "s2-9",
+    "type": "match",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "Jabez Wilson",
+      "right": "Lombard / rudy klient"
+     },
+     {
+      "left": "Vincent Spaulding / John Clay",
+      "right": "Kopie tunel"
+     },
+     {
+      "left": "Duncan Ross / William Morris",
+      "right": "Fałszywy organizator Ligi"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "s2-10",
+    "type": "what_next",
+    "question": "Co dzieje się w banku na końcu?",
+    "options": [
+     "Policja łapie Clay i Archie Rossa",
+     "Wilson dostaje awans",
+     "Bank płonie",
+     "Holmes gubi sprawę"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   }
+  ],
+  "treasure-ch1": [
+   {
+    "id": "tr1-1",
+    "type": "multiple_choice",
+    "question": "Kto przybywa do Admiral Benbow na początku?",
+    "options": [
+     "Billy Bones — stary marynarz ze skrzynią",
+     "Long John Silver",
+     "Jim's mother",
+     "Doctor Livesey"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr1-2",
+    "type": "true_false",
+    "question": "Billy Bones boi się mężczyzny z jedną nogą.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr1-3",
+    "type": "open_question",
+    "question": "Dlaczego marynarze w gospodzie boją się Billy Bonesa?",
+    "context": "Groźny, pijany, opowieści o morzu",
+    "expectedMeaning": "Jest agresywny, tajemniczy, opowiada straszne historie, grozi, ma reputację pirata",
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr1-4",
+    "type": "ordering",
+    "question": "Kolejność Ch.1",
+    "items": [
+     "Przybycie Billy Bonesa",
+     "Prośba o obserwowanie wybrzeża",
+     "Jim przynosi rum",
+     "Czarna plama pojawia się w rozmowach"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr1-5",
+    "type": "who_said",
+    "question": "Kto mówi o 'one-legged man'?",
+    "pairs": [
+     {
+      "left": "The one-legged man I fear",
+      "right": "Billy Bones"
+     },
+     {
+      "left": "Squire Trelawney will hear of this",
+      "right": "Dr Livesey"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr1-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 przedmioty Billy Bonesa",
+    "options": [
+     "Skrzynia morska",
+     "Mapa skarbów",
+     "Złoty zegarek",
+     "Kulawy papuga"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr1-7",
+    "type": "why_question",
+    "question": "Dlaczego Jim pomaga mimo strachu?",
+    "expectedMeaning": "Ciekawość, obowiązek wobec gościa, chęć przygody, lojalność wobec matki/gospody",
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr1-8",
+    "type": "find_error",
+    "question": "Znajdź błąd o Treasure Island Ch.1",
+    "statements": [
+     "Gospoda to Admiral Benbow",
+     "Billy Bones dostaje Black Spot",
+     "Jim jest narratorem",
+     "Pojawia się Kapitan Hook"
+    ],
+    "errorIndex": 3,
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr1-9",
+    "type": "match",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "Billy Bones",
+      "right": "Stary marynarz z mapą"
+     },
+     {
+      "left": "Jim Hawkins",
+      "right": "Syn gospodyni, narrator"
+     },
+     {
+      "left": "Black Dog",
+      "right": "Pierwszy intruz"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr1-10",
+    "type": "what_next",
+    "question": "Co dzieje się po śmierci Billy Bonesa?",
+    "options": [
+     "Jim znajduje mapę w skrzyni",
+     "Jim ucieka do Londynu",
+     "Piraci palą gospodę",
+     "Jim zostaje kapitanem"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   }
+  ],
+  "treasure-ch2": [
+   {
+    "id": "tr2-1",
+    "type": "multiple_choice",
+    "question": "Kto to Black Dog?",
+    "options": [
+     "Dawny kompan Billy Bonesa",
+     "Lekarz",
+     "Ojciec Jima",
+     "Celnicy"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr2-2",
+    "type": "true_false",
+    "question": "Black Dog i Billy walczą na noże w gospodzie.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr2-3",
+    "type": "open_question",
+    "question": "Co zdradza walka Black Dog vs Bones o ich przeszłości?",
+    "expectedMeaning": "Znali się z załogi Flinta, piracka przeszłość, długi i strach przed zemstą",
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr2-4",
+    "type": "ordering",
+    "question": "Kolejność Ch.2",
+    "items": [
+     "Przybycie Black Dog",
+     "Rozpoznanie i bójka",
+     "Ucieczka Black Doga",
+     "Atak apopleksji u Bonesa"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr2-5",
+    "type": "who_said",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "You are a coward",
+      "right": "Black Dog do Bonesa"
+     },
+     {
+      "left": "I'll have that chest",
+      "right": "Black Dog"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr2-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 konsekwencje wizyty Black Doga",
+    "options": [
+     "Bones dostaje udar",
+     "Jim boi się bardziej",
+     "Gospoda zostaje nagrodzona",
+     "Pojawia się wojsko"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr2-7",
+    "type": "why_question",
+    "question": "Dlaczego Bones boi się po wizycie jeszcze bardziej?",
+    "expectedMeaning": "To znak że dawna załoga go znalazła, Black Spot blisko, piraci nadchodzą",
+    "difficulty": "medium"
+   },
+   {
+    "id": "tr2-8",
+    "type": "find_error",
+    "question": "Znajdź błąd",
+    "statements": [
+     "Black Dog zna Billy Bonesa",
+     "Jim słyszy ich rozmowę",
+     "Bones wygrywa walkę i Black Dog ucieka",
+     "Black Dog zostaje aresztowany przez Jima"
+    ],
+    "errorIndex": 3,
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr2-9",
+    "type": "match",
+    "question": "Dopasuj ranę do osoby",
+    "pairs": [
+     {
+      "left": "Billy Bones",
+      "right": "Udar / nóż"
+     },
+     {
+      "left": "Black Dog",
+      "right": "Cięcie po walce"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "tr2-10",
+    "type": "what_next",
+    "question": "Co zapowiada Ch.2?",
+    "options": [
+     "Nadejście niewidomego Pew i Black Spot",
+     "Powrót spokojnego życia",
+     "Jim idzie do szkoły",
+     "Bones wyzdrowieje"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   }
+  ],
+  "tom-ch1": [
+   {
+    "id": "to1-1",
+    "type": "multiple_choice",
+    "question": "Na czym polega kara Toma na początku?",
+    "options": [
+     "Malowanie płotu na biało",
+     "Rąbanie drewna",
+     "Pisanie wypracowania",
+     "Sprzątanie strychu"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "to1-2",
+    "type": "true_false",
+    "question": "Tom zamienia karę w przywilej i każe kolegom płacić za malowanie.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "to1-3",
+    "type": "open_question",
+    "question": "Jak Tom przekonuje Bena że malowanie jest super?",
+    "expectedMeaning": "Udaje że to sztuka i przywilej, że nie każdy może, że to przyjemność, reverse psychology",
+    "difficulty": "medium"
+   },
+   {
+    "id": "to1-4",
+    "type": "ordering",
+    "question": "Kolejność malowania",
+    "items": [
+     "Ciotka każe malować",
+     "Ben Rogers się nabija",
+     "Tom udaje artystę",
+     "Ben płaci jabłkiem za malowanie"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "to1-5",
+    "type": "who_said",
+    "question": "Kto mówi 'Does a boy get a chance to whitewash a fence every day?'",
+    "pairs": [
+     {
+      "left": "Does a boy get a chance to whitewash a fence every day?",
+      "right": "Tom Sawyer"
+     },
+     {
+      "left": "Y-o-u-u Tom!",
+      "right": "Ciotka Polly"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "to1-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 co Tom dostaje za płot",
+    "options": [
+     "Jabłko",
+     "Latawiec / kulki",
+     "Złoty medal",
+     "Konia"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "to1-7",
+    "type": "why_question",
+    "question": "Dlaczego Twain pokazuje tę scenę?",
+    "expectedMeaning": "Pokazuje spryt Toma, psychologię perswazji, humor, krytykę pracy dzieci",
+    "difficulty": "medium"
+   },
+   {
+    "id": "to1-8",
+    "type": "find_error",
+    "question": "Znajdź błąd o Ch.1-2",
+    "statements": [
+     "Tom mieszka z ciotką Polly",
+     "Ben Rogers maluje za jabłko",
+     "Tom nienawidzi malowania i odmawia fortelu",
+     "Tom zbiera skarby od kolegów"
+    ],
+    "errorIndex": 2,
+    "difficulty": "easy"
+   },
+   {
+    "id": "to1-9",
+    "type": "match",
+    "question": "Dopasuj postać",
+    "pairs": [
+     {
+      "left": "Tom Sawyer",
+      "right": "Spryciarz od płotu"
+     },
+     {
+      "left": "Ben Rogers",
+      "right": "Płaci za malowanie"
+     },
+     {
+      "left": "Ciotka Polly",
+      "right": "Każe malować płot"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "to1-10",
+    "type": "what_next",
+    "question": "Co Tom robi z bogactwem po płocie?",
+    "options": [
+     "Idzie na cmentarz / pokazuje się w kościele",
+     "Kupuje dom",
+     "Ucieka z miasta",
+     "Zostaje nauczycielem"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   }
+  ],
+  "tom-ch2": [
+   {
+    "id": "to2-1",
+    "type": "multiple_choice",
+    "question": "Dokąd uciekają Tom, Huck i Joe?",
+    "options": [
+     "Jackson's Island",
+     "Treasure Island",
+     "Netherfield",
+     "Sherwood"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "to2-2",
+    "type": "true_false",
+    "question": "Chłopcy udają piratów a miasteczko myśli że utonęli.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "to2-3",
+    "type": "open_question",
+    "question": "Dlaczego ucieczka na wyspę jest dla nich atrakcyjna?",
+    "expectedMeaning": "Wolność, przygoda, ucieczka od zasad dorosłych, bycie piratem, niezależność",
+    "difficulty": "medium"
+   },
+   {
+    "id": "to2-4",
+    "type": "ordering",
+    "question": "Kolejność wyspy",
+    "items": [
+     "Ucieczka łódką nocą",
+     "Życie piratów na wyspie",
+     "Miasteczko żałoba / pogrzeb",
+     "Powrót i zaskoczenie na pogrzebie"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "to2-5",
+    "type": "who_said",
+    "question": "Kto jest narratorem?",
+    "pairs": [
+     {
+      "left": "Narrator trzecioosobowy o Tomie",
+      "right": "Mark Twain / narrator"
+     },
+     {
+      "left": "We are pirates!",
+      "right": "Tom i Huck"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "to2-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 członków załogi piratów",
+    "options": [
+     "Tom Sawyer",
+     "Huck Finn",
+     "Injun Joe",
+     "Becky Thatcher"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "to2-7",
+    "type": "why_question",
+    "question": "Dlaczego wracają na własny pogrzeb?",
+    "expectedMeaning": "Tęsknota, chęć efektu, zabawa i chwała, Tom lubi dramat",
+    "difficulty": "medium"
+   },
+   {
+    "id": "to2-8",
+    "type": "find_error",
+    "question": "Znajdź błąd",
+    "statements": [
+     "Uciekają na Jackson's Island",
+     "Palą ognisko i kradną jedzenie",
+     "Zostają uznani za zmarłych",
+     "Zostają na wyspie na zawsze"
+    ],
+    "errorIndex": 3,
+    "difficulty": "easy"
+   },
+   {
+    "id": "to2-9",
+    "type": "match",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "Joe Harper",
+      "right": "Drugi pirat wyspy"
+     },
+     {
+      "left": "Huck Finn",
+      "right": "Bezdomny pirat"
+     },
+     {
+      "left": "Ciotka Polly",
+      "right": "Płacze na pogrzebie"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "to2-10",
+    "type": "what_next",
+    "question": "Co po powrocie?",
+    "options": [
+     "Bohaterowie miasteczka, zazdrość kolegów",
+     "Kara chłosty",
+     "Wygnanie",
+     "Tom zostaje kapitanem statku"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   }
+  ],
+  "around-ch1": [
+   {
+    "id": "ar1-1",
+    "type": "multiple_choice",
+    "question": "Ile wynosi zakład Fogga?",
+    "options": [
+     "£20,000",
+     "£5,000",
+     "$35",
+     "£100,000"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar1-2",
+    "type": "true_false",
+    "question": "Phileas Fogg mieszka w Savile Row i jest członkiem Reform Club.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar1-3",
+    "type": "open_question",
+    "question": "Dlaczego Fogg przyjmuje zakład o 80 dni?",
+    "expectedMeaning": "Wierzy w postęp techniki (kolej, parowce), precyzję i że świat się skurczył, chce udowodnić kalkulację",
+    "difficulty": "medium"
+   },
+   {
+    "id": "ar1-4",
+    "type": "ordering",
+    "question": "Kolejność Ch.1",
+    "items": [
+     "Dyskusja w Reform Club o 80 dni",
+     "Fogg zakłada się o £20k",
+     "Zatrudnia Passepartout",
+     "Wyruszają 2 października o 20:45"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "ar1-5",
+    "type": "who_said",
+    "question": "Kto mówi 'The world has grown smaller'?",
+    "pairs": [
+     {
+      "left": "The world has grown smaller...",
+      "right": "Dyskusja w Reform Club (Fogg/obserwator)"
+     },
+     {
+      "left": "I am called Passepartout",
+      "right": "Służący Fogga"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar1-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 cechy Fogga",
+    "options": [
+     "Punktualny pedant",
+     "Bogaty dżentelmen",
+     "Pirat",
+     "Roztrzepany artysta"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar1-7",
+    "type": "why_question",
+    "question": "Dlaczego Passepartout chce pracować u Fogga?",
+    "expectedMeaning": "Szuka spokojnej posady u uporządkowanego pana, po burzliwej karierze cyrkowej",
+    "difficulty": "medium"
+   },
+   {
+    "id": "ar1-8",
+    "type": "find_error",
+    "question": "Znajdź błąd",
+    "statements": [
+     "Zakład: 80 dni dookoła świata",
+     "Fogg wyrusza z Londynu",
+     "Fogg jest biednym marynarzem",
+     "Stawka to połowa majątku Fogga"
+    ],
+    "errorIndex": 2,
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar1-9",
+    "type": "match",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "Phileas Fogg",
+      "right": "Dżentelmen Reform Club"
+     },
+     {
+      "left": "Passepartout",
+      "right": "Francuski służący"
+     },
+     {
+      "left": "Reform Club",
+      "right": "Miejsce zakładu"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar1-10",
+    "type": "what_next",
+    "question": "Co tuż po zakładzie?",
+    "options": [
+     "Fogg i Passepartout ruszają do Dover / Suez",
+     "Fogg idzie spać",
+     "Fogg przegrywa od razu",
+     "Passepartout rezygnuje"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   }
+  ],
+  "around-ch2": [
+   {
+    "id": "ar2-1",
+    "type": "multiple_choice",
+    "question": "Kto ściga Fogga jako domniemanego złodzieja?",
+    "options": [
+     "Detektyw Fix",
+     "Holmes",
+     "Passepartout",
+     "Bankier"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar2-2",
+    "type": "true_false",
+    "question": "W Banku Anglii skradziono £55,000 i Fix podejrzewa Fogga.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar2-3",
+    "type": "open_question",
+    "question": "Dlaczego Fix myli Fogga ze złodziejem?",
+    "expectedMeaning": "Rysopis pasuje, Fogg ma dużo gotówki, nagłe wyjazdy, tajemniczy tryb życia",
+    "difficulty": "medium"
+   },
+   {
+    "id": "ar2-4",
+    "type": "ordering",
+    "question": "Kolejność pościgu",
+    "items": [
+     "Kradzież w Banku Anglii",
+     "Fix dostaje depeszę w Suezie",
+     "Fix obserwuje Fogga i Passepartout",
+     "Fix płynie za nimi dalej"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "ar2-5",
+    "type": "who_said",
+    "question": "Dopasuj",
+    "pairs": [
+     {
+      "left": "He fits the description exactly",
+      "right": "Fix o Foggu"
+     },
+     {
+      "left": "We shall see",
+      "right": "Fix"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar2-6",
+    "type": "multiple_select",
+    "question": "Wybierz 2 środki transportu Fogga (ogólnie książka)",
+    "options": [
+     "Parowiec",
+     "Kolej",
+     "Balon na chwilę",
+     "Rower"
+    ],
+    "correctAnswers": [
+     0,
+     1
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar2-7",
+    "type": "why_question",
+    "question": "Dlaczego Passepartout jest problemem dla Fogga (czas)?",
+    "expectedMeaning": "Gubi się, nie rozumie czasu/pośpiechu, robi dygresje, Fix go wykorzystuje",
+    "difficulty": "medium"
+   },
+   {
+    "id": "ar2-8",
+    "type": "find_error",
+    "question": "Znajdź błąd",
+    "statements": [
+     "Fix ściga Fogga do Suezu i dalej",
+     "Passepartout traci rozum czasu",
+     "Fogg leci samolotem od początku",
+     "Zakład trwa 80 dni"
+    ],
+    "errorIndex": 2,
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar2-9",
+    "type": "match",
+    "question": "Dopasuj trasę",
+    "pairs": [
+     {
+      "left": "Suez",
+      "right": "Fix spotyka Fogga"
+     },
+     {
+      "left": "Bombaj",
+      "right": "Słonie i świątynia"
+     },
+     {
+      "left": "Londyn",
+      "right": "Start/meta"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "ar2-10",
+    "type": "what_next",
+    "question": "Co robi Fix gdy nie ma nakazu?",
+    "options": [
+     "Czeka na nakaz i śledzi Fogga",
+     "Aresztuje od razu",
+     "Wraca do Londynu",
+     "Pomaga Foggowi"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   }
+  ],
+  "grimm-ch1": [
+   {
+    "id": "grimm-1-1",
+    "type": "multiple_choice",
+    "question": "Kto pomaga Kopciuszkowi w wersji Grimm?",
+    "options": [
+     "Dobra wróżka z różdżką",
+     "Leszczyna na grobie mamy i biały ptak",
+     "Myszki-krawcowe",
+     "Złota rybka"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "grimm-1-2",
+    "type": "true_false",
+    "question": "Przyrodnie siostry okaleczają sobie stopy, żeby zmieścić się w pantofelek.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-1-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: dlaczego północ była taka ważna na balu?",
+    "context": "Czar pryska o północy",
+    "expectedMeaning": "O północy czar znikał — suknia i pantofelki wracały do dawnej postaci, więc Kopciuszek musiał uciec przed północą",
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-1-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia z Kopciuszka w kolejności",
+    "items": [
+     "Śmierć mamy i leszczyna na grobie",
+     "Wybieranie soczewicy z popiołu",
+     "Bal i ucieczka o północy",
+     "Przymiarka pantofelka i gołębie"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-1-5",
+    "type": "multiple_select",
+    "question": "Co Kopciuszek musiał zrobić przed balem? (2 odpowiedzi)",
+    "options": [
+     "Wybrać soczewicę z popiołu",
+     "Uciec o północy",
+     "Zaczarować dynię",
+     "Być dobrą i pobożną"
+    ],
+    "correctAnswers": [
+     0,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-1-6",
+    "type": "why_question",
+    "question": "Dlaczego gołębie wydziobały siostrom oczy na ślubie?",
+    "context": "Gołębie siadają siostrom na ramionach w drodze do kościoła i z powrotem",
+    "expectedMeaning": "Bo siostry były fałszywe i okrutne — to kara za zło i obłudę",
+    "difficulty": "medium"
+   }
+  ],
+  "grimm-ch2": [
+   {
+    "id": "grimm-2-1",
+    "type": "multiple_choice",
+    "question": "Co Czerwony Kapturek niesie chorej babci?",
+    "options": [
+     "Chleb i ser",
+     "Placek i wino",
+     "Miód i mleko",
+     "Jabłka i orzechy"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "grimm-2-2",
+    "type": "true_false",
+    "question": "Wilk zjadł babcię i Kapturka, a myśliwy wyciągnął je żywe z jego brzucha.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "grimm-2-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: jak wilk wywabił Kapturka z drogi?",
+    "context": "Kwiaty na łące, zbaczanie ze ścieżki",
+    "expectedMeaning": "Namówił ją na zbieranie kwiatów na łące, żeby samemu zdążyć do babci",
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-2-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia z Czerwonego Kapturka",
+    "items": [
+     "Mama wysyła Kapturka do babci",
+     "Wilk zbiera kwiaty-podstęp i biegnie do babci",
+     "Dialog o wielkich oczach, uszach i paszczy",
+     "Myśliwy, kamienie w brzuchu wilka"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "grimm-2-5",
+    "type": "who_said",
+    "question": "Kto to powiedział: 'Jakie ty masz wielkie oczy?'",
+    "pairs": [
+     {
+      "left": "Kapturek",
+      "right": "Czerwony Kapturek"
+     },
+     {
+      "left": "Babcia",
+      "right": "wilk przebrany za babcię"
+     }
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "grimm-2-6",
+    "type": "why_question",
+    "question": "Dlaczego mama zakazała Kapturkowi schodzić ze ścieżki?",
+    "context": "Droga przez las do babci",
+    "expectedMeaning": "Bo las jest niebezpieczny — zejście ze ścieżki grozi spotkaniem wilka",
+    "difficulty": "easy"
+   }
+  ],
+  "grimm-ch3": [
+   {
+    "id": "grimm-3-1",
+    "type": "multiple_choice",
+    "question": "Ile wróżek zaproszono na chrzciny królewny?",
+    "options": [
+     "Dwanaście z trzynastu",
+     "Wszystkie trzynaście",
+     "Tylko siedem",
+     "Żadnej"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-3-2",
+    "type": "true_false",
+    "question": "Królewna śpi za cierniowym żywopłotem dokładnie sto lat.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "grimm-3-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: skąd wzięła się klątwa wrzeciona?",
+    "context": "Niezaproszona trzynasta wróżka",
+    "expectedMeaning": "Pominięta trzynasta wróżka z zemsty przepowiedziała śmierć od ukłucia wrzecionem w piętnaste urodziny",
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-3-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia ze Śpiącej Królewny",
+    "items": [
+     "Żaba zapowiada narodziny córki",
+     "Klątwa trzynastej wróżki na chrzcinach",
+     "Ukłucie wrzecionem w wieku 15 lat",
+     "Królewicz przedziera się przez ciernie po 100 latach"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-3-5",
+    "type": "multiple_choice",
+    "question": "Kto zapowiedział królowej narodziny córki?",
+    "options": [
+     "Biała gołębica",
+     "Żaba z wody",
+     "Stara żebraczka",
+     "Książę z sąsiedztwa"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium"
+   },
+   {
+    "id": "grimm-3-6",
+    "type": "why_question",
+    "question": "Dlaczego król kazał spalić wszystkie wrzeciona w kraju?",
+    "context": "Klątwa trzynastej wróżki",
+    "expectedMeaning": "Żeby uniemożliwić spełnienie klątwy — bez wrzecion królewna nie może się ukłuć",
+    "difficulty": "easy"
+   }
+  ],
+  "andersen-ch1": [
+   {
+    "id": "andersen-1-1",
+    "type": "multiple_choice",
+    "question": "Co syrenka oddaje morskiej czarownicy za nogi?",
+    "options": [
+     "Perły z włosów",
+     "Swój głos",
+     "Koronę księżniczki",
+     "Pamięć o rodzinie"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-1-2",
+    "type": "true_false",
+    "question": "Syrenka może wypłynąć na powierzchnię dopiero w piętnaste urodziny.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-1-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: dlaczego chodzenie bolało syrenkę?",
+    "context": "Nogi jak noże",
+    "expectedMeaning": "Każdy krok ranił jak stąpanie po ostrych nożach — taka była cena nóg",
+    "difficulty": "medium"
+   },
+   {
+    "id": "andersen-1-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia z Małej syrenki",
+    "items": [
+     "Ratowanie tonącego królewicza",
+     "Umowa z morską czarownicą",
+     "Tańce na bolących nogach",
+     "Świt ostatniego dnia i piana"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "andersen-1-5",
+    "type": "multiple_choice",
+    "question": "W co zamieni się syrenka, jeśli królewicz poślubi inną?",
+    "options": [
+     "W kamień",
+     "W pianę morską",
+     "W mewę",
+     "W koral"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-1-6",
+    "type": "why_question",
+    "question": "Dlaczego syrenka uratowała królewicza z tonącego okrętu?",
+    "context": "Burza, wrak, plaża",
+    "expectedMeaning": "Bo go pokochała od pierwszego wejrzenia i nie chciała dopuścić, by utonął",
+    "difficulty": "easy"
+   }
+  ],
+  "andersen-ch2": [
+   {
+    "id": "andersen-2-1",
+    "type": "multiple_choice",
+    "question": "Co trafiło Kaja w oko i serce?",
+    "options": [
+     "Płatek śniegu",
+     "Odłamek diabelskiego zwierciadła",
+     "Kolec róży",
+     "Sopel lodu"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-2-2",
+    "type": "true_false",
+    "question": "Gerda topi odłamek w sercu Kaja swoimi łzami.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-2-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: co robiło diabelskie zwierciadło?",
+    "context": "Zwierciadło trola na początku baśni",
+    "expectedMeaning": "Pomniejszało wszystko dobre i piękne, a wyolbrzymiało zło i brzydotę",
+    "difficulty": "medium"
+   },
+   {
+    "id": "andersen-2-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia z Królowej Śniegu",
+    "items": [
+     "Trol rozbija zwierciadło",
+     "Odłamek zmienia Kaja",
+     "Kaj odjeżdża z Królową Śniegu",
+     "Wędrówka Gerdy i łzy topiące odłamek"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "andersen-2-5",
+    "type": "multiple_choice",
+    "question": "Z kim odjeżdża Kaj?",
+    "options": [
+     "Z morską czarownicą",
+     "Z Królową Śniegu",
+     "Z Babą Jagą",
+     "Z wróżką z Północy"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-2-6",
+    "type": "why_question",
+    "question": "Dlaczego Gerda nie poddała się w poszukiwaniach Kaja?",
+    "context": "Długa wędrówka przez świat",
+    "expectedMeaning": "Bo go kochała jak brata — miłość i wierność prowadziły ją mimo przeszkód",
+    "difficulty": "easy"
+   }
+  ],
+  "andersen-ch3": [
+   {
+    "id": "andersen-3-1",
+    "type": "multiple_choice",
+    "question": "Kim okazało się brzydkie kaczątko?",
+    "options": [
+     "Dziki gęsiorek",
+     "Młody łabędź",
+     "Kormoran",
+     "Pelikan"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-3-2",
+    "type": "true_false",
+    "question": "Kaczątko wykluło się z łabędziego jaja podłożonego do gniazda kaczki.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium"
+   },
+   {
+    "id": "andersen-3-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: dlaczego podwórko odrzuciło kaczątko?",
+    "context": "Inność, dziobanie i kopanie",
+    "expectedMeaning": "Bo było inne — duże, szare i niezgrabne, więc kaczki i kury je dziobały i wyśmiewały",
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-3-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia z Brzydkiego kaczątka",
+    "items": [
+     "Wyklucie i odrzucenie na podwórku",
+     "Ucieczka i ciężka zima",
+     "Wiosenne łabędzie na jeziorze",
+     "Przemiana i odkrycie piękna"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-3-5",
+    "type": "multiple_choice",
+    "question": "Kiedy kaczątko odkrywa prawdę o sobie?",
+    "options": [
+     "Zimą w zamarzniętym stawie",
+     "Wiosną wśród łabędzi",
+     "Jesienią na polu",
+     "Nigdy"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy"
+   },
+   {
+    "id": "andersen-3-6",
+    "type": "why_question",
+    "question": "Dlaczego baśń kończy się szczęśliwie dla kaczątka?",
+    "context": "Odrzucenie, zima, łabędzie",
+    "expectedMeaning": "Bo przetrwało mimo odrzucenia i okazało się łabędziem — piękno wyszło na jaw",
+    "difficulty": "easy"
+   }
+  ],
+  "oz-ch1": [
+   {
+    "id": "oz-1-1",
+    "type": "multiple_choice",
+    "question": "Dlaczego dom w Kansas był mały i szary?",
+    "options": [
+     "Bo wuj był biedny",
+     "Bo drewno trzeba było wozić wozem wiele mil",
+     "Bo cyklony niszczyły domy",
+     "Bo Dorotka lubiła szarość"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium"
+   },
+   {
+    "id": "oz-1-2",
+    "type": "true_false",
+    "question": "Wuj Henry i ciocia Em chowają się przed cyklonem w piwnicy pod klapą w podłodze.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "oz-1-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: dlaczego Kansas wydawało się szare?",
+    "context": "Preria, słońce, szarość",
+    "expectedMeaning": "Słońce wypaliło wszystko na szaro — prerię, dom, a nawet twarze wuja i cioci",
+    "difficulty": "medium"
+   },
+   {
+    "id": "oz-1-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia z Cyklonu",
+    "items": [
+     "Szare życie na prerii",
+     "Nadciąganie cyklonu i ucieczka do piwnicy",
+     "Porwanie domku z Dorotką i Totem",
+     "Lot domku przez powietrze"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "easy"
+   },
+   {
+    "id": "oz-1-5",
+    "type": "multiple_choice",
+    "question": "Jak wabi się piesek Dorotki?",
+    "options": [
+     "Toto",
+     "Rex",
+     "Burek",
+     "Pluto"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "oz-1-6",
+    "type": "why_question",
+    "question": "Dlaczego Dorotka nie zdążyła do piwnicy?",
+    "context": "Wicher, Toto, drzwi",
+    "expectedMeaning": "Bo mały Toto przestraszył się wichru i schował pod łóżko, a Dorotka pobiegła go ratować",
+    "difficulty": "medium"
+   }
+  ],
+  "oz-ch2": [
+   {
+    "id": "oz-2-1",
+    "type": "multiple_choice",
+    "question": "Na kogo spadł domek Dorotki?",
+    "options": [
+     "Na Złą Czarownicę ze Wschodu",
+     "Na Dobrą Czarownicę z Północy",
+     "Na Króla Manczkinów",
+     "Na stracha na wróble"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "oz-2-2",
+    "type": "true_false",
+    "question": "Po zmarłej czarownicy zostały srebrne pantofelki, które dostała Dorotka.",
+    "options": [
+     "Prawda",
+     "Fałsz"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "oz-2-3",
+    "type": "open_question",
+    "question": "Własnymi słowami: dlaczego Manczkinowie świętowali przybycie Dorotki?",
+    "context": "Śmierć Złej Czarownicy ze Wschodu",
+    "expectedMeaning": "Bo domek zabił okrutną Złą Czarownicę ze Wschodu i uwolnił ich od niewoli",
+    "difficulty": "medium"
+   },
+   {
+    "id": "oz-2-4",
+    "type": "ordering",
+    "question": "Ułóż wydarzenia rozdziału",
+    "items": [
+     "Przebudzenie po wstrząsie i słońce",
+     "Manczkinowie i trzy postaci",
+     "Wieść o śmierci Złej Czarownicy",
+     "Srebrne pantofelki i rada Dobrej Czarownicy"
+    ],
+    "correctOrder": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "difficulty": "medium"
+   },
+   {
+    "id": "oz-2-5",
+    "type": "multiple_choice",
+    "question": "Dokąd Dobra Czarownica każe iść Dorotce?",
+    "options": [
+     "Drogą z żółtej cegły do Szmaragdowego Grodu",
+     "Prosto na północ",
+     "Z powrotem do Kansas balonem",
+     "Do lasu po maki"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy"
+   },
+   {
+    "id": "oz-2-6",
+    "type": "why_question",
+    "question": "Dlaczego Dobra Czarownica nie przeniosła Dorotki do domu magią?",
+    "context": "Pocałunek na czole, znak ochrony",
+    "expectedMeaning": "Bo jej magia ma granice — dała ochronny pocałunek i wskazała drogę, resztę Dorotka musi przejść sama",
+    "difficulty": "medium"
+   }
+  ]
+ }
 }
