@@ -5,6 +5,7 @@ import AVFoundation
 struct ReadingSessionView: View {
     let book: Book
     let chapter: Chapter
+    var campaignId: String? = nil // ustawione dla książek wydawców (start przez /api/publisher/campaigns/:id/start)
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var loc: LocalizationService
     @Environment(\.dismiss) var dismiss
@@ -22,6 +23,7 @@ struct ReadingSessionView: View {
     @State private var starting = false
     @State private var lastResult: (challengeId: String, correct: Bool)?
     @State private var lastCorrectText: String?
+    @State private var aiBlocked = false
     @State private var hearts = 3
     let maxHearts = 3
     @State private var rulesAccepted = false
@@ -74,12 +76,17 @@ struct ReadingSessionView: View {
                                     HStack(spacing: 8) {
                                         Image(systemName: fb.correct ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
                                         VStack(alignment:.leading, spacing:2){
-                                            Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t(hearts<=0 ? "Źle — koniec serc" : "Źle — straciłeś serce","Wrong — lost a heart")).font(.headline.weight(.bold))
-                                            if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — możesz spróbować ponownie od razu","Session ended — you can retry right away") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
+                                            if aiBlocked {
+                                                Text(loc.t("Wykryto odpowiedź AI","AI-written answer detected")).font(.headline.weight(.bold))
+                                                Text(loc.t("Odpowiedzi wklejane z ChatGPT blokują sesję jak cheatowanie.","Answers pasted from ChatGPT block the session like cheating.")).font(.caption2)
+                                            } else {
+                                                Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t(hearts<=0 ? "Źle — koniec serc" : "Źle — straciłeś serce","Wrong — lost a heart")).font(.headline.weight(.bold))
+                                                if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — możesz spróbować ponownie od razu","Session ended — you can retry right away") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
+                                            }
                                         }
                                         Spacer()
                                     }
-                                    if !fb.correct, let ct = lastCorrectText, !ct.isEmpty {
+                                    if !fb.correct, !aiBlocked, let ct = lastCorrectText, !ct.isEmpty {
                                         Text(loc.t("Poprawna odpowiedź: ","Correct answer: ") + ct).font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.95)).padding(.top,2)
                                     }
                                 }
@@ -92,12 +99,15 @@ struct ReadingSessionView: View {
                                     let correct = ok?.correct ?? false
                                     if !correct { lastCorrectText = ok?.correctText ?? correctAnswerText(for: active) }
                                     lastResult = (active.id, correct)
+                                    // AI-writing: backend wykrył tekst z AI — blokada sesji jak przy cheatowaniu
+                                    if ok?.aiDetected == true {
+                                        aiBlocked = true; hearts -= 1
+                                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                                        aiBlocked = false
+                                        await completeWithWrong()
+                                        return
+                                    }
                                     if correct {
-                                        try? await Task.sleep(nanoseconds: 900_000_000)
-                                        completed.insert(active.id)
-                                        lastResult = nil; lastCorrectText = nil
-                                        updateLive()
-                                    } else {
                                         hearts -= 1
                                         if hearts <= 0 {
                                             try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -281,8 +291,15 @@ struct ReadingSessionView: View {
     func start() async {
         guard let wallet = appState.wallet.address, PhantomService.isValidSolanaAddress(wallet) else { error="Połącz Phantom Devnet"; starting=false; return }
         do{
-            let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
-            sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil
+            // książki wydawców startują przez /api/publisher/campaigns/:id/start (ta sama sesja/answer/complete)
+            if let cid = campaignId {
+                let s = try await BackendService.shared.startCampaignSession(campaignId: cid, walletAddress: wallet)
+                guard let sid = s.sessionId, let chs = s.challenges else { throw BackendService.GenError.parse }
+                sessionId = sid; challenges = chs; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false
+            } else {
+                let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
+                sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false
+            }
             ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: s.challenges.count)
             cameraMonitor.start() // anty-zdjęcie drugim telefonem — dopiero gdy sesja naprawdę ruszyła
             updateLive()

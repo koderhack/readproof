@@ -3,6 +3,7 @@ import SwiftUI
 struct ChapterIntroView: View {
     let book: Book
     let chapter: Chapter
+    var campaignId: String? = nil // dla książek wydawców — sesja startuje przez endpoint kampanii
     @EnvironmentObject var store: ChallengeStore
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var loc: LocalizationService
@@ -26,7 +27,7 @@ struct ChapterIntroView: View {
         .background(RPColor.bg)
         .navigationTitle("Chapter \(chapter.index)")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $goSession) { ReadingSessionView(book: book, chapter: chapter) }
+        .navigationDestination(isPresented: $goSession) { ReadingSessionView(book: book, chapter: chapter, campaignId: campaignId) }
     }
 
     var card: some View {

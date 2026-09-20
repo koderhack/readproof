@@ -120,6 +120,50 @@ final class BackendService: ObservableObject {
 
     struct ChallengeSetWrapper: Codable { let challenges: [Challenge]; let chapterId: String; let count: Int? }
 
+    // MARK: - Publisher campaigns (książki wydawców w katalogu apki)
+    struct PublisherCampaign: Codable, Identifiable, Hashable {
+        let id: String
+        let title: String
+        let author: String?
+        let isbn: String?
+        let description: String?
+        let rewardPerProof: Double?
+        let currency: String?
+        let status: String?
+        let coverUrl: String?
+        var isActive: Bool { status == "active" }
+        var rewardLabel: String {
+            let r = rewardPerProof.map { $0.truncatingRemainder(dividingBy: 1) == 0 ? String(Int($0)) : String($0) } ?? "5"
+            return "\(r) \(currency ?? "USDC")"
+        }
+    }
+    struct CampaignListWrapper: Codable { let count: Int?; let campaigns: [PublisherCampaign]? }
+    struct CampaignStartResponse: Codable { let ok: Bool?; let sessionId: String?; let challenges: [SessionChallenge]? }
+    func fetchCampaigns() async -> [PublisherCampaign]? {
+        guard let url = URL(string: "\(api)/api/publisher/campaigns") else { return nil }
+        var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
+        do {
+            let (d, r) = try await data(for: req)
+            guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+            if let w = try? JSONDecoder().decode(CampaignListWrapper.self, from: d), let c = w.campaigns { return c }
+            return try? JSONDecoder().decode([PublisherCampaign].self, from: d)
+        } catch { return nil }
+    }
+    func startCampaignSession(campaignId: String, walletAddress: String, userId: String? = nil) async throws -> CampaignStartResponse {
+        guard let url = URL(string: "\(api)/api/publisher/campaigns/\(campaignId)/start") else { throw GenError.badURL }
+        var req = URLRequest(url: url); req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
+        attachAuthHeaders(to: &req)
+        let effectiveUserId = userId ?? appleUserIdStored
+        var body: [String: Any] = ["walletAddress": walletAddress]
+        if let u = effectiveUserId, !u.isEmpty { body["userId"] = u; req.setValue(u, forHTTPHeaderField: "X-User-Id") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (d, r) = try await data(for: req)
+        guard (r as? HTTPURLResponse)?.statusCode == 200 else { throw GenError.api(String(data: d, encoding: .utf8) ?? "campaign start failed") }
+        return try JSONDecoder().decode(CampaignStartResponse.self, from: d)
+    }
+
     // MARK: - Jev via backend
     func evaluateViaBackend(question: String, expectedMeaning: String, userAnswer: String, context: String) async -> JevVerdict? {
         guard let url = URL(string: "\(api)/api/evaluate") else { return nil }
@@ -292,7 +336,7 @@ final class BackendService: ObservableObject {
     func answerSession(sessionId: String, challengeId: String, answer: Any) async -> Bool {
         (await answerSessionDetailed(sessionId: sessionId, challengeId: challengeId, answer: answer)) != nil
     }
-    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict?; let correctText: String?; let correctAnswer: Int?; let correctAnswers: [Int]?; let expectedMeaning: String? }
+    struct AnswerResult: Codable { let challengeId: String; let correct: Bool; let jev: JevVerdict?; let aiDetected: Bool?; let correctText: String?; let correctAnswer: Int?; let correctAnswers: [Int]?; let expectedMeaning: String? }
     func answerSessionDetailed(sessionId: String, challengeId: String, answer: Any) async -> AnswerResult? {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
