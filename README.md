@@ -14,12 +14,12 @@ Design: **parchment / burgundy / gold** — Kolegium, Sigillum, Paszport Literac
 
 | Co | Link |
 |----|------|
-| 🌐 Strona publiczna | https://kacpersikora.pages.dev/books |
-| 💊 Health backendu | https://frog02.mikr.us:32287/health |
-| 🏪 Panel wydawcy | https://koderhack.github.io/books/publisher/ |
-| 📜 Zasady wydawców | [PUBLISHER_RULES.md](PUBLISHER_RULES.md) |
-| 🎬 Scenariusz demo (60 s) | [docs/DEMO.md](docs/DEMO.md) |
-| 📦 To repo | https://github.com/koderhack/readproof |
+| Strona publiczna | https://kacpersikora.pages.dev/books |
+| Health backendu | https://frog02.mikr.us:32287/health |
+| Panel wydawcy | https://kacpersikora.pages.dev/publisher/ |
+| Zasady wydawców | [PUBLISHER_RULES.md](PUBLISHER_RULES.md) |
+| Scenariusz demo (60 s) | [docs/DEMO.md](docs/DEMO.md) |
+| To repo | https://github.com/koderhack/readproof |
 
 ---
 
