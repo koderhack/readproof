@@ -37,6 +37,13 @@ final class BackendService: ObservableObject {
     var langHeader: String { LocalizationService.shared.current.rawValue }
     var devMode: Bool { UserDefaults.standard.bool(forKey: "admin_dev_mode") }
     var devPassword: String { UserDefaults.standard.string(forKey: "admin_dev_password") ?? "" }
+    var appleSessionToken: String? { UserDefaults.standard.string(forKey: "apple_session_token") }
+    var appleUserIdStored: String? { UserDefaults.standard.string(forKey: "apple_user_id") ?? AuthService.shared.userId }
+    private func attachAuthHeaders(to req: inout URLRequest){
+        if let tok = appleSessionToken, !tok.isEmpty { req.setValue("Bearer \(tok)", forHTTPHeaderField: "Authorization") }
+        if let uid = appleUserIdStored, !uid.isEmpty { req.setValue(uid, forHTTPHeaderField: "X-User-Id"); req.setValue(uid, forHTTPHeaderField: "X-Apple-User") }
+        else if let uid = AuthService.shared.userId, !uid.isEmpty { req.setValue(uid, forHTTPHeaderField: "X-User-Id") }
+    }
 
     // szyfrowane połączenie — self-signed na localhost akceptujemy w dev (jak NSAllowsArbitraryLoads)
     private lazy var session: URLSession = {
@@ -122,9 +129,10 @@ final class BackendService: ObservableObject {
     }
 
     // MARK: - Proofs
-    func submitProof(bookId: String, chapterId: String, challenges: [Challenge], answers: [String: UserAnswer], walletAddress: String?) async -> ReadingProof? {
+    func submitProof(bookId: String, chapterId: String, challenges: [Challenge], answers: [String: UserAnswer], walletAddress: String?, userId: String? = nil) async -> ReadingProof? {
         guard let url = URL(string: "\(api)/api/proofs") else { return nil }
         var req = URLRequest(url: url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang"); req.timeoutInterval = 15
+        attachAuthHeaders(to: &req)
         var ansMap:[String:Any] = [:]
         for (k,v) in answers {
             switch v {
@@ -135,7 +143,7 @@ final class BackendService: ObservableObject {
             case .matched(let m): ansMap[k]=m.mapValues{$0}
             }
         }
-        let payload:[String:Any]=["bookId":bookId,"chapterId":chapterId,"challenges": challenges.map{ try! JSONEncoder().encode($0) }.map{ try! JSONSerialization.jsonObject(with: $0) },"answers": ansMap,"walletAddress": walletAddress as Any]
+        let payload:[String:Any]=["bookId":bookId,"chapterId":chapterId,"challenges": challenges.map{ try! JSONEncoder().encode($0) }.map{ try! JSONSerialization.jsonObject(with: $0) },"answers": ansMap,"walletAddress": walletAddress as Any,"userId": userId as Any]
         req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         do {
             let (d, r)=try await data(for:req)
@@ -144,12 +152,72 @@ final class BackendService: ObservableObject {
         } catch { return nil }
     }
 
-    func fetchProofs(wallet:String? = nil) async -> [ReadingProof]? {
-        var s="\(api)/api/proofs"
-        if let w=wallet, !w.isEmpty { s+="?wallet=\(w.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? w)" }
-        guard let url=URL(string:s) else { return nil }
-        var req = URLRequest(url:url); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
-        do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else {return nil}; return try JSONDecoder().decode([ReadingProof].self, from: d)}catch{return nil}
+    // MARK: - Users (wire userId + wallet)
+    struct UserRegistration: Codable {
+        let id: String
+        let provider: String
+        let nickname: String
+        let walletAddress: String?
+    }
+    struct UserStats: Codable {
+        let id: String
+        let nickname: String?
+        let provider: String?
+        let walletAddress: String?
+        let totalProofs: Int
+        let verifiedProofs: Int
+        let rewardsClaimed: Int
+    }
+    /// Upsert profilu (userId + wallet) na backendzie — best-effort, nie blokuje UI.
+    @discardableResult
+    func registerUser(_ r: UserRegistration) async -> UserStats? {
+        guard let url = URL(string: "\(api)/api/users") else { return nil }
+        var req = URLRequest(url: url); req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(langHeader, forHTTPHeaderField: "X-Lang"); req.timeoutInterval = 6
+        req.httpBody = try? JSONEncoder().encode(r)
+        do {
+            let (d, resp) = try await data(for: req)
+            guard (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+            return try? JSONDecoder().decode(UserStats.self, from: d)
+        } catch { return nil }
+    }
+    func fetchUser(id: String) async -> UserStats? {
+        guard let url = URL(string: "\(api)/api/users/\(id.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? id)") else { return nil }
+        var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
+        do { let (d, r) = try await data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; return try? JSONDecoder().decode(UserStats.self, from: d) } catch { return nil }
+    }
+    func fetchProofs(userId: String? = nil, wallet: String? = nil) async -> [ReadingProof]? {
+        var qs: [String] = []
+        if let u = userId ?? appleUserIdStored, !u.isEmpty { qs.append("userId=\(u.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? u)") }
+        else if let u = AuthService.shared.userId, !u.isEmpty { qs.append("userId=\(u.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? u)") }
+        if let w = wallet, !w.isEmpty { qs.append("wallet=\(w.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed) ?? w)") }
+        let q = qs.isEmpty ? "" : "?" + qs.joined(separator: "&")
+        guard let url = URL(string: "\(api)/api/proofs\(q)") else { return nil }
+        var req = URLRequest(url: url); req.setValue(langHeader, forHTTPHeaderField: "X-Lang")
+        attachAuthHeaders(to: &req)
+        do { let (d, r) = try await data(for: req); guard (r as? HTTPURLResponse)?.statusCode == 200 else { return nil }; return try JSONDecoder().decode([ReadingProof].self, from: d) } catch { return nil }
+    }
+
+    // MARK: - Apple Auth (Sign in with Apple -> backend)
+    struct AppleAuthRequest: Codable { let identityToken: String?; let appleUserId: String; let email: String?; let nickname: String?; let walletAddress: String? }
+    struct AppleAuthResponse: Codable { let ok: Bool; let user: AppleUser?; let sessionToken: String; let provider: String? }
+    struct AppleUser: Codable { let id: String?; let appleUserId: String?; let nickname: String?; let email: String?; let walletAddress: String?; let provider: String?; let sessionToken: String? }
+    @discardableResult
+    func authWithApple(identityToken: String?, appleUserId: String, email: String?, nickname: String?, walletAddress: String?) async -> AppleAuthResponse? {
+        guard let url = URL(string: "\(api)/api/auth/apple") else { return nil }
+        var req = URLRequest(url: url); req.httpMethod="POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(langHeader, forHTTPHeaderField: "X-Lang"); req.timeoutInterval = 10
+        let body = AppleAuthRequest(identityToken: identityToken, appleUserId: appleUserId, email: email, nickname: nickname, walletAddress: walletAddress)
+        req.httpBody = try? JSONEncoder().encode(body)
+        do{
+            let (d,resp) = try await data(for: req)
+            guard (resp as? HTTPURLResponse)?.statusCode==200 else { print("[appleAuth] status", (resp as? HTTPURLResponse)?.statusCode ?? 0, String(data:d,encoding:.utf8) ?? ""); return nil }
+            let decoded = try JSONDecoder().decode(AppleAuthResponse.self, from: d)
+            if let tok = decoded.sessionToken as String? { UserDefaults.standard.set(tok, forKey: "apple_session_token") }
+            return decoded
+        }catch{ print("[appleAuth] error", error); return nil }
     }
 
     // MARK: - Reading Sessions (staged, anti-ChatGPT)
@@ -183,11 +251,16 @@ final class BackendService: ObservableObject {
         let difficulty: String?
         let hint: String?
     }
-    func startSession(bookId: String, chapterId: String, walletAddress: String) async throws -> SessionStartResponse {
+    func startSession(bookId: String, chapterId: String, walletAddress: String, userId: String? = nil) async throws -> SessionStartResponse {
         guard let url = URL(string:"\(api)/api/sessions/start") else { throw GenError.badURL }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
         if devMode { req.setValue("1", forHTTPHeaderField:"X-Dev-Mode"); req.setValue(devPassword, forHTTPHeaderField:"X-Dev-Password") }
-        req.httpBody = try JSONSerialization.data(withJSONObject:["bookId":bookId,"chapterId":chapterId,"walletAddress":walletAddress, "devBypass": devMode, "devPassword": devPassword])
+        attachAuthHeaders(to: &req)
+        // prefer explicit userId param, else stored Apple id
+        let effectiveUserId = userId ?? appleUserIdStored ?? AuthService.shared.userId
+        var body: [String: Any] = ["bookId":bookId,"chapterId":chapterId,"walletAddress":walletAddress, "devBypass": devMode, "devPassword": devPassword]
+        if let u = effectiveUserId, !u.isEmpty { body["userId"] = u; req.setValue(u, forHTTPHeaderField: "X-User-Id") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (d,r)=try await data(for:req)
         if let http = r as? HTTPURLResponse, http.statusCode != 200 {
             // 429 = blokada po oszukanej / błędnej próbie — zwróć czas, nie goły JSON
@@ -219,19 +292,51 @@ final class BackendService: ObservableObject {
     func answerSessionDetailed(sessionId: String, challengeId: String, answer: Any) async -> AnswerResult? {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/answer") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        attachAuthHeaders(to: &req)
         req.httpBody = try? JSONSerialization.data(withJSONObject:["challengeId":challengeId,"answer":answer])
         do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; return try JSONDecoder().decode(AnswerResult.self, from:d) }catch{return nil}
     }
     func flagSession(sessionId: String, type: String) async {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/flag") else { return }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue("application/json", forHTTPHeaderField:"Content-Type"); req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
+        attachAuthHeaders(to: &req)
         req.httpBody = try? JSONSerialization.data(withJSONObject:["type":type])
         _ = try? await data(for:req)
     }
     func completeSession(sessionId: String, endEarly: Bool = false) async -> ReadingProof? {
         guard let url = URL(string:"\(api)/api/sessions/\(sessionId)/complete?fail=\(endEarly ? 1 : 0)") else { return nil }
         var req = URLRequest(url:url); req.httpMethod="POST"; req.setValue(langHeader, forHTTPHeaderField:"X-Lang")
-        do{ let (d,r)=try await data(for:req); guard (r as? HTTPURLResponse)?.statusCode==200 else { return nil }; let j = try JSONSerialization.jsonObject(with:d) as? [String:Any]; if let p = j?["proof"] as? [String:Any]{ let data = try JSONSerialization.data(withJSONObject:p); return try JSONDecoder().decode(ReadingProof.self, from:data)}; return nil }catch{return nil}
+        attachAuthHeaders(to: &req)
+        req.setValue("1", forHTTPHeaderField:"X-Dev-Mode"); req.setValue(devPassword, forHTTPHeaderField:"X-Dev-Password")
+        do{
+            let (d,r)=try await data(for:req)
+            if let http = r as? HTTPURLResponse, http.statusCode != 200 {
+                let msg = String(data:d, encoding:.utf8) ?? "complete failed \(http.statusCode)"
+                await MainActor.run { self.lastError = msg }
+                print("[complete] backend \(http.statusCode): \(msg)")
+                return nil
+            }
+            let j = try JSONSerialization.jsonObject(with:d) as? [String:Any]
+            if let p = j?["proof"] as? [String:Any]{
+                let data = try JSONSerialization.data(withJSONObject:p)
+                // Log raw proof przy błędzie decode — klasyczny "isn't in the correct format" to timestamp/status
+                do {
+                    let dec = JSONDecoder()
+                    // nie ustawiamy dateDecodingStrategy — ReadingProof.init(from:) jest tolerancyjny na String ISO8601
+                    return try dec.decode(ReadingProof.self, from:data)
+                } catch {
+                    let raw = String(data:data, encoding:.utf8) ?? "<no utf8>"
+                    print("[complete] decode failed: \(error) raw=\(raw)")
+                    await MainActor.run { self.lastError = "Decode: \(error.localizedDescription) raw:\(raw.prefix(300))" }
+                    return nil
+                }
+            }
+            return nil
+        }catch{
+            await MainActor.run { self.lastError = error.localizedDescription }
+            print("[complete] error", error)
+            return nil
+        }
     }
 
     // MARK: - LLM generate
