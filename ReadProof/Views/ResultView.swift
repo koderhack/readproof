@@ -3,35 +3,102 @@ import SwiftUI
 struct ResultMinimalView: View {
     let book: Book; let chapter: Chapter; let results:[ChallengeResult]; let proof: ReadingProof
     @Environment(\.dismiss) var dismiss
+    @State private var now = Date()
+    @State private var sealAppeared = false
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var isVerified: Bool { proof.status == .verified || proof.status == .comprehensionVerified }
+    var isFailed: Bool { proof.status == .failed }
+    var blockedUntil: Date { proof.timestamp.addingTimeInterval(30*60) }
     var body: some View {
         ScrollView{
             VStack(spacing:16){
                 header
-                rewardCard
+                if isFailed { cooldownCard } else { rewardCard }
                 attestation
                 actions
             }.padding(16)
         }.background(RPColor.bg)
         .navigationTitle("Szczegóły Weryfikacji")
         .navigationBarTitleDisplayMode(.inline)
+        .onReceive(timer) { _ in now = Date() }
+        .onAppear {
+            if isVerified {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) { sealAppeared = true }
+            }
+        }
     }
     var header: some View {
         VStack(spacing:8){
-            Text("Dowód Zrozumienia\nZatwierdzony").font(.system(size:24, weight:.bold, design:.rounded)).multilineTextAlignment(.center)
-            Text("Verification Engine zweryfikował sesję, proofHash zapisany w Solana Devnet (niezmienny dowód, treść i odpowiedzi nie trafiają on-chain).").font(.system(size:13)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+            if isVerified {
+                ZStack {
+                    Circle()
+                        .stroke(RPColor.primary.opacity(0.35), lineWidth: 4)
+                        .frame(width: 110, height: 110)
+                        .scaleEffect(sealAppeared ? 1 : 0.4)
+                        .opacity(sealAppeared ? 1 : 0)
+                    VStack(spacing: 2) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 36))
+                            .foregroundStyle(RPColor.primary)
+                        Text("VERIFIED")
+                            .font(.system(size: 12, weight: .black, design: .rounded))
+                            .tracking(1.2)
+                            .foregroundStyle(RPColor.primary)
+                        Text(String(proof.proofHash.prefix(8)).uppercased())
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(RPColor.muted)
+                    }
+                    .scaleEffect(sealAppeared ? 1 : 0.2)
+                    .opacity(sealAppeared ? 1 : 0)
+                }
+                .padding(.bottom, 4)
+                Text("Dowód Zrozumienia\nZatwierdzony").font(.system(size:24, weight:.bold, design:.rounded)).foregroundStyle(RPColor.ink).multilineTextAlignment(.center)
+                Text(proof.txSignature == nil
+                    ? "Sesja zweryfikowana. proofHash zapisany w backendzie (demo/mock payout — brak live transferu USDC, dopóki nie ma tx na Devnecie). Treść i odpowiedzi nie trafiają on-chain."
+                    : "Verification Engine zweryfikował sesję; proofHash + tx na Solana Devnet (niezmienny dowód, treść i odpowiedzi nie trafiają on-chain)."
+                ).font(.system(size:13)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+            } else {
+                Image(systemName: isFailed ? "xmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 44)).foregroundStyle(isFailed ? Color.red : RPColor.primary)
+                Text(isFailed ? "Dowód Zrozumienia\nNIE ZATWIERDZONY" : "Sesja wymaga poprawy").font(.system(size:24, weight:.bold, design:.rounded)).foregroundStyle(RPColor.ink).multilineTextAlignment(.center)
+                if isFailed {
+                    Text("Błędna odpowiedź lub podejrzana czynność (screenshot/kamera). Sesja oznaczona jako Failed — nagroda nie przysługuje.").font(.system(size:13)).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+                }
+            }
         }.padding(.vertical,8)
+    }
+    var cooldownCard: some View {
+        let left = max(0, Int(blockedUntil.timeIntervalSince(now)))
+        let mm = left/60, ss = left%60
+        return VStack(alignment:.leading, spacing:10){
+            HStack{ Label("BLOKADA 30 MINUT", systemImage:"lock.fill").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(Color.red); Spacer() }
+            HStack(spacing:8){
+                Image(systemName:"hourglass").font(.system(size:22)).foregroundStyle(Color.red)
+                VStack(alignment:.leading, spacing:2){
+                    Text("Sesja zablokowana po błędnej/oszukanej próbie").font(.system(size:13, weight:.semibold)).foregroundStyle(RPColor.ink)
+                    Text("Ponownie za \(String(format:"%02d:%02d", mm, ss))").font(.system(size:22, weight:.bold, design:.rounded)).monospacedDigit().foregroundStyle(RPColor.ink)
+                }
+                Spacer()
+            }
+            Text("Celowo uniemożliwiamy zgadywanie i wklejanie do AI — prawdziwy wysiłek czytelniczy.").font(.system(size:11)).foregroundStyle(RPColor.muted)
+        }.padding(16).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:16)).overlay(RoundedRectangle(cornerRadius:16).stroke(Color.red.opacity(0.5)))
     }
     var rewardCard: some View {
         VStack(alignment:.leading, spacing:12){
             HStack{ Label("NAGRODA PROTOKOLARNA", systemImage:"checkmark.seal.fill").font(.system(size:11, weight:.bold, design:.rounded)).tracking(0.6).foregroundStyle(RPColor.primary); Spacer(); ZStack{ Circle().fill(RPColor.primaryLight).frame(width:36,height:36); Image(systemName:"wallet.pass.fill").foregroundStyle(RPColor.primary)}}
-            HStack(alignment:.firstTextBaseline, spacing:6){ Text("+\(proof.reward ?? "$15.00")").font(.system(size:28, weight:.bold, design:.rounded)); Text("USDC").font(.system(size:14, weight:.medium)).foregroundStyle(RPColor.muted) }
+            HStack(alignment:.firstTextBaseline, spacing:6){ Text("+\(proof.reward ?? "5 USDC")").font(.system(size:28, weight:.bold, design:.rounded)); Text(proof.txSignature == nil ? "(demo)" : "USDC").font(.system(size:14, weight:.medium)).foregroundStyle(RPColor.muted) }
             HStack(spacing:8){
-                HStack(spacing:6){ Circle().fill(RPColor.primary).frame(width:8,height:8); Text("Dostępna do natychmiastowej wypłaty").font(.system(size:12)).foregroundStyle(RPColor.ink)}
+                HStack(spacing:6){
+                    Circle().fill(proof.txSignature == nil ? Color.orange : RPColor.primary).frame(width:8,height:8)
+                    Text(proof.txSignature == nil ? "Mock / demo — bez live transferu na Devnecie" : "Wysłane na Solana Devnet").font(.system(size:12)).foregroundStyle(RPColor.ink)
+                }
                 Spacer()
-                Text("Zero prowizji").font(.system(size:11)).foregroundStyle(RPColor.muted).padding(.horizontal,8).padding(.vertical,6).background(Color.white).clipShape(RoundedRectangle(cornerRadius:8)).overlay(RoundedRectangle(cornerRadius:8).stroke(RPColor.line))
+                Text(proof.txSignature == nil ? "proofHash OK" : "Zero prowizji").font(.system(size:11)).foregroundStyle(RPColor.muted).padding(.horizontal,8).padding(.vertical,6).background(Color.white).clipShape(RoundedRectangle(cornerRadius:8)).overlay(RoundedRectangle(cornerRadius:8).stroke(RPColor.line))
             }.padding(10).background(Color(hex:"#F9FAFB")).clipShape(RoundedRectangle(cornerRadius:12))
             if let url=proof.explorerUrl, let u=URL(string:url){ Link(destination:u){ Label("Zobacz w Explorer (Devnet)", systemImage:"link").font(.system(size:12, weight:.semibold)) }.tint(RPColor.primary)}
+            else if isVerified {
+                Text("Brak txSignature — payout mockowy (ustaw SOLANA_PAYER_PRIVATE_KEY na backendzie, żeby odpalić real Devnet USDC).").font(.system(size:11)).foregroundStyle(RPColor.muted)
+            }
         }.padding(16).card()
     }
     var attestation: some View {
@@ -75,12 +142,17 @@ struct ResultMinimalView: View {
     }
     var actions: some View {
         VStack(spacing:10){
-            Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName:"wallet.pass"); Text("Wypłać \(proof.reward ?? "$15.00") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.inkFixed).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
-            HStack(spacing:10){
-                Button{} label:{ HStack{ Image(systemName:"square.and.arrow.up"); Text("Udostępnij").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
-                Button{} label:{ HStack{ Image(systemName:"doc.text"); Text("Dowód").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
+            if isFailed {
+                Button{ dismiss() } label:{ HStack{ Image(systemName:"arrow.left"); Text("Wróć do książki").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).foregroundStyle(.white).background(RPColor.inkFixed).clipShape(RoundedRectangle(cornerRadius:14))}
+                Text("Ponowne podejście będzie możliwe po odliczeniu blokady 30 minut.").font(.system(size:11)).foregroundStyle(RPColor.muted)
+            } else {
+                Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName: proof.txSignature == nil ? "checkmark.seal" : "wallet.pass"); Text(proof.txSignature == nil ? "Dowód gotowy (demo — bez live USDC)" : "Wypłać \(proof.reward ?? "5 USDC") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.inkFixed).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
+                HStack(spacing:10){
+                    Button{} label:{ HStack{ Image(systemName:"square.and.arrow.up"); Text("Udostępnij").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
+                    Button{} label:{ HStack{ Image(systemName:"doc.text"); Text("Dowód").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
+                }
+                Label("Zapisano w Solana Devnet: wallet, book, chapter, session, score, duration, verificationVersion, proofHash, timestamp", systemImage:"lock").font(.system(size:11)).foregroundStyle(RPColor.muted)
             }
-            Label("Zapisano w Solana Devnet: wallet, book, chapter, session, score, duration, verificationVersion, proofHash, timestamp", systemImage:"lock").font(.system(size:11)).foregroundStyle(RPColor.muted)
         }
     }
 }

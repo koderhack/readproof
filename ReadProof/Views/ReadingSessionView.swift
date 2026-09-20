@@ -1,5 +1,6 @@
 import SwiftUI
 import ActivityKit
+import AVFoundation
 
 struct ReadingSessionView: View {
     let book: Book
@@ -18,8 +19,17 @@ struct ReadingSessionView: View {
     @State private var isCaptured = UIScreen.main.isCaptured
     @State private var showResult = false
     @State private var proof: ReadingProof?
-    @State private var starting = true
+    @State private var starting = false
     @State private var lastResult: (challengeId: String, correct: Bool)?
+    @State private var hearts = 3
+    let maxHearts = 3
+    @State private var rulesAccepted = false
+    @State private var cooldownUntil: Date?
+    @State private var cameraMonitor = FrontCameraMonitor()
+    @State private var cameraOK = false
+    @State private var cameraSignal = FrontCameraMonitor.CameraSignal()
+    @State private var cameraFrames = 0
+    @State private var showCameraPreview = false
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -27,11 +37,12 @@ struct ReadingSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if starting {
-                    ProgressView("Tworzę sesję — losuję 5 z 30 (live \(loc.current.rawValue))…")
+                    ProgressView("Przygotowujemy Twoją sesję…")
                         .frame(maxWidth: .infinity)
                         .padding(20)
                 } else {
                     header
+                    cameraStatus
                     if isPaused {
                         Label("Sesja wstrzymana — licznik zatrzymany (weryfikowane przez backend).", systemImage:"pause.circle.fill").font(.caption).foregroundStyle(.white).padding(10).background(Color(hex:"#FF8B4D")).clipShape(RoundedRectangle(cornerRadius:10))
                     }
@@ -39,7 +50,12 @@ struct ReadingSessionView: View {
                         Label(loc.t("Sesja oznaczona jako podejrzana — screenshot/screen recording wykryty. Możesz spróbować ponownie.","Session flagged suspicious — screenshot detected. You can retry."), systemImage: "exclamationmark.triangle.fill")
                             .font(.caption).foregroundStyle(.white).padding(10).background(Color.red).clipShape(RoundedRectangle(cornerRadius:10))
                     }
-                    // 1 pytanie na ekran — jak Duolingo, nie lista
+                    if let cd = cooldownUntil {
+                        blockedCard(cd)
+                    } else if !rulesAccepted {
+                        rulesCard
+                    } else {
+                        // 1 pytanie na ekran — jak Duolingo, nie lista
                     if let active = challenges.first(where: { !isLocked($0) && !completed.contains($0.id) }) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -56,8 +72,8 @@ struct ReadingSessionView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: fb.correct ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
                                     VStack(alignment:.leading, spacing:2){
-                                        Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t("Źle","Wrong")).font(.headline.weight(.bold))
-                                        if !fb.correct { Text(loc.t("Sesja zakończona — spróbuj ponownie za 30 min","Session ended — retry in 30 min")).font(.caption2) }
+                                        Text(fb.correct ? loc.t("Dobrze!","Correct!") : loc.t(hearts<=0 ? "Źle — koniec serc" : "Źle — straciłeś serce","Wrong — lost a heart")).font(.headline.weight(.bold))
+                                        if !fb.correct { Text(hearts<=0 ? loc.t("Sesja zakończona — spróbuj ponownie za 30 min","Session ended — retry in 30 min") : loc.t("Zostało \(hearts) \(hearts==1 ? "serce" : "serca")","\(hearts) hearts left")).font(.caption2) }
                                     }
                                     Spacer()
                                 }
@@ -75,9 +91,16 @@ struct ReadingSessionView: View {
                                         lastResult = nil
                                         updateLive()
                                     } else {
-                                        // zła odpowiedź — pokaż, potem natychmiast zamknij sesję (blokada 30 min)
-                                        try? await Task.sleep(nanoseconds: 1_200_000_000)
-                                        await completeWithWrong()
+                                        hearts -= 1
+                                        if hearts <= 0 {
+                                            try? await Task.sleep(nanoseconds: 1_200_000_000)
+                                            await completeWithWrong()
+                                        } else {
+                                            // zostało serc — pokaż, pozwól spróbować ponownie tego samego pytania
+                                            try? await Task.sleep(nanoseconds: 1_500_000_000)
+                                            lastResult = nil
+                                            answers.removeValue(forKey: active.id)
+                                        }
                                     }
                                 }
                             })
@@ -111,6 +134,7 @@ struct ReadingSessionView: View {
                             Text("ZAKOŃCZ I ZWERYFIKUJ").font(.headline).frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.primary).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:12))
                         }
                     }
+                    } // else cooldown
                 }
                 if let e = error { Text(e).foregroundStyle(.red).font(.caption) }
             }
@@ -137,10 +161,59 @@ struct ReadingSessionView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
-        .onReceive(timer) { _ in now = Date() }
-        .onAppear { Task { await start() }; observeScreenshots() }
+        .toolbar(.hidden, for: .tabBar) // dół menu znika na czas sesji — nie da się przełączyć zakładki
+        .onReceive(timer) { _ in now = Date(); cameraOK = cameraMonitor.isActive; cameraSignal = cameraMonitor.currentSignal; cameraFrames = cameraMonitor.videoFrames }
+        .onAppear { cameraMonitor.onScreenDetected = { failOnSuspicion(type: "frontCameraScreen") }; observeScreenshots() }
         .onDisappear { stopLive() }
         .navigationDestination(isPresented: $showResult) { if let p=proof{ ResultMinimalView(book:book, chapter:chapter, results:[], proof:p)}}
+    }
+
+    var cameraStatus: some View {
+        let dev = UserDefaults.standard.bool(forKey:"admin_dev_mode")
+        return VStack(alignment: .leading, spacing: 6) {
+            if !cameraOK {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("KAMERA WYŁĄCZONA — detekcja anti-screenshot NIEAKTYWNA", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption.weight(.bold)).foregroundStyle(.red)
+                    Text("To nie działa na symulatorze (brak kamery). Na iPhonie: pozwól na dostęp do kamery w Ustawieniach, wróć i naciśnij „Ponów start kamery”.")
+                        .font(.caption2).foregroundStyle(RPColor.muted)
+                    HStack(spacing: 8) {
+                        Button { cameraMonitor.start() } label: { Label("Ponów start kamery", systemImage: "arrow.clockwise").font(.caption2.weight(.bold)) }
+                            .buttonStyle(.bordered).tint(RPColor.primary)
+                        Button { if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) } }
+                             label: { Label("Otwórz Ustawienia", systemImage: "gear").font(.caption2.weight(.bold)) }
+                            .buttonStyle(.bordered).tint(RPColor.muted2)
+                    }
+                }.padding(8).background(Color.red.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            Label(cameraOK ? "Kamera anty-screen: AKTYWNA (front + Face ID depth)" : "Kamera anty-screen: OFF — brak uprawnienia lub brak przedniej kamery (symulator)", systemImage: cameraOK ? "camera.fill" : "camera")
+                .font(.caption2).foregroundStyle(cameraOK ? RPColor.muted : RPColor.muted2)
+            Text("Nie zasłaniaj obiektywu przedniej kamery (u góry ekranu). Twarz nie musi być cały czas widoczna — czytaj normalnie.")
+                .font(.caption2).foregroundStyle(RPColor.muted2).fixedSize(horizontal: false, vertical: true)
+            if dev {
+                Toggle("Podgląd kamery (debug)", isOn: $showCameraPreview).font(.caption.weight(.bold)).tint(RPColor.primary)
+                if showCameraPreview {
+                    CameraPreviewView(monitor: cameraMonitor) // live podgląd + czerwony box = wykryty ekran (Vision)
+                        .frame(height: 220).clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(RPColor.line))
+                }
+                Button { failOnSuspicion(type: "frontCameraScreenTest") } label: {
+                    Label("Symuluj drugi telefon (test failsafe)", systemImage: "iphone.gen3").font(.caption.weight(.bold))
+                }
+                .buttonStyle(.bordered)
+                .tint(RPColor.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(format:"SCORE %.1f / %.0f — fail gdy >= %.0f", cameraSignal.score, (UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode")) ? 6.0 : 3.0, (UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode")) ? 6.0 : 3.0))
+                        .font(.caption2.monospaced()).foregroundStyle(cameraSignal.score >= ((UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode")) ? 6.0 : 3.0) ? .red : RPColor.muted)
+                    Text("klatki wideo: \(cameraFrames) • twarze: \(cameraSignal.faceCount) • prostokąt: \(cameraSignal.bigRect ? "TAK":"nie") • jasność: \(String(format:"%.0f%%", cameraSignal.bright*100)) • krawędzie: \(String(format:"%.0f%%", cameraSignal.edge*100)) • luma: \(String(format:"%.2f", cameraSignal.luma)) • depth: \(cameraSignal.depthActive ? (cameraSignal.depthNear ? "BLISKO" : "aktywna(\(cameraSignal.depthFrames) klatek)") : "BRAK depth")\(cameraMonitor.stalled ? " ⚠️ STALL" : "")")
+                        .font(.caption2.monospaced()).foregroundStyle(RPColor.muted)
+                    Text("MobileNet: \(cameraSignal.modelHit ? "TELEFON/EKRAN" : (cameraSignal.modelLabel.map{ "\"\($0)\"" } ?? "–")) \(String(format:"%.2f", cameraSignal.modelConf))")
+                        .font(.caption2.monospaced()).foregroundStyle(cameraSignal.modelHit ? .red : RPColor.muted)
+                    Text("YOLOv8n: \(cameraSignal.yoloHit ? "TELEFON \(String(format:"%.2f", cameraSignal.yoloConf))" : "–")\(cameraSignal.yoloBox.map{ b in String(format:" box %.2f,%.2f", b.midX, b.midY)} ?? "")")
+                        .font(.caption2.monospaced()).foregroundStyle(cameraSignal.yoloHit ? .red : RPColor.muted)
+                }
+            }
+        }.padding(10).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:10))
     }
 
     var header: some View {
@@ -151,11 +224,40 @@ struct ReadingSessionView: View {
                 Label("Sesja", systemImage:"timer").font(.caption2).foregroundStyle(RPColor.muted)
                 Text("5 wyzwań • losowe 5 z 30 • fragment-dependent").font(.caption2).foregroundStyle(RPColor.muted)
                 Spacer()
+                HStack(spacing:2){
+                    ForEach(0..<maxHearts, id:\.self){ i in Image(systemName: i < hearts ? "heart.fill" : "heart").font(.caption2).foregroundStyle(i < hearts ? Color.red : RPColor.line) }
+                    Text("\(hearts)/\(maxHearts)").font(.caption2.monospaced()).foregroundStyle(RPColor.muted)
+                }
+                if UserDefaults.standard.bool(forKey:"pitch_demo_mode") || UserDefaults.standard.bool(forKey:"admin_dev_mode") {
+                    Text("DEMO").font(.caption2.weight(.black)).foregroundStyle(.white)
+                        .padding(.horizontal,8).padding(.vertical,3)
+                        .background(RPColor.primary).clipShape(Capsule())
+                }
                 Text("\(completed.count)/\(challenges.count)").font(.caption.weight(.bold)).foregroundStyle(RPColor.primary)
             }
             ProgressView(value: Double(completed.count), total: Double(max(challenges.count,1))).tint(RPColor.primary)
-            Text("Nie pokazujemy 5 pytań od razu — odblokowują się co ~20-25s (demo) / 3-5min (real). Nie da się wkleić całości do ChatGPT.").font(.caption2).foregroundStyle(RPColor.muted)
+            Text("Nie pokazujemy 5 pytań od razu — odblokowują się co ~20-25s (demo) / 3-5min (real). Nie da się wkleić całości do ChatGPT. Masz 3 ❤️ — 3 złe odpowiedzi kończą sesję; screenshot/telefon kończy od razu.").font(.caption2).foregroundStyle(RPColor.muted)
         }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
+    }
+
+    var rulesCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Zasady testu", systemImage: "exclamationmark.shield.fill").font(.headline).foregroundStyle(RPColor.ink)
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Możesz korzystać tylko z książki — zabronione są podpowiedzi (AI, ChatGPT, notatki, drugi telefon).", systemImage: "book.fill").font(.caption).foregroundStyle(RPColor.ink)
+                Label("Aplikacja posiada zabezpieczenia wykrywające screenshoty i nagrywanie ekranu.", systemImage: "eye.slash.fill").font(.caption).foregroundStyle(RPColor.ink)
+                Label("Kamera pozostaje włączona, aby wyeliminować / zminimalizować możliwość zrobienia zdjęcia innym telefonem.", systemImage: "camera.fill").font(.caption).foregroundStyle(RPColor.ink)
+                Label("Obraz z kamery nie wychodzi poza telefon — przetwarzanie on-device, zero zapisu, zero wysyłki.", systemImage: "lock.shield.fill").font(.caption).foregroundStyle(RPColor.ink)
+            }
+            Text("Kontynuując, potwierdzasz że zapoznałeś się z zasadami.").font(.caption2).foregroundStyle(RPColor.muted)
+            Button {
+                rulesAccepted = true
+                starting = true
+                Task { await start() }
+            } label: {
+                Text("Akceptuję zasady — rozpocznij test").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
+            }.buttonStyle(BurgundyButtonStyle())
+        }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.primary, lineWidth: 1.5))
     }
 
     func isLocked(_ ch: BackendService.SessionChallenge) -> Bool {
@@ -168,20 +270,54 @@ struct ReadingSessionView: View {
         let sec = max(0, Int(d.timeIntervalSince(now)))
         return String(format:"%02d:%02d", sec/60, sec%60)
     }
+    func cooldownRemaining(_ until: Date) -> String {
+        let sec = max(0, Int(until.timeIntervalSince(now)))
+        return String(format:"%02d:%02d", sec/60, sec%60)
+    }
+    func blockedCard(_ until: Date) -> some View {
+        let left = max(0, Int(until.timeIntervalSince(now)))
+        return VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "lock.fill").font(.system(size: 34)).foregroundStyle(RPColor.primary)
+            Text(loc.t("Blokada po oszukanej próbie","Locked after suspicious attempt")).font(.headline).foregroundStyle(RPColor.ink)
+            Text(loc.t("Jedna błędna odpowiedź lub screenshot kończy sesję i blokuje ponowne podejście na 30 minut.","A wrong answer or screenshot ends the session and blocks retry for 30 minutes."))
+                .font(.caption).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+            VStack(spacing: 2) {
+                Text(loc.t("Możesz spróbować ponownie za","Retry available in")).font(.caption).foregroundStyle(RPColor.muted)
+                Text(cooldownRemaining(until)).font(.system(size: 40, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(RPColor.ink)
+            }.padding(.vertical, 4)
+            Button {
+                Task { await start() }
+            } label: {
+                Text(left <= 0 ? loc.t("SPRÓBUJ PONOWNIE","TRY AGAIN") : loc.t("Odblokowanie za","Unlocks in") + " \(cooldownRemaining(until))")
+                    .font(.headline).frame(maxWidth:.infinity).padding(.vertical,14)
+            }
+            .buttonStyle(BurgundyButtonStyle())
+            .disabled(left > 0)
+            .opacity(left > 0 ? 0.5 : 1)
+            Text(loc.t("Blokada 30 min: zalecany jest prawdziwy wysiłek czytelniczy — tryb anti-ChatGPT.","30-min lock: real reading effort required — anti-ChatGPT mode.")).font(.caption2).foregroundStyle(RPColor.muted).multilineTextAlignment(.center)
+        }
+        .padding(18).frame(maxWidth:.infinity, alignment: .center)
+        .background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.primary, lineWidth:1.5))
+    }
     func start() async {
         guard let wallet = appState.wallet.address, PhantomService.isValidSolanaAddress(wallet) else { error="Połącz Phantom Devnet"; starting=false; return }
         do{
             let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
-            sessionId = s.id; challenges = s.challenges; starting=false
+            sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil
             ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: s.challenges.count)
+            cameraMonitor.start() // anty-zdjęcie drugim telefonem — dopiero gdy sesja naprawdę ruszyła
             updateLive()
+        } catch BackendService.GenError.cooldown(let retryAfter, let until) {
+            // blokada po oszukanej próbie — pokaż odliczanie do odblokowania, nie kod błędu
+            cooldownUntil = until ?? (retryAfter > 0 ? Date().addingTimeInterval(retryAfter) : nil)
+            starting = false; error = nil
         } catch let e { error = e.localizedDescription; starting=false }
     }
     func updateLive(){
         let next = challenges.first{ isLocked($0) }.flatMap{ $0.releaseAt}.flatMap{ ISO8601DateFormatter().date(from:$0) }.map{ max(0, Int($0.timeIntervalSince(now)))} ?? 0
         ReadingSessionActivityManager.shared.update(completed: completed.count, total: challenges.count, nextUnlockIn: next, status: completed.count==challenges.count ? "verifying" : "reading")
     }
-    func stopLive(){ ReadingSessionActivityManager.shared.end(status: proof?.status.rawValue ?? "ended") }
+    func stopLive(){ ReadingSessionActivityManager.shared.end(status: proof?.status.rawValue ?? "ended"); cameraMonitor.stop() }
     func completeWithWrong() async {
         guard let id=sessionId else { return }
         suspicious=true
@@ -225,6 +361,45 @@ struct ReadingSessionView: View {
             isCaptured = UIScreen.main.isCaptured
             if UIScreen.main.isCaptured { failOnSuspicion(type: "screenRecording") }
         }
+    }
+}
+
+struct CameraPreviewView: UIViewRepresentable {
+    let monitor: FrontCameraMonitor
+    func makeUIView(context: Context) -> CameraPreviewUIView { CameraPreviewUIView(monitor: monitor) }
+    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
+        // nakładaj box wykryty przez Vision z normalnej przedniej kamery
+        uiView.updateOverlay(rect: monitor.currentSignal.rect)
+    }
+}
+
+final class CameraPreviewUIView: UIView {
+    private let preview = AVCaptureVideoPreviewLayer()
+    private let box = CAShapeLayer()
+    init(monitor: FrontCameraMonitor) {
+        super.init(frame: .zero)
+        preview.session = monitor.session
+        preview.videoGravity = .resizeAspectFill
+        layer.addSublayer(preview)
+        box.strokeColor = UIColor.systemRed.cgColor
+        box.fillColor = UIColor.clear.cgColor
+        box.lineWidth = 3
+        box.isHidden = true
+        layer.addSublayer(box)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        preview.frame = bounds
+    }
+    /// Vision (normalized, y ↑) → warstwa podglądu
+    func updateOverlay(rect: CGRect?) {
+        guard let rect else { box.path = nil; box.isHidden = true; return }
+        let tl = preview.layerPointConverted(fromCaptureDevicePoint: CGPoint(x: rect.minX, y: 1 - rect.maxY))
+        let br = preview.layerPointConverted(fromCaptureDevicePoint: CGPoint(x: rect.maxX, y: 1 - rect.minY))
+        let r = CGRect(x: min(tl.x, br.x), y: min(tl.y, br.y), width: abs(br.x - tl.x), height: abs(br.y - tl.y))
+        box.path = CGPath(rect: r, transform: nil)
+        box.isHidden = false
     }
 }
 

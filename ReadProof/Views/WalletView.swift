@@ -76,11 +76,25 @@ struct PassportView: View {
                         Button("Test"){ Task{ _=await BackendService.shared.checkHealth() } }
                     }
                     BackendHealthView()
-                    Toggle(isOn: Binding(get:{UserDefaults.standard.bool(forKey:"admin_dev_mode")}, set:{UserDefaults.standard.set($0, forKey:"admin_dev_mode")})) {
+                    SecureField("Hasło trybu testowego", text: Binding(get:{UserDefaults.standard.string(forKey:"admin_dev_password") ?? ""}, set:{UserDefaults.standard.set($0, forKey:"admin_dev_password")}))
+                        .font(.caption.monospaced()).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    Text("Hasło: hackathon2026@ — wymagane do Admin Dev Mode (bez blokad, bez czekania).").font(.caption2).foregroundStyle(RPColor.muted)
+                    Toggle(isOn: Binding(
+                        get:{ UserDefaults.standard.bool(forKey:"admin_dev_mode") && (UserDefaults.standard.string(forKey:"admin_dev_password") ?? "") == "hackathon2026@" },
+                        set:{ UserDefaults.standard.set($0 && (UserDefaults.standard.string(forKey:"admin_dev_password") ?? "") == "hackathon2026@", forKey:"admin_dev_mode") }
+                    )) {
                         Label("Admin Dev Mode — bez czekania", systemImage:"hammer.fill")
                     }.tint(RPColor.primary)
-                    if UserDefaults.standard.bool(forKey:"admin_dev_mode") {
-                        Text("Włączone: sesje odblokowują wszystkie 5 wyzwań natychmiast (X-Dev-Mode), brak limitu czasu. Do testów.").font(.caption2).foregroundStyle(RPColor.peach)
+                    if UserDefaults.standard.bool(forKey:"admin_dev_mode") && (UserDefaults.standard.string(forKey:"admin_dev_password") ?? "") == "hackathon2026@" {
+                        Text("Włączone: sesje odblokowują wszystkie 5 wyzwań natychmiast (X-Dev-Mode), brak blokad. Do testów.").font(.caption2).foregroundStyle(RPColor.peach)
+                    } else if UserDefaults.standard.bool(forKey:"admin_dev_mode") {
+                        Text("Hasło nieprawidłowe — tryb nieaktywny.").font(.caption2).foregroundStyle(.red)
+                    }
+                    Toggle(isOn: Binding(get:{UserDefaults.standard.bool(forKey:"pitch_demo_mode")}, set:{UserDefaults.standard.set($0, forKey:"pitch_demo_mode")})) {
+                        Label("Pitch Demo Mode — łagodniejszy anti-cheat", systemImage:"flag.fill")
+                    }.tint(RPColor.primary)
+                    if UserDefaults.standard.bool(forKey:"pitch_demo_mode") {
+                        Text("Na scenę: wyższy próg kamery (fail ≥ 6 zamiast 3), debounce i PhoneBack 0.78. Produkcja bez tego przełącznika.").font(.caption2).foregroundStyle(RPColor.peach)
                     }
                     Text("Frontend nie wysyła AI. LLM (OpenRouter free) i Jev (TypeSafe jev-latest) tylko przez backend.").font(.caption2).foregroundStyle(RPColor.muted)
                 }

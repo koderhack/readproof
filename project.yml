@@ -36,6 +36,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        NSCameraUsageDescription: "ReadProof anty-screenshot: przednia kamera wykrywa, czy ktoś nie celuje drugim telefonem w Twój ekran."
     settings:
       base:
         INFOPLIST_FILE: ReadProof/Info.plist
