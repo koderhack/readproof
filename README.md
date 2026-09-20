@@ -1,188 +1,122 @@
-# ReadProof — Kolegium ReadProof
+# ReadProof — przeczytaj prawdziwą książkę, udowodnij zrozumienie, zgarnij nagrodę
 
-**Hasło:** *Read a real book. Prove you understood it. Get rewarded.*
+**EN tagline:** *Read a real book. Prove you understood it. Get rewarded.*
 
-Aplikacja iOS (SwiftUI) + Backend (Node + SQLite) zachęcająca do czytania **fizycznych** książek przygodowych poprzez 5-zadaniowe Reading Challenge'e weryfikujące zrozumienie treści. Nagrody testowe na **Solana Devnet** (mock USDC).
+Aplikacja **iOS (SwiftUI)** + **backend (Node + Solana Devnet)**. Czytelnik czyta **fizyczną książkę**,
+a apka weryfikuje zrozumienie przez 5 zadań na rozdział. Zweryfikowany dowód (`5/5`) trafia na
+**Solana Devnet** jako `proofHash` — nagroda **5 USDC (Devnet)** z puli wydawcy.
 
-Design: **parchment / burgundy / gold** — styl akademicki jak na screenach (Kolegium, Sigillum, Paszport Literacki, Karta Archiwalna). Bez „crypto casino”.
-
----
-
-## 1. Książki — 5 przygodowych, pełny tekst domena publiczna
-
-Wszystkie teksty legalnie z **Project Gutenberg (USA public domain)**, nie są ebook readerem — pełny tekst jest w bundlu jako podgląd/źródło dla LLM/Jev, ale główną lekturą jest fizyczna książka.
-
-| # | Tytuł | Autor | Gutenberg | Plik bundla | Rozdziały w MVP |
-|---|-------|-------|-----------|-------------|-----------------|
-| 1 | Alice's Adventures in Wonderland | Lewis Carroll | [#11](https://www.gutenberg.org/ebooks/11) | `alice.txt` | 3: Down the Rabbit-Hole / Pool of Tears / Caucus-Race |
-| 2 | The Adventures of Sherlock Holmes | Arthur Conan Doyle | [#1661](https://www.gutenberg.org/ebooks/1661) | `sherlock.txt` | 2: A Scandal in Bohemia / Red-Headed League |
-| 3 | Treasure Island | Robert Louis Stevenson | [#120](https://www.gutenberg.org/ebooks/120) | `treasure.txt` | 2: Old Sea-Dog / Black Dog |
-| 4 | The Adventures of Tom Sawyer | Mark Twain | [#74](https://www.gutenberg.org/ebooks/74) | `tomsawyer.txt` | 2: The Fence / Jackson's Island |
-| 5 | Around the World in Eighty Days | Jules Verne | [#103](https://www.gutenberg.org/ebooks/103) | `around.txt` | 2: Fogg Bets £20k / Detective Fix |
-
-W UI: *Book Detail → „Pełny tekst z domeny publicznej (Gutenberg #…)" → Czytaj fragment (TextViewer, `*.txt` z bundla) + link do źródła + licencja.*  
-Docelowo autor/wydawca może wgrać własny tekst — tu pokazujemy mechanizm.
+Design: **parchment / burgundy / gold** — Kolegium, Sigillum, Paszport Literacki. Bez „crypto casino”.
 
 ---
 
-## 2. Backend (lokalnie — na razie testujemy lokalnie)
+## 🔗 Linki (hackathon)
 
-### Stack
-- **Node.js 20 + Express 4** — `backend/server.js:5`
-- **SQLite (sqlite3)** — `readproof.db`, tabele `proofs`
-- **CORS** otwarte dla iOS/Simulator
-- **LLM**: OpenRouter — **free routing/model** (domyślnie `meta-llama/llama-3.2-3b-instruct:free`), cache'uje 8–12 challenge'y → wybiera 5 różnych typów. Fallback = bundled `challenges.json` (patrz niżej).
-- **Jev**: `POST /api/evaluate` — najpierw OpenRouter free, potem mock keyword-overlap (próg **0.80**, konfigurowalny `JEV_THRESHOLD`).
-- **Solana**: mock Devnet — SHA256 `proofHash` + mock base58 signature 88 znaków + `https://explorer.solana.com/tx/…?cluster=devnet` + `GET /api/wallet/:address` saldo `12.50 USDC (Devnet)`. Hook `SOLANA_RPC=https://api.devnet.solana.com` gotowy na real RPC.
+| Co | Link |
+|----|------|
+| 🌐 Strona publiczna | https://kacpersikora.pages.dev/books |
+| 💊 Health backendu | https://frog02.mikr.us:32287/health |
+| 🏪 Panel wydawcy | https://koderhack.github.io/books/publisher/ |
+| 📜 Zasady wydawców | [PUBLISHER_RULES.md](PUBLISHER_RULES.md) |
+| 🎬 Scenariusz demo (60 s) | [docs/DEMO.md](docs/DEMO.md) |
+| 📦 To repo | https://github.com/koderhack/readproof |
 
-### Uruchomienie lokalne
+---
+
+## 🎬 Demo w 60 sekund
+
+1. **Paszport** → *Sign in with Apple* (na symulatorze: *Gość*) — portfel podpina się sam.
+2. **Katalog** → *Alice in Wonderland* → rozdział 1 → *Akceptuję zasady — rozpocznij test*.
+3. Odpowiedz na pytania (ABCD, *Kto to powiedział?*, otwarte z AI-Jev, układanie kolejności ↑/↓).
+4. Masz **3 ❤️** — po błędzie apka pokazuje **poprawną odpowiedź**.
+5. **ZAKOŃCZ I ZWERYFIKUJ** → *Reading Verified* → hash + link do Solana Explorera (Devnet).
+
+Pełny scenariusz z timingiem: [docs/DEMO.md](docs/DEMO.md).
+
+---
+
+## 🧩 Jak to działa
+
+- **Pytania z pełnego tekstu na serwerze** — LLM (OpenRouter `deepseek-v4-flash`, free) losuje 5 z ~30
+  na sesję, w języku urządzenia. Pełna treść **nigdy** nie trafia on-chain (tylko hash SHA-256).
+- **Jev (TypeSafe `jev-latest`)** ocenia pytania otwarte + łagodny keyword-fallback
+  (rozumie np. *wiedźma ≈ dobra wróżka*).
+- **Anti-cheat bez blokad czasowych** — 5 min na pytanie, brak cooldownu 30 min.
+  Kamera front wykrywa drugi telefon (tylko wskaźnik *aktywna/wyłączona*),
+  screenshot/screen-recording kończy sesję. Fałszywe alarmy złagodzone.
+- **Konto = Apple, nie portfel** — po *Sign in with Apple* syntetyczny adres Devnet podpina się sam.
+  Kto chce, podepnie Phantom / Solflare / Backpack / Glow / Brave / WalletConnect (lista w Paszporcie).
+- **Wydawcy** dodają książki przez API (`POST /api/publisher/campaigns` → treść → fundusz → `active`),
+  fundują pulę nagród, drukują QR na okładkę. Szczegóły: [PUBLISHER_RULES.md](PUBLISHER_RULES.md).
+
+### Książki w MVP
+
+5 klasyków z **Project Gutenberg (USA public domain)**: Alice, Sherlock Holmes, Treasure Island,
+Tom Sawyer, Around the World — pełne teksty w `ReadProof/Resources/PublicDomainTexts/` i `backend/texts/`.
+Główną lekturą jest fizyczna książka; tekst w bundlu to źródło pytań + podgląd.
+
+---
+
+## 🚀 Quickstart
+
+### Backend
+
 ```bash
 cd backend
 npm install
-cp .env.example .env   # uzupełnij OPENROUTER_API_KEY jeśli masz, inaczej działa mock Jev
-# .env domyślnie:
-# PORT=32288
-# OPENROUTER_MODEL=meta-llama/llama-3.2-3b-instruct:free
-# JEV_THRESHOLD=0.80
-# SOLANA_RPC=https://api.devnet.solana.com
-
-node server.js
-# → ReadProof backend :32288 books=5 openrouter=false jevThresh=0.8
-
-# test:
-curl http://127.0.0.1:32288/health | jq
-curl http://127.0.0.1:32288/api/books | jq '.[0].title'
-curl http://127.0.0.1:32288/api/books/alice/chapters/alice-ch1/challenge | jq
-curl -X POST http://127.0.0.1:32288/api/evaluate -H "Content-Type: application/json" \
-  -d '{"question":"Dlaczego drzwi były problemem?","expectedMeaning":"Drzwi za małe, kluczyk nie pasował","userAnswer":"Bo były zamknięte i za małe","context":"Korytarz"}' | jq
+cp .env.example .env   # uzupełnij klucze (nigdy nie commituj .env!)
+node server.js         # → https://0.0.0.0:32288 (health: /health)
 ```
 
-Backend jest **za proxy** na Frog gdy wdrożysz: `frog02.mikr.us:32287` → `/api/subscribe` → `:8081`, reszta → `:32288`. Lokalnie wystarczy `:32288`.
+### iOS
 
-### Endpointy
-```
-GET  /health
-GET  /api/books
-GET  /api/books/:bookId
-GET  /api/books/:bookId/chapters/:chapterId/challenge  # 5 różnych typów, co najmniej 1 Jev
-GET  /api/challenges/:chapterId?pick=5
-POST /api/evaluate  {question, expectedMeaning, userAnswer, context} → {correct, confidence, reason, source}
-POST /api/proofs    {bookId, chapterId, challenges, answers, walletAddress} → ReadingProof + mock Solana tx
-GET  /api/proofs?wallet=0x...
-GET  /api/wallet/:address
-POST /api/generate  {bookId, chapterId, count} → LLM OpenRouter free generuje 8–12, waliduje JSON, zapisuje do challenges.json
-GET  /api/books/:bookId/text  # pierwsze 50k znaków pełnego tekstu
-```
-
-**LLM cache:** pytania generowane **raz** ( lub `POST /api/generate` dla autora) i zapisane w `backend/challenges.json` + SQLite, nie wywoływane przy każdym `Start Challenge`. Oszczędność kosztów.
-
-**Jev nie generuje challenge'y** — tylko ocenia `open_question` / `why_question` (whitelist typów w `ChallengeType.requiresJev`).
-
----
-
-## 3. iOS App (Swift, SwiftUI, mobile-first)
-
-### Wymagania
-- Xcode 15+, iOS 17+, Simulator iPhone 16 Pro
-- `xcodegen` (ma `project.yml` → generuje `ReadProof.xcodeproj`)
-
-### Uruchomienie
 ```bash
 xcodegen generate
 open ReadProof.xcodeproj
-# wybierz scheme ReadProof → iPhone 16 Pro (iOS 18.2) → Run
+# scheme ReadProof → iPhone 16 Pro → Run
 ```
 
-### Architektura Swift
-- `Models/Models.swift:5` — `Book`, `Chapter`, `Challenge` (12 typów: `multiple_choice` … `memory`), `ReadingProof`, `Scoring.jevThreshold=0.80`
-- `Services/ChallengeStore.swift:31` — `pickFive()` dywersyfikuje typy + wymusza 1× Jev
-- `Services/JevService.swift:17` — `evaluate()` → Backend `/api/evaluate` → direct OpenRouter free → mock keyword-recall
-- `Services/SolanaService.swift:12` — `createProofHash()` SHA256 + `mockSignature()` + `sendReward()` (900ms delay) + `checkDevnet()`
-- `Services/BackendService.swift` — wrapper na `http://127.0.0.1:32288` (konfigurowalny w Paszporcie), fallback do bundla gdy offline
-- `Services/LLMService.swift:12` — `generateChallenges()` OpenRouter free → walidacja JSON
-- `Views/` — **Design.swift** parchment/burgundy, **HomeView** (Explore Challenges, Featured Tome, Trending Sprints, Recent Verifications), **BookDetailView** (Gutenberg source + TextViewer), **ChapterIntroView**, **ChallengeFlowView** (Questio + burgundy ABCD + reflection bonus + Submit & Verify), **ResultView** (Sigillum, Dowód Zatwierdzony!, Karta Archiwalna, Kwit +$15), **WalletView/PassportView** (Paszport Literacki, Stan Skarbca, metryki, backend URL)
+Wymagania: Xcode 15+, iOS 17+. Backend URL zmienisz w apce: **Paszport → Backend**.
 
-### Flow demo (P0 — 24h hackathon)
-1. Otwieram ReadProof na telefonie → **Explore Challenges**
-2. Wybieram *Alice’s Adventures in Wonderland* → *Chapter 1 — Reward 5 USDC*
-3. Ekran: „Przeczytaj rozdział w fizycznej książce” + podgląd pełnego tekstu (Gutenberg)
-4. **Start Reading Challenge** → 5 różnych zadań (np. ABCD + Who Said It? + Open Question → Jev + Ordering + What Happened Next?)
-5. Jedno otwarte oceniane przez Jev (backend / OpenRouter free / mock)
-6. **Reading Verified** (4–5/5) lub Try Again (3/5) / Failed (<3)
-7. **Proof hash + txSignature mock + Explorer link (Devnet)** → *View Proof*
-8. Scenariusz błędny: <4/5 → brak reward, retry
-
-### Scoring
-- `5/5 → verified`, `4/5 → verified`, `3/5 → try again`, `<3 → failed` (`Models.swift:174`)
-- `JEV_THRESHOLD=0.80` — jedno miejsce konfigurowalne (`backend/.env` + `JevService` + `Scoring`).
-
----
-
-## 4. OpenRouter free — gdzie ustawić klucz
-
-- **Backend (preferowane dla lokalnych testów):** `backend/.env` → `OPENROUTER_API_KEY=sk-or-v1-...` — backend użyje go dla `/api/evaluate` i `/api/generate`, appka i tak przejdzie przez backend.
-- **Aplikacja (fallback):** Paszport → Ustawienia → *OpenRouter API Key* + model (zapis do `UserDefaults`). Jeśli brak klucza — działa **mock Jev** (keyword recall) i **bundled challenges.json** — zero kosztów.
-
-Rekomendowany model free: `meta-llama/llama-3.2-3b-instruct:free` (routing `:free` w OpenRouter).
-
----
-
-## 5. Wdrożenie na Frog (gdy przestaniesz testować lokalnie)
+### Deploy backendu (mikrus)
 
 ```bash
-# z Maca:
 tar czf readproof-backend.tar.gz -C backend .
 scp -P 12287 readproof-backend.tar.gz frog@frog02.mikr.us:/home/frog/
-ssh frog@frog02.mikr.us -p 12287 "mkdir -p readproof-backend && tar xzf readproof-backend.tar.gz -C readproof-backend && cd readproof-backend && npm install --omit=dev && cat > .env <<'ENV'
-PORT=32288
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=meta-llama/llama-3.2-3b-instruct:free
-JEV_THRESHOLD=0.80
-SOLANA_RPC=https://api.devnet.solana.com
-ENV
-nohup node server.js > /tmp/readproof.log 2>&1 & echo ok; sleep 1; curl -s http://127.0.0.1:32288/health"
-
-# app: Paszport → Backend URL = http://frog02.mikr.us:32287
+ssh frog@frog02.mikr.us -p 12287 "cd readproof-backend && tar xzf ../readproof-backend.tar.gz && npm rebuild sqlite3 && (nohup node server.js > /tmp/readproof.log 2>&1 &)"
 ```
 
-Proxy na Frog (`/srv/newsletter/proxy.js:8`) już kieruje resztę ruchu z `:32287` na `:32288`, więc zewnętrzny URL to `frog02.mikr.us:32287`.
+Uwaga: wysyłaj **pliki źródłowe** (`server.js`, `verification.js`), nie cały `node_modules`
+(natywne moduły budowane na mikrusie przez `npm rebuild sqlite3`).
 
 ---
 
-## 6. Kryterium gotowości (MVP P0)
-
-- [x] 5 książek przygodowych, pełny tekst public domain, legalny
-- [x] rozdziały + 5 challenge'y o **różnych** typach (LLM generuje 8–12, wybieramy 5)
-- [x] LLM OpenRouter free (cache, walidowany JSON)
-- [x] Jev/mock Jev tylko dla otwartych (próg 0.80)
-- [x] wynik + Reading Verified / Try Again
-- [x] wallet (demo + real address) + Solana Devnet proof/reward (mock sig + Explorer)
-- [x] flow end-to-end na telefonie (Simulator)
-
-Nie robimy w MVP: własny token `$NERD`, DAO, marketplace, setki książek, social, ebook reader, real-money.
-
----
-
-## 7. Struktura
+## 🗂 Struktura repo
 
 ```
 readproof/
-├── project.yml                 # xcodegen
-├── ReadProof.xcodeproj/
-├── ReadProof/
-│   ├── App/ReadProofApp.swift
-│   ├── Models/Models.swift
-│   ├── Services/{ChallengeStore,JevService,SolanaService,LLMService,BackendService,AppState}.swift
-│   ├── Views/{Design,HomeView,BookDetailView,ChapterIntroView,ChallengeFlowView,ResultView,WalletView,BackendHealthView}.swift
-│   ├── Resources/{challenges.json, PublicDomainTexts/*.txt, Assets.xcassets}
-│   └── Info.plist
-├── backend/                    # Node backend (lokalnie :32288)
-│   ├── server.js
-│   ├── challenges.json         # cache LLM
-│   ├── texts/*.txt             # pełne teksty Gutenberg
-│   ├── .env
-│   └── package.json
-└── README.md
+├── README.md                 # ten plik
+├── PUBLISHER_RULES.md        # zasady dla wydawców (v1.0)
+├── docs/DEMO.md              # scenariusz demo 60 s
+├── LICENSE                   # MIT
+├── project.yml               # xcodegen → ReadProof.xcodeproj
+├── ReadProof/                # apka iOS (App, Models, Services, Views, Resources)
+├── ReadProofLiveActivity/    # widget / Live Activity
+├── backend/                  # Node backend (server.js, verification.js, texts/)
+│   └── .env.example          # wzór sekretów (prawdziwy .env tylko lokalnie!)
+└── public/books/             # strona statyczna → kacpersikora.pages.dev/books
 ```
 
-Po zakończeniu lokalnych testów `kill $(cat /tmp/readproof-backend.pid)` lub `pkill -f "node server.js"` gdy przenosisz na Frog.
+---
+
+## 🔒 Sekrety
+
+Prawdziwe klucze są **tylko** w `backend/.env` (lokalnie / na mikrusie) i **nigdy** w repo.
+W repo jest wyłącznie `backend/.env.example` z placeholderami.
+Klucze prywatne Solana trzymaj poza repo (np. `pitch/.secrets/` — ignorowane przez git).
+
+---
+
+## 📄 Licencja
+
+MIT — zob. [LICENSE](LICENSE).

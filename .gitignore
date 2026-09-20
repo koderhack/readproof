@@ -17,3 +17,26 @@ backend/readproof.db
 /tmp/
 .env.local
 backend/certs/key.pem
+backend/*.bak*
+backend/texts/campaign_*
+
+# Sekrety i klucze — NIGDY do repo
+pitch/.secrets/
+*.pem
+!backend/certs/cert.pem
+solana-payer-*.json
+*.key
+
+# Lokalne śmieci / tooling (hackathon: nie commitować)
+.agents/
+.claude/
+skills-lock.json
+.watch2.py
+=22.0.0.
+build
+build/
+Models/
+tools/
+ReadProof/*.mlmodelc/
+pitch/
+ReadProof.xcodeproj/project.xcworkspace/xcuserdata/
