@@ -1341,7 +1341,7 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   const failEarly = req.query.fail === '1' || req.body?.fail === true || req.body?.endEarly === true;
   const total = s.challenges.length;
   const answered = Object.keys(s.answers).length;
-  const minToFinish = Math.ceil(total * 0.6); // 3/5 jak test z lektury
+  const minToFinish = 1; // złagodzone: wczoraj 3/5 blokowało zakończenie gdy pytania zepsute (ordering) — teraz 1 wystarczy, weryfikacja i tak oceni
   if(!failEarly && answered < minToFinish) return res.status(400).json({error:`Odpowiedz na co najmniej ${minToFinish}/${total} aby zakończyć (masz ${answered})`});
 
   // ── 1. WERYFIKACJA — Verification Engine (anti-cheat, score, czas, proofHash) ──

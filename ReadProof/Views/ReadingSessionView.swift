@@ -134,11 +134,11 @@ struct ReadingSessionView: View {
                             HStack { Spacer(); Text(loc.t("Następne za","Next in") + " \(countdown(next))").font(.caption.monospaced()).foregroundStyle(RPColor.muted) }
                         }.padding(14).background(RPColor.card).clipShape(RoundedRectangle(cornerRadius:14)).overlay(RoundedRectangle(cornerRadius:14).stroke(RPColor.line))
                     }
-                    if challenges.allSatisfy({ completed.contains($0.id) }) {
+                    if completed.count >= 1 || challenges.allSatisfy({ completed.contains($0.id) }) {
                         Button {
                             Task { await complete() }
                         } label: {
-                            Text("ZAKOŃCZ I ZWERYFIKUJ").font(.headline).frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.primary).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:12))
+                            Text(completed.count == challenges.count ? "ZAKOŃCZ I ZWERYFIKUJ" : "ZAKOŃCZ WCZEŚNIEJ (\(completed.count)/\(challenges.count))").font(.headline).frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.primary).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:12))
                         }
                     }
                     } // else cooldown
