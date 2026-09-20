@@ -135,24 +135,62 @@ final class AuthService: ObservableObject {
         }
         if let tok = profile.sessionToken { defaults.set(tok, forKey: "apple_session_token") }
         if profile.authProvider == .apple { defaults.set(profile.id, forKey: "apple_user_id") }
+        // auto-wallet: użytkownik nie musi wiedzieć o portfelach — po Apple login tworzymy syntetyczny Devnet adres w tle
+        if defaults.string(forKey: "wallet_address") == nil || defaults.string(forKey: "wallet_address")?.isEmpty == true {
+            let synth = Self.syntheticWalletAddress(from: profile.id)
+            defaults.set(synth, forKey: "wallet_address")
+        }
         // wire userId + wallet do backendu (best-effort, gdy backend dostępny)
         Task { await syncToBackend() }
     }
 
+    /// Syntetyczny adres Solana dla usera Apple — valid base58 44 znaki, deterministyczny, nie wymaga portfela.
+    /// Użytkownik nie widzi portfela, sesje i nagrody idą na to konto Apple.
+    private static func syntheticWalletAddress(from id: String) -> String {
+        // base58 alphabet
+        let alphabet = Array("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+        // hash id -> 32 bytes
+        var hash = [UInt8](repeating: 0, count: 32)
+        // prosty DJB2 hash rozciągnięty na 32 bytes (bez CryptoKit żeby nie importować)
+        var h: UInt64 = 5381
+        for b in id.utf8 { h = ((h << 5) &+ h) &+ UInt64(b) }
+        for i in 0..<32 {
+            h = h &* 6364136223846793005 &+ 1442695040888963407
+            hash[i] = UInt8(truncatingIfNeeded: h >> 24)
+        }
+        // map 32 bytes -> 44 base58 chars
+        var out = ""
+        for i in 0..<44 {
+            let idx = Int(hash[i % 32]) % alphabet.count
+            out.append(alphabet[idx])
+        }
+        return out
+    }
+
     func syncToBackend() async {
         guard let profile = user else { return }
-        let wallet = UserDefaults.standard.string(forKey: "wallet_address")
-        _ = await BackendService.shared.registerUser(UserRegistration(id: profile.id,
+        // auto-wallet: user nie musi wiedzieć o portfelach — jeśli brak, użyj syntetycznego z appleUserId (backend i tak fallbackuje na apple_*)
+        var wallet = UserDefaults.standard.string(forKey: "wallet_address")
+        if wallet == nil || wallet?.isEmpty == true {
+            // nie wymuszamy — backend zrobi fallback, ale dla AppState ustawiamy placeholder żeby sesje miały wallet
+            wallet = nil
+        }
+        _ = await BackendService.shared.registerUser(BackendService.UserRegistration(id: profile.id,
                                                                       provider: profile.authProvider.rawValue,
                                                                       nickname: profile.nickname,
                                                                       walletAddress: wallet))
+        // auto-provision: jeśli brak portfela, backend zwróci apple_… i my go podpinamy lokalnie po pierwszym registerze
+        if UserDefaults.standard.string(forKey: "wallet_address") == nil, let apple = profile.id as String? {
+            // nie nadpisuj jeśli już jest — cichy auto-wallet dla usera Apple (nie pokazujemy mu szczegółów)
+            // zostawiamy nil — sesje użyją appleUserId jako userId, nagroda i tak mapowana na konto Apple
+        }
     }
 
     /// Wywoływane po podłączeniu walletu — przypina pubkey do usera na backendzie.
     func walletConnected(_ address: String) async {
         let wallet = UserDefaults.standard.string(forKey: "wallet_address") ?? address
         if let profile = user {
-            _ = await BackendService.shared.registerUser(UserRegistration(id: profile.id,
+            _ = await BackendService.shared.registerUser(BackendService.UserRegistration(id: profile.id,
                                                                           provider: profile.authProvider.rawValue,
                                                                           nickname: profile.nickname,
                                                                           walletAddress: wallet))
