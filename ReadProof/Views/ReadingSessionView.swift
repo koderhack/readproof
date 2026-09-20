@@ -216,6 +216,7 @@ struct ReadingSessionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label("Możesz korzystać tylko z książki — zabronione są podpowiedzi (AI, ChatGPT, notatki, drugi telefon).", systemImage: "book.fill").font(.caption).foregroundStyle(RPColor.ink)
                 Label("Aplikacja posiada zabezpieczenia wykrywające screenshoty i nagrywanie ekranu.", systemImage: "eye.slash.fill").font(.caption).foregroundStyle(RPColor.ink)
+                Label("Kamera obserwuje i wykrywa nagrywanie oraz zdjęcia z innego telefonu.", systemImage: "camera.fill").font(.caption).foregroundStyle(RPColor.ink)
             }
             Text("Kontynuując, potwierdzasz że zapoznałeś się z zasadami.").font(.caption2).foregroundStyle(RPColor.muted)
             Button {
