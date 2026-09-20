@@ -21,6 +21,11 @@ targets:
     deploymentTarget: 17.0
     sources:
       - ReadProof
+    # Skompilowane modele Core ML (MobileNet + YOLOv8n) MUSZĄ być w bundlu —
+    # inaczej FrontCameraMonitor nie wykrywa telefonu (xcodegen sam ich nie podłapuje)
+    resources:
+      - ReadProof/MobileNet.mlmodelc
+      - ReadProof/yolov8n.mlmodelc
     info:
       path: ReadProof/Info.plist
       properties:

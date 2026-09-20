@@ -63,7 +63,7 @@
 		355BAEA9789B21E13D526CC9 /* LocalizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationService.swift; sourceTree = "<group>"; };
 		38245A384BCFB955A4554FD8 /* ReadingSessionActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionActivity.swift; sourceTree = "<group>"; };
 		3AA4F1F11B5752458A77E427 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		44BCF0641B2AE08BC58FF5D6 /* ReadProof.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadProof.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		44BCF0641B2AE08BC58FF5D6 /* ReadProof.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ReadProof.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C0D6256C8BB275775A75EAC /* ReadProofLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadProofLiveActivityBundle.swift; sourceTree = "<group>"; };
 		53EF17DFBC64C138350E79F0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		55782CFF806899E9249400C7 /* Design.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
@@ -75,7 +75,7 @@
 		8E432DC9DCD34C4BE2525539 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		924A5091CF6C655D4DDC88BB /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
 		9893A8AB5A6DB805DC1C427C /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
-		A0BEA041B51F181468AABC23 /* MobileNet.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = MobileNet.mlmodelc; sourceTree = "<group>"; };
+		A0BEA041B51F181468AABC23 /* MobileNet.mlmodelc */ = {isa = PBXFileReference; path = MobileNet.mlmodelc; sourceTree = "<group>"; };
 		A164649654C6D62DEF6AE4E5 /* treasure.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = treasure.txt; sourceTree = "<group>"; };
 		A59B218590383061311CF2D0 /* ChallengeFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeFlowView.swift; sourceTree = "<group>"; };
 		AC3CA26BFF276DCD1DE6CBB4 /* SolanaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolanaService.swift; sourceTree = "<group>"; };
@@ -84,7 +84,7 @@
 		B5B57629EE4CD06C4D0858AB /* ReadProofLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadProofLiveActivity.swift; sourceTree = "<group>"; };
 		BE21E5F0DE3F8705B1490D37 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C0B26A94B5446D3F167F13D6 /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
-		C83F10F2682E6E719DAF08F1 /* yolov8n.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = yolov8n.mlmodelc; sourceTree = "<group>"; };
+		C83F10F2682E6E719DAF08F1 /* yolov8n.mlmodelc */ = {isa = PBXFileReference; path = yolov8n.mlmodelc; sourceTree = "<group>"; };
 		CD18CF24BC398A3882AAA87F /* ChallengeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeStore.swift; sourceTree = "<group>"; };
 		CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCoverView.swift; sourceTree = "<group>"; };
 		D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionView.swift; sourceTree = "<group>"; };
@@ -387,13 +387,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 5JT3JLN6L4;
 				INFOPLIST_FILE = ReadProof/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.readproof.ReadProof;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -531,13 +527,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 5JT3JLN6L4;
 				INFOPLIST_FILE = ReadProof/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.readproof.ReadProof;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

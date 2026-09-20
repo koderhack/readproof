@@ -180,7 +180,7 @@ struct ReadingSessionView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar) // dół menu znika na czas sesji — nie da się przełączyć zakładki
         .onReceive(timer) { _ in now = Date(); cameraOK = cameraMonitor.isActive; cameraSignal = cameraMonitor.currentSignal; cameraFrames = cameraMonitor.videoFrames }
-        .onAppear { cameraMonitor.onScreenDetected = { print("[camera] wykryto ekran — nie oznaczam od razu jako podejrzana (złagodzone, wcześniej false-positive gdy nic nie zrobiono)") }; observeScreenshots() }
+        .onAppear { cameraMonitor.onScreenDetected = { failOnSuspicion(type: "frontCameraScreen") }; observeScreenshots() }
         .onDisappear { stopLive() }
         .navigationDestination(isPresented: $showResult) { if let p=proof{ ResultMinimalView(book:book, chapter:chapter, results:[], proof:p)}}
     }
@@ -300,7 +300,7 @@ struct ReadingSessionView: View {
                 let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
                 sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false
             }
-            ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: s.challenges.count)
+            ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: challenges.count)
             cameraMonitor.start() // anty-zdjęcie drugim telefonem — dopiero gdy sesja naprawdę ruszyła
             updateLive()
         } catch BackendService.GenError.cooldown(let retryAfter, let until) {

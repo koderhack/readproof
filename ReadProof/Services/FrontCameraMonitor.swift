@@ -7,12 +7,13 @@ import UIKit
 /// Anti-screenshot: przednia kamera wykrywa, czy ktoś celuje drugim telefonem/ekranem w nasz ekran.
 /// W 100% on-device (AVFoundation + Vision + Core ML MobileNet), free/open, zero zapisu klatek.
 ///
-/// Kanały (fail przy SCORE >= 6 — wcześniej 3, było za czułe):
-/// 1. SZYBKIE PIKSELE  — jasność / % bieli / krawędzie (CPU, co ~0.9 s) — progi podniesione 0.65/0.60/0.08.
+/// Kanały (fail przy SCORE >= 4.0 prod / 6.0 demo — modele MUSZĄ być w bundlu):
+/// 1. SZYBKIE PIKSELE  — jasność / % bieli / krawędzie (CPU, co ~0.9 s), progi 0.65/0.60/0.08.
 /// 2. VISION (2 s cache) — twarz w kadrze (legitymizacja) + duży prostokąt.
-/// 3. MODEL MobileNet (ImageNet, 16MB via Core ML) — rozpoznaje „telefon/monitor/laptop” tylko przy conf >=0.50 (było 0.30) → +2.
-/// 4. YOLOv8n cell phone — conf >=0.40 + 0.35 threshold (było 0.20/0.15), bez natychmiastowego fire, przez scoring.
-/// 5. TRUEDEPTH — baseline ×2.5 i nearRatio 0.60/0.80 (było 2.0× 0.45/0.75).
+/// 3. MODEL MobileNet (ImageNet, 16MB via Core ML, w bundlu) — „telefon/monitor/laptop” przy conf >=0.50 → +2.
+/// 4. YOLOv8n cell phone (6.2MB via Core ML, w bundlu) — conf >=0.40 → +3 przez scoring;
+///    conf >=0.65 → natychmiastowy fire (telefon prawie na pewno w kadrze).
+/// 5. TRUEDEPTH — baseline ×2.5 i nearRatio 0.60/0.80.
 final class FrontCameraMonitor: NSObject {
     struct CameraSignal {
         var score = 0.0
@@ -300,9 +301,10 @@ extension FrontCameraMonitor: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         s.score = sc
         currentSignal = s
-        // Podniesiony próg dla obu trybów — prod był 3.0 i wywalał na jasnej kartce
+        // Modele w bundlu (MobileNet + YOLOv8n) — próg prod 4.0: YOLO(3)+MobileNet(2) lub pełny zestaw pikseli+model.
+        // Same piksele (max ~4 bez modeli) już nie wywalają. Demo/pitch łagodniej: 6.0.
         let demo = UserDefaults.standard.bool(forKey: "pitch_demo_mode") || UserDefaults.standard.bool(forKey: "admin_dev_mode")
-        let failAt = demo ? 7.0 : 6.0
+        let failAt = demo ? 6.0 : 4.0
         if sc >= failAt { fireDebounced(demo: demo) }
     }
 
@@ -353,7 +355,9 @@ extension FrontCameraMonitor: AVCaptureVideoDataOutputSampleBufferDelegate {
             yoloConf = y.conf
             yoloBox = y.box
             if yoloHit, let b = y.box { cachedRect = b }
-            // usunięte natychmiastowe `fire()` - YOLO idzie teraz przez scoring + debounce (score + failAt)
+            // Pewny YOLO (conf >= 0.65) — natychmiastowy fire, telefon prawie na pewno w kadrze.
+            // Słabszy hit idzie przez scoring + debounce (failAt), żeby nie łapać tła.
+            if yoloHit && yoloConf >= 0.65 { fire() }
         } catch {
             // Vision/CoreML padło — zostaw poprzedni stan
         }
