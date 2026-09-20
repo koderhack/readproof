@@ -1220,21 +1220,22 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
         jev = j; correct = jev.correct && jev.confidence >= JEV_THRESHOLD;
         // Fallback: gdy zdanie znaczy to samo innymi słowami, Jev czasem daje 0.2x — sprawdź overlap słów kluczowych
         if(!correct && typeof answer==='string' && ch.expectedMeaning){
-          const norm = s=> s.toLowerCase().replace(/[^a-ząćęłńóśźż\s]/g,'').split(/\s+/).filter(w=>w.length>3);
+          const norm = s=> s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,'').split(/\s+/).filter(w=>w.length>3);
           const exp = new Set(norm(ch.expectedMeaning));
           const got = new Set(norm(answer));
           let inter=0; for(const w of got) if(exp.has(w)) inter++;
           const overlap = exp.size ? inter/exp.size : 0;
-          // Synonimy wróżka/wiedźma/czarownica/magia/zaczarowane traktuj jako pokrewne
-          const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka"]);
+          // Synonimy wróżka/wiedźma/czarownica/magia/zaczarowane traktuj jako pokrewne — po normalizacji bez polskich znaków
+          const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka","wrozka","babajaga"]);
           let magicHit = false;
           for(const w of got) if(magicSyns.has(w)) for(const e of exp) if(magicSyns.has(e)) magicHit=true;
-          if(overlap >= 0.35 || magicHit){ correct = true; jev.reason = (jev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''}` }
+          // wiedźma == dobra wróżka — oba w magicSyns, więc hit; też dobra/wrozka vs zla/wiedzma
+          if(overlap >= 0.30 || magicHit){ correct = true; jev.reason = (jev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''}` }
           // ostateczny fallback: krótka sensowna odp. >10 znaków i zawiera choć 1 słowo kluczowe z kontekstu
-          if(!correct && answer.trim().length>10){
+          if(!correct && answer.trim().length>8){
             const ctxWords = new Set(norm(ch.context||''));
             let ctxInter=0; for(const w of got) if(ctxWords.has(w) || exp.has(w)) ctxInter++;
-            if(ctxInter>=1 && jev.confidence>=0.12){ correct=true; jev.reason=(jev.reason||'')+` | lenient-context-fallback` }
+            if(ctxInter>=1 && jev.confidence>=0.10){ correct=true; jev.reason=(jev.reason||'')+` | lenient-context-fallback` }
           }
         }
       }
