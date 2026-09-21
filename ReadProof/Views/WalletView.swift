@@ -9,9 +9,22 @@ struct PassportView: View {
     @State private var showCopied=false
     @State private var guestName=""
 
+    private func roleAccent() -> Color {
+        (appState.role ?? .reader).accent
+    }
+
     var body: some View {
         NavigationStack{
             List{
+                Section(loc.t("Rola", "Role")){
+                    HStack{
+                        Image(systemName: appState.role?.symbol ?? "person.fill")
+                            .foregroundStyle(roleAccent())
+                        Text(appState.role?.title ?? loc.t("Nie wybrano", "Not chosen"))
+                        Spacer()
+                        Button(loc.t("Zmień", "Change")){ appState.clearRole() }.font(.caption.weight(.semibold))
+                    }
+                }
                 Section{
                     HStack(spacing:12){
                         Circle().fill(Color(hex:"#E5E7EB")).frame(width:48,height:48).overlay(Image(systemName:"person.fill").foregroundStyle(RPColor.muted))

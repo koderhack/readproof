@@ -1,11 +1,19 @@
 import Foundation
 import SwiftUI
 
+/// Rola użytkownika — jeden system, różne nawigacje i stany.
+enum UserRole: String, CaseIterable, Codable {
+    case student
+    case reader
+    case teacher
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var wallet = WalletState(address: UserDefaults.standard.string(forKey: "wallet_address"), balance: "0.00 USDC (Devnet)", history: [])
     @Published var proofs: [ReadingProof] = []
     @Published var path = NavigationPath()
+    @Published var role: UserRole? = UserRole(rawValue: UserDefaults.standard.string(forKey: "user_role") ?? "")
 
     init() {
         if let data = UserDefaults.standard.data(forKey: "proofs_v1"),
@@ -29,6 +37,18 @@ final class AppState: ObservableObject {
         wallet.address = nil
         wallet.balance = "0.00 USDC (Devnet)"
         UserDefaults.standard.removeObject(forKey: "wallet_address")
+    }
+
+    // MARK: - Role (student / reader / teacher)
+
+    func setRole(_ role: UserRole) {
+        self.role = role
+        UserDefaults.standard.set(role.rawValue, forKey: "user_role")
+    }
+
+    func clearRole() {
+        role = nil
+        UserDefaults.standard.removeObject(forKey: "user_role")
     }
 
     func saveProof(_ proof: ReadingProof) {

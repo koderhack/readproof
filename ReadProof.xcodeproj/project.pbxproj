@@ -29,6 +29,7 @@
 		A1350B7EB8E42777C045CB85 /* ReadProofLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B57629EE4CD06C4D0858AB /* ReadProofLiveActivity.swift */; };
 		A3C5146B25D6776FE4CC82D8 /* LocalizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355BAEA9789B21E13D526CC9 /* LocalizationService.swift */; };
 		B95C0108A73DD1C87B7B3A73 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9893A8AB5A6DB805DC1C427C /* LLMService.swift */; };
+		B9DE2011E890E57DEA10C972 /* RoleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20299436C6D05DAC52169213 /* RoleViews.swift */; };
 		BB6792CA89AFE82B0B5D201A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E432DC9DCD34C4BE2525539 /* Assets.xcassets */; };
 		BE26B4FC6D5A8B30547470DD /* sherlock.txt in Resources */ = {isa = PBXBuildFile; fileRef = 78868261F5650E1B23869229 /* sherlock.txt */; };
 		C355AA5B5B4EBCA837BE0851 /* yolov8n.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = C83F10F2682E6E719DAF08F1 /* yolov8n.mlmodelc */; };
@@ -58,6 +59,7 @@
 /* Begin PBXFileReference section */
 		0BE56E9607E388F080843460 /* JevService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevService.swift; sourceTree = "<group>"; };
 		0EC99363F7DB05EF8F7DA307 /* ReadProofApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadProofApp.swift; sourceTree = "<group>"; };
+		20299436C6D05DAC52169213 /* RoleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleViews.swift; sourceTree = "<group>"; };
 		2537A234633EACF3EEF5704C /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
 		25B99A87961FBD405CCD90D2 /* challenges.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = challenges.json; sourceTree = "<group>"; };
 		355BAEA9789B21E13D526CC9 /* LocalizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationService.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 				D8FB1AD7F924F90BA791D0DB /* ReadingSessionView.swift */,
 				CF5E434DF9B0CD5497D1A1ED /* RemoteCoverView.swift */,
 				924A5091CF6C655D4DDC88BB /* ResultView.swift */,
+				20299436C6D05DAC52169213 /* RoleViews.swift */,
 				2537A234633EACF3EEF5704C /* WalletView.swift */,
 			);
 			path = Views;
@@ -336,6 +339,7 @@
 				56AC2FA163F30F38BAFA803B /* ReadingSessionView.swift in Sources */,
 				39890C2415E8FA3B19CE19CD /* RemoteCoverView.swift in Sources */,
 				2D2A1D801723FC44CC2D0B5B /* ResultView.swift in Sources */,
+				B9DE2011E890E57DEA10C972 /* RoleViews.swift in Sources */,
 				432D793DC26CD28AA747B601 /* SolanaService.swift in Sources */,
 				514973BBF92F8A4621DB0939 /* WalletService.swift in Sources */,
 				E712633410B242645B53D6A3 /* WalletView.swift in Sources */,

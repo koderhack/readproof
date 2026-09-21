@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verify a ReadProof Certificate</title>
+<meta name="description" content="Check any ReadProof Certificate by ID: book, holder, score and proof details.">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<nav class="rp-nav"><div class="wrap">
+  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <div class="rp-links">
+    <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
+    <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+    <a href="/publisher/" data-i18n="nav_publishers">Publishers</a>
+    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en">EN</button></span>
+    <a href="/" class="cta" data-i18n="nav_home">Home</a>
+  </div>
+</div></nav>
+
+<main class="wrap">
+  <section class="rp-section tight rp-center" style="padding-bottom:0">
+    <p class="rp-kicker" data-i18n="v_k">Verification</p>
+    <h1 class="rp-h2" data-i18n="v_h">Verify a certificate.</h1>
+    <p class="rp-sub" data-i18n="v_sub">Enter a Certificate ID (e.g. <code class="inline">RP-7K2Q</code>) or open a shared certificate link.</p>
+    <form id="f" class="form-row" style="max-width:480px;margin:0 auto">
+      <div class="field" style="flex:1"><label for="q" data-i18n="v_label">Certificate ID</label><input id="q" class="mono" placeholder="RP-XXXX" autocomplete="off"></div>
+      <div class="field" style="flex:0;align-self:end"><button class="btn btn-primary" type="submit" data-i18n="v_btn">Verify</button></div>
+    </form>
+  </section>
+  <section class="rp-section tight"><div id="out"></div></section>
+</main>
+
+<footer class="rp-footer"><div class="wrap">
+  <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood it.</span></div>
+  <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/students/" data-i18n="nav_students">Students</a></div>
+</div></footer>
+
+<script>
+(function(){
+  const API = 'https://frog02.mikr.us:32287';
+  const DEMO = {
+    'RP-7K2Q': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Alexandra Nowak', score: '92%', date: '2026-09-18' },
+    'RP-3M8P': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Bartosz K.', score: '88%', date: '2026-09-17' },
+    'RP-9Q2D': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Ewa M.', score: '81%', date: '2026-09-16' }
+  };
+  const out = document.getElementById('out');
+  const q = document.getElementById('q');
+  const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
+  function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
+  async function apiGet(path){
+    for(const b of BASES){
+      try{ const r = await fetch(b + path); if(r.ok) return await r.json(); }catch(e){}
+    }
+    throw new Error('offline');
+  }
+  async function verify(id){
+    id = (id || '').trim().toUpperCase();
+    if(!id){ out.innerHTML = ''; return; }
+    q.value = id;
+    out.innerHTML = '<p class="muted rp-center">' + esc(T('vf_checking', 'Checking…')) + '</p>';
+    // 1) try live backend proofs
+    try{
+      const proofs = await apiGet('/api/proofs');
+      const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
+      const hit = list.find(p => (p.proofHash || '').toUpperCase().startsWith(id.replace('RP-','')) || (p.id || '').toUpperCase() === id);
+      if(hit){
+        out.innerHTML = certHTML({ book: hit.bookId, author: '', holder: (hit.walletAddress||'').slice(0,10) + '…', score: hit.score + '/' + hit.total, date: hit.timestamp || '' }, false, hit);
+        return;
+      }
+    }catch(e){ /* offline → demo lookup */ }
+    // 2) demo certificates (clearly labeled)
+    const d = DEMO[id];
+    if(d){ out.innerHTML = certHTML(d, true, null); return; }
+    out.innerHTML = '<div class="card rp-center"><h3>' + esc(T('vf_notfound', 'Certificate not found')) + '</h3><p class="muted">' + esc(T('vf_noid_a', 'No certificate with ID')) + ' <span class="mono">' + esc(id) + '</span> ' + esc(T('vf_noid_b', 'in live records or demo set.')) + ' <a href="/verify/?id=RP-7K2Q">RP-7K2Q</a>.</p></div>';
+  }
+  function certHTML(d, demo, raw){
+    return '<div class="cert">'
+      + '<div class="cert-k">ReadProof Certificate · ✓ Verified</div>'
+      + '<h3>' + esc(d.book) + '</h3>'
+      + (d.author ? '<div class="cert-book">' + esc(d.author) + '</div>' : '')
+      + '<div class="cert-name">' + esc(d.holder) + '</div>'
+      + '<p class="muted" style="margin:6px 0 0;font-size:.9rem">' + esc(T('lp_line', 'Demonstrated understanding · Score:')) + ' ' + esc(d.score) + '</p>'
+      + '<div class="cert-meta"><span>' + esc(q.value.toUpperCase()) + '</span><span>✓ ' + esc(T('vf_proofrec', 'Proof recorded')) + '</span></div>'
+      + '<div class="proof-mini" style="text-align:left;margin-top:18px"><b>' + esc(T('vf_details', 'Proof Details')) + '</b><br>'
+      + '<span class="mono" style="font-size:.75rem">' + esc(T('vf_net', 'Network: Solana Devnet')) + '<br>' + esc(T('vf_proofid', 'Proof ID:')) + ' ' + esc(q.value.toUpperCase()) + '<br>'
+      + (raw && raw.txSignature ? esc(T('vf_tx', 'Transaction:')) + ' ' + esc(raw.txSignature) : esc(T('vf_tx', 'Transaction:')) + ' ' + esc(T('vf_devnet', 'devnet record')) + (demo ? ' (demo)' : '')) + '</span></div>'
+      + (demo ? '<div style="margin-top:12px"><span class="demo-tag">' + esc(T('vf_demo', 'DEMO · illustrative example')) + '</span></div>' : '')
+      + '</div>';
+  }
+  document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); history.replaceState(null,'','?id=' + encodeURIComponent(q.value.trim().toUpperCase())); verify(q.value); });
+  verify(new URLSearchParams(location.search).get('id') || '');
+})();
+</script>
+<script src="/assets/i18n.js"></script>
+</body>
+</html>
