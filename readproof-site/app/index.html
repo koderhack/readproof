@@ -608,6 +608,11 @@ function renderResult(){
         <button class="btn btn-ghost btn-sm" id="bCopy">Kopiuj hash</button>
       </div>
       <div style="margin-top:12px"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">Zobacz w Solana Explorer →</a></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px">
+        <button class="btn btn-primary btn-sm" id="bShare">Udostępnij</button>
+        <a class="btn btn-ghost btn-sm" target="_blank" id="bLinkedIn" href="#">LinkedIn</a>
+        <a class="btn btn-ghost btn-sm" target="_blank" id="bX" href="#">X</a>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px">
         <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
         <a class="btn btn-primary" href="#/books">Kolejna książka →</a>
@@ -616,6 +621,14 @@ function renderResult(){
   document.getElementById('bCopy').addEventListener('click', ()=>{
     navigator.clipboard.writeText(p.proofHash || '').then(()=>{ document.getElementById('bCopy').textContent = 'OK'; });
   });
+  const shareUrl = location.origin + '/verify/?id=' + encodeURIComponent((p.proofHash || '').slice(0,8).toUpperCase());
+  const shareText = 'Certyfikat ReadProof — ' + bookName + ' ' + p.score + '/' + p.total;
+  document.getElementById('bShare').addEventListener('click', ()=>{
+    if(navigator.share){ navigator.share({title:'ReadProof', text:shareText, url:shareUrl}).catch(()=>{}); }
+    else navigator.clipboard.writeText(shareText + ' ' + shareUrl).then(()=>{ document.getElementById('bShare').textContent = 'OK'; });
+  });
+  document.getElementById('bLinkedIn').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl);
+  document.getElementById('bX').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl);
 }
 
 /* ═══ #/proofs historia (API + lokalnie) ═══ */

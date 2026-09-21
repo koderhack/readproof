@@ -204,6 +204,7 @@
     tier_partial: "Częściowe zrozumienie", tier_none: "Nie wykazano zrozumienia",
     tier_ps: "◐ Częściowe", tier_ns: "✗ Brak zrozumienia",
     vf_explorer: "Zobacz w Solana Explorer →",
+    vf_share: "Udostępnij",
     no_camps: "Brak wyzwań na żywo — wydawcy tworzą je w panelu wydawcy.",
     no_proofs: "Brak zweryfikowanych dowodów w sieci — ukończ wyzwanie w aplikacji, a Twój dowód pojawi się tutaj.",
     check_proof: "Sprawdź ten dowód", all_ch: "wyzwań czytelniczych na żywo",

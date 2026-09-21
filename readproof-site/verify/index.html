@@ -128,8 +128,31 @@
       + (raw && raw.txSignature ? esc(T('vf_tx', 'Transaction:')) + ' ' + esc(raw.txSignature) : esc(T('vf_tx', 'Transaction:')) + ' ' + esc(T('vf_devnet', 'devnet record')) + (demo ? ' (demo)' : '')) + '</span></div>'
       + (demo ? '<div style="margin-top:12px"><span class="demo-tag">' + esc(T('vf_demo', 'DEMO · illustrative example')) + '</span></div>' : '')
       + '<div style="margin-top:14px;text-align:center"><a class="btn btn-ghost btn-sm" target="_blank" href="' + (raw && raw.txSignature ? 'https://explorer.solana.com/tx/' + encodeURIComponent(raw.txSignature) + '?cluster=devnet' : 'https://explorer.solana.com/?cluster=devnet') + '">' + esc(T('vf_explorer', 'Zobacz w Solana Explorer →')) + '</a></div>'
+      + '<div style="margin-top:10px;text-align:center">'
+      + '<button class="btn btn-primary btn-sm" id="bShare">' + esc(T('vf_share', 'Share')) + '</button> '
+      + '<a class="btn btn-ghost btn-sm" target="_blank" id="bLinkedIn">LinkedIn</a> '
+      + '<a class="btn btn-ghost btn-sm" target="_blank" id="bX">X</a></div>'
       + '</div>';
   }
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.id === 'bShare'){
+      const url = location.origin + location.pathname + '?id=' + encodeURIComponent((document.getElementById('q')||{}).value || '');
+      const title = document.querySelector('.cert h3');
+      const text = 'ReadProof Certificate — ' + (title ? title.textContent : 'Proof of Comprehension');
+      if(navigator.share){ navigator.share({title: 'ReadProof', text, url}).catch(()=>{}); }
+      else{ navigator.clipboard.writeText(text + ' ' + url).then(()=>{ e.target.textContent = 'OK'; }); }
+    }
+  });
+  document.addEventListener('click', function(e){
+    const t = e.target && (e.target.id === 'bLinkedIn' || e.target.id === 'bX') ? e.target : null;
+    if(!t) return;
+    const url = encodeURIComponent(location.origin + location.pathname + '?id=' + encodeURIComponent((document.getElementById('q')||{}).value || ''));
+    const title = document.querySelector('.cert h3');
+    const text = encodeURIComponent('ReadProof Certificate — ' + (title ? title.textContent : 'Proof of Comprehension'));
+    t.href = t.id === 'bLinkedIn'
+      ? 'https://www.linkedin.com/sharing/share-offsite/?url=' + url
+      : 'https://twitter.com/intent/tweet?text=' + text + '&url=' + url;
+  });
   document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); history.replaceState(null,'','?id=' + encodeURIComponent(q.value.trim().toUpperCase())); verify(q.value); });
   verify(new URLSearchParams(location.search).get('id') || '');
 })();
