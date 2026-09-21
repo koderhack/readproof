@@ -135,10 +135,10 @@ textarea.big-input{min-height:110px;resize:vertical}
 <main class="view" id="view"></main>
 
 <!-- ═══ bottom nav ═══ -->
-<nav class="bottom-nav" id="bottomNav">
-  <a href="#/" data-tab="katalog" class="active"><span class="nav-icon">📖</span><span>Katalog</span></a>
-  <a href="#/lektury" data-tab="lektury"><span class="nav-icon">📚</span><span>Lektury</span></a>
-  <a href="#/nagrody" data-tab="nagrody"><span class="nav-icon">🏆</span><span>Nagrody</span></a>
+<nav class="bottom-nav" id="bottomNav" style="display:none">
+  <a href="#/" data-tab="katalog" class="active"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>Katalog</span></a>
+  <a href="#/dowody" data-tab="dowody"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span>Dowody</span></a>
+  <a href="#/nagrody" data-tab="nagrody"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span><span>Nagrody</span></a>
 </nav>
 
 <script>
@@ -181,6 +181,10 @@ function setWallet(w){ try{ w ? localStorage.setItem('rp_app_wallet', w) : local
 function paintWallet(){
   const w = getWallet(), el = document.getElementById('walletPill');
   if(el) el.textContent = w ? ('● ' + w.slice(0,4) + '…' + w.slice(-4)) : 'niezalogowany';
+  const nav = document.getElementById('bottomNav');
+  if(nav) nav.style.display = w ? 'flex' : 'none';
+  // auto-nav po logowaniu
+  if(w && (location.hash==='' || location.hash==='#')) nav('#/');
 }
 const SECRET_KEYS = ['correctAnswer','correctAnswers','correctOrder','errorIndex','expectedMeaning','correctText'];
 function stripSecrets(ch){ const c = Object.assign({}, ch); SECRET_KEYS.forEach(k => delete c[k]); return c; }
@@ -200,7 +204,7 @@ function updateNav(){
     const tab = a.dataset.tab;
     let active = false;
     if(tab==='katalog' && (h===''||h==='/')) active = true;
-    if(tab==='lektury' && h.startsWith('lektury')) active = true;
+    if(tab==='dowody' && h.startsWith('dowody')) active = true;
     if(tab==='nagrody' && h.startsWith('nagrody')) active = true;
     a.classList.toggle('active', active);
   });
@@ -212,13 +216,13 @@ function route(){
   const h = (location.hash||'').replace('#','');
   const seg = h.split('/').filter(Boolean);
   if(seg.length === 0 || seg[0]==='' || seg[0]==='katalog') return renderLogin();
-  if(seg[0]==='lektury') return renderLektury(seg[1], seg[2]);
+  if(seg[0]==='dowody') return renderDowody();
   if(seg[0]==='nagrody') return renderNagrody();
   if(seg[0]==='book' && seg[1]) return renderBook(seg[1]);
   if(seg[0]==='chapter' && seg[1] && seg[2]) return renderChapter(seg[1], decodeURIComponent(seg[2]));
   if(seg[0]==='quiz' && seg[1]) return renderQuiz(seg[1]);
   if(seg[0]==='result') return renderResult();
-  if(seg[0]==='proofs') return renderProofs();
+  if(seg[0]==='proofs') return renderDowody();
   if(seg[0]==='publisher') return renderPublisher();
   return renderLogin();
 }
@@ -247,7 +251,6 @@ function renderLogin(){
     </div>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-primary btn-lg" id="bGo" ${w ? '' : 'disabled style="opacity:.5"'}>Wybierz książkę →</button>
-      <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
     </div>
     <p class="muted" style="font-size:.82rem;margin-top:12px">Wydawca? <a href="#/publisher">Panel wydawcy →</a></p>`;
   document.getElementById('bPhantom').addEventListener('click', async ()=>{
@@ -280,7 +283,7 @@ async function mountPrivyUser(){
       if(authenticated) return e('span',{className:'muted'},'Zalogowano — otwieranie…');
       return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj emailem');
     }
-    function App(){ return e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{loginMethods:['email'],embeddedWallets:{createOnLogin:'users-without-wallets'}},e(Inner)); }
+    function App(){ return e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{loginMethods:['email'],embeddedWallets:{createOnLogin:'users-without-wallets'}},children:e(Inner)}); }
     createRoot(box).render(e(App));
   }catch(err){ privyMountedUser=false; if(box) box.innerHTML = `<p class="muted">Logowanie emailem niedostępne (${esc(err.message||err)}). Użyj portfela lub Gościa poniżej.</p>`; }
 }
@@ -495,13 +498,13 @@ async function renderResult(){
     ${p.reward?`<p style="margin-top:6px"><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>`:`<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5.</p>`}
   </div>
   <div style="margin-top:14px;text-align:center;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-    <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
+    <a class="btn btn-ghost" href="#/dowody">Moje dowody</a>
     <a class="btn btn-primary" href="#/">Kolejna książka →</a>
   </div>`;
 }
 
-/* ═══ PROOFS ═══ */
-async function renderProofs(){
+/* ═══ DOWODY ═══ */
+async function renderDowody(){
   const w = getWallet(); view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Katalog</a><h1 class="rp-h2" style="font-size:1.6rem;margin-top:12px">Moje dowody.</h1><div id="pl"><p class="muted">Ładowanie…</p></div>`;
   let list = [];
   if(w){ try{ const j = await api('/api/proofs?wallet='+encodeURIComponent(w)); list = Array.isArray(j)?j:(j.proofs||[]); }catch(e){} }
@@ -539,25 +542,28 @@ function searchBooks(){ renderLektury(document.querySelector('#subTabs button.ac
 
 /* ═══ NAGRODY ═══ */
 async function renderNagrody(){
-  const w = getWallet(); view.innerHTML = `<p class="rp-kicker">Nagrody</p><h1 class="rp-h2" style="font-size:1.7rem">Twoje nagrody i dowody.</h1>
+  const w = getWallet(); view.innerHTML = `<p class="rp-kicker">Nagrody</p><h1 class="rp-h2" style="font-size:1.7rem">Certyfikaty i nagrody.</h1>
     <div class="card" style="margin-top:10px">
       <p class="rp-kicker">Portfel</p>
-      ${w ? `<p style="font-family:var(--font-mono);font-size:.92rem">${esc(w.slice(0,6))}…${esc(w.slice(-4))}</p><button class="btn btn-ghost btn-sm" id="bWalletOut" style="margin-top:6px">Wyloguj</button>` : `<p class="muted">Zaloguj się, aby widzieć portfel i nagrody.</p><a class="btn btn-primary" href="#/">Konto →</a>`}
+      ${w ? `<p style="font-family:var(--font-mono);font-size:.92rem">${esc(w.slice(0,6))}…${esc(w.slice(-4))}</p><button class="btn btn-ghost btn-sm" id="bWalletOut" style="margin-top:6px">Wyloguj</button>` : `<p class="muted">Zaloguj się, aby widzieć nagrody.</p><a class="btn btn-primary" href="#/">Konto →</a>`}
     </div>
     <div id="nagrodyContent" style="margin-top:16px"><p class="muted">Ładowanie…</p></div>`;
   if(w) document.getElementById('bWalletOut').addEventListener('click', ()=>{ setWallet(''); renderNagrody(); });
-  // load proofs
-  try{
-    const j = await api('/api/proofs?wallet='+encodeURIComponent(w));
-    const list = Array.isArray(j)?j:(j.proofs||[]);
-    const container = document.getElementById('nagrodyContent');
-    if(list.length){
-      let totalScore=0;
-      container.innerHTML = `<p class="rp-kicker">Zdobyte dowody (${list.length})</p>` + list.slice(0,20).map(p=>`<div class="book-row"><div class="t"><b>${esc(p.bookId||'')}</b> — <span class="muted">${esc(p.chapterId||'')}</span><br><span class="pill ok">${esc(String(p.score))}/${esc(String(p.total))} · ${esc((p.timestamp||'').slice(0,10))}</span></div><span style="font-family:var(--font-mono);font-size:.72rem;color:var(--green)">${p.status||'verified'}</span></div>`).join('') + `<div class="reward-card" style="margin-top:14px"><div class="muted">Łączna nagroda</div><div class="amount">${list.length} × 5 USDC</div></div>`;
-    } else {
-      container.innerHTML = `<div class="card-warm" style="text-align:center;padding:30px"><p class="muted">Brak dowodów. Ukończ pierwszy quiz!</p><a class="btn btn-primary btn-sm" href="#/" style="margin-top:12px">Katalog</a></div>`;
-    }
-  }catch(e){ document.getElementById('nagrodyContent').innerHTML=`<p class="muted">Błąd: ${esc(e.message)}</p>`; }
+  // load certificates & rewards
+  let certs = [];
+  if(w){
+    try{ const j = await api('/api/proofs?wallet='+encodeURIComponent(w)); certs = Array.isArray(j)?j:(j.proofs||[]); }catch(e){}
+    let local = []; try{ local = JSON.parse(localStorage.getItem('rp_app_proofs')||'[]'); }catch(e){}
+    const seen = new Set(certs.map(p=>p.proofHash)); local.forEach(p=>{ if(p.proofHash&&!seen.has(p.proofHash)) certs.push(p); });
+    // filter only verified (certificates)
+    certs = certs.filter(p=>['Reading Verified','Comprehension Verified','verified'].includes(p.status));
+  }
+  const container = document.getElementById('nagrodyContent');
+  if(certs.length){
+    container.innerHTML = `<p class="rp-kicker">Certyfikaty (${certs.length})</p>` + certs.map(p=>`<div class="book-row"><div class="t"><b>${esc(p.bookId||'')}</b> — <span class="muted">${esc(p.chapterId||'')}</span><br><span class="pill ok">${esc(String(p.score))}/${esc(String(p.total))}</span></div><a class="btn btn-ghost btn-sm" href="#/result">Otwórz certyfikat</a></div>`).join('') + `<div class="reward-card" style="margin-top:14px"><div class="muted">Łączna nagroda</div><div class="amount">${certs.length} × 5 USDC</div></div>`;
+  } else {
+    container.innerHTML = `<div class="card-warm" style="text-align:center;padding:30px"><p class="muted">Brak certyfikatów. Ukończ quiz z 5/5!</p><a class="btn btn-primary btn-sm" href="#/" style="margin-top:12px">Katalog</a></div>`;
+  }
 }
 
 /* ═══ publisher ═══ */
@@ -593,7 +599,7 @@ async function mountPrivyApp(){
       if(authenticated) return e('span',{className:'muted'},'Zalogowano…');
       return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj Privy');
     }
-    createRoot(box).render(e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{appearance:{walletChainType:'solana-only',showWalletLoginFirst:true},loginMethods:['wallet','email'],embeddedWallets:{createOnLogin:'users-without-wallets'}},e(Inner)));
+    createRoot(box).render(e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{appearance:{walletChainType:'solana-only',showWalletLoginFirst:true},loginMethods:['wallet','email'],embeddedWallets:{createOnLogin:'users-without-wallets'}},children:e(Inner)}));
   }catch(err){ privyMountedApp=false; if(box) box.innerHTML=`<p class="muted">Privy nie załadowało się.</p>`; }
 }
 
@@ -603,7 +609,7 @@ function ensureProctorListeners(){
   if(procListenersOn) return; procListenersOn = true;
   document.addEventListener('fullscreenchange', ()=>{ if(!proctor||!location.hash.startsWith('#/quiz/')) return; if(!document.fullscreenElement){ proctor.exits++; if(proctor.exits>=3){ failFinish(proctor.sid,'wyjście z pełnego ekranu'); return; } procToast('Wyjście z pełnego ekranu ('+proctor.exits+'/3). Wróć.'); try{document.documentElement.requestFullscreen().catch(()=>{});}catch(e){} } });
   ['copy','cut'].forEach(ev=>document.addEventListener(ev, e=>{ if(!proctor||!location.hash.startsWith('#/quiz/'))return; if(view.contains(e.target)){e.preventDefault();proctor.copies++;procToast('Kopiowanie zablokowane.');} },true));
-  document.addEventListener('keydown', e=>{ if(!proctor||!location.hash.startsWith('#/quiz/'))return; const k=(e.key||'').toLowerCase(); if(k==='printscreen'||((e.ctrlKey||e.metaKey)&&['c','x','u','s','p'].includes(k))){e.preventDefault();proctor.copies++;procToast('Zablokowane.');} },true));
+  document.addEventListener('keydown', e=>{ if(!proctor||!location.hash.startsWith('#/quiz/'))return; const k=(e.key||'').toLowerCase(); if(k==='printscreen'||((e.ctrlKey||e.metaKey)&&['c','x','u','s','p'].includes(k))){e.preventDefault();proctor.copies++;procToast('Zablokowane.');} },true);
 }
 function procToast(msg){ let t=document.getElementById('procToast'); if(!t){t=document.createElement('div');t.id='procToast';t.style.cssText='position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9999;background:#3A2E00;color:#FFE9B0;padding:10px 16px;border-radius:12px;font-size:.85rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:92vw;text-align:center';document.body.appendChild(t);} t.textContent=msg; clearTimeout(t._h); t._h=setTimeout(()=>{if(document.getElementById('procToast'))document.getElementById('procToast').remove();},4000); }
 function failFinish(sid, reason){ stopProctor(); try{api('/api/sessions/'+encodeURIComponent(sid)+'/complete?fail=1',{method:'POST',body:'{}'}).then(r=>{LAST_RESULT={proof:r.proof,verification:r.verification,results:r.results,meta:SESSION_META};try{localStorage.setItem('rp_app_last_result',JSON.stringify(LAST_RESULT));}catch(e){}saveLocalProof(LAST_RESULT.proof);nav('#/result');}).catch(()=>{view.innerHTML=`<div class="card"><h3>Sesja zakończona (naruszenie).</h3><a class="btn btn-ghost" href="#/">Katalog</a></div>`;});}catch(e){} }
