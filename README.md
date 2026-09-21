@@ -14,7 +14,8 @@ Design: **parchment / burgundy / gold** — Kolegium, Sigillum, Paszport Literac
 
 | Co | Link |
 |----|------|
-| Strona publiczna | https://kacpersikora.pages.dev/books |
+| Strona główna | https://kacpersikora.pages.dev/ |
+| Strona publiczna ReadProof | https://kacpersikora.pages.dev/books |
 | Health backendu | https://frog02.mikr.us:32287/health |
 | Panel wydawcy | https://kacpersikora.pages.dev/publisher/ |
 | Zasady wydawców | [PUBLISHER_RULES.md](PUBLISHER_RULES.md) |
@@ -104,7 +105,10 @@ readproof/
 ├── ReadProofLiveActivity/    # widget / Live Activity
 ├── backend/                  # Node backend (server.js, verification.js, texts/)
 │   └── .env.example          # wzór sekretów (prawdziwy .env tylko lokalnie!)
-└── public/books/             # strona statyczna → kacpersikora.pages.dev/books
+├── public/                   # strona główna + statyczne podstrony
+│   ├── index.html            # strona główna → kacpersikora.pages.dev/
+│   ├── books/                # strona statyczna → kacpersikora.pages.dev/books
+│   └── publisher/           # panel wydawcy → kacpersikora.pages.dev/publisher/
 ```
 
 ---
