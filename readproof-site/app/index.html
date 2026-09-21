@@ -151,7 +151,7 @@ textarea.big-input{min-height:110px;resize:vertical}
 'use strict';
 
 /* ═══ konfiguracja / API ═══ */
-const BASES = ['', 'https://frog02-32287.wykr.es', 'https://frog02.mikr.us:32287'];
+const BASES = ['https://readproof-api-proxy.koder1.workers.dev'];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[c]));
 async function api(path, opts){
   let lastErr = null;
