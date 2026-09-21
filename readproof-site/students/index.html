@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReadProof for Students — Turn reading into something you can prove</title>
+<meta name="description" content="Practice literature, take chapter challenges, prepare for exams and earn a ReadProof Certificate of demonstrated understanding.">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<nav class="rp-nav"><div class="wrap">
+  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <div class="rp-links">
+    <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
+    <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+    <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
+    <a href="https://kacpersikora.pages.dev/publisher/" data-i18n="nav_publishers">Publishers</a>
+    <a href="/verify/" data-i18n="nav_verify">Verify</a>
+    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en">EN</button></span>
+    <a href="/" class="cta" data-i18n="nav_home">Home</a>
+  </div>
+</div></nav>
+
+<header class="rp-hero"><div class="wrap">
+  <div>
+    <span class="rp-eyebrow" style="background:var(--green-soft)" data-i18n="sp_eyebrow">For Students</span>
+    <h1 class="rp-h1"><span data-i18n="sp_h_a">Turn reading into something</span> <em data-i18n="sp_h_b">you can prove.</em></h1>
+    <p class="rp-lead" data-i18n="sp_sub">Learn your books. Practice chapter by chapter. Prove what you know — with a certificate that shows your score and can be verified by anyone.</p>
+    <div class="rp-actions">
+      <a class="btn btn-primary" href="#flow" data-i18n="sp_how">How it works</a>
+      <a class="btn btn-ghost" href="#matura" data-i18n="sp_matura">Matura preparation</a>
+    </div>
+  </div>
+  <div><svg viewBox="0 0 320 200" style="width:100%;height:auto" role="img" aria-label="Student illustration"><use href="/assets/roles.svg#rp-student"/></svg></div>
+</div></header>
+
+<main>
+<section class="rp-section tight" id="flow"><div class="wrap">
+  <p class="rp-kicker" data-i18n="flow_h">Your flow</p>
+  <h2 class="rp-h2" data-i18n="flow_sub">Choose a book. Read. Prove it.</h2>
+  <ol class="steps" style="margin-top:22px">
+    <li><b data-i18n="fl_1">Choose a book</b><p data-i18n="fl_1p">Pick from the catalog, a reading challenge, or your teacher’s assignment.</p></li>
+    <li><b data-i18n="fl_2">Read</b><p data-i18n="fl_2p">Read the real, physical book — chapter by chapter, at your pace.</p></li>
+    <li><b data-i18n="fl_3">Take the challenge</b><p data-i18n="fl_3p">Answer 5 comprehension questions per chapter: characters, motives, cause and effect.</p></li>
+    <li><b data-i18n="fl_4">Get your result</b><p data-i18n="fl_4p">See your score instantly, with explanations for anything you missed.</p></li>
+    <li><b data-i18n="fl_5">Earn a ReadProof Certificate</b><p data-i18n="fl_5p">A certificate of demonstrated understanding with a verifiable proof ID.</p></li>
+  </ol>
+</div></section>
+
+<section class="rp-section tight" id="matura"><div class="wrap">
+  <div class="card flat" style="background:var(--green-soft);border-color:#CFE3D6">
+    <p class="rp-kicker" data-i18n="mat_k">Exam prep</p>
+    <h2 class="rp-h2" style="font-size:1.7rem" data-i18n="mat_h">Matura preparation &amp; literature practice.</h2>
+    <p class="rp-sub" style="margin-bottom:0" data-i18n="mat_p">Use ReadProof for <strong>matura preparation</strong> and <strong>literature practice</strong>: work through set books, test your understanding, and collect <strong>ReadProof Certificates</strong> as evidence of your progress. ReadProof certificates document demonstrated understanding — they are not official exam certificates.</p>
+  </div>
+</div></section>
+
+<section class="rp-section tight" id="certificate"><div class="wrap">
+  <div class="rp-grid cols-2" style="align-items:center">
+    <div>
+      <p class="rp-kicker" data-i18n="cert_k">Certificates</p>
+      <h2 class="rp-h2" data-i18n="sc_h">Your proof, in one link.</h2>
+      <p class="rp-sub" data-i18n="sc_sub">Every passed challenge issues a certificate: book, your name, score, and a unique Certificate ID. Share the link — teachers and schools can verify it instantly.</p>
+      <div class="rp-actions" style="margin:0">
+        <a class="btn btn-primary" href="/verify/" data-i18n="sc_verify">Verify a certificate</a>
+      </div>
+    </div>
+    <div id="liveProof"><div class="cert"><p class="muted">Loading the latest verified proof from the network…</p></div></div>
+  </div>
+</div></section>
+
+<section class="rp-section tight"><div class="wrap rp-center">
+  <h2 class="rp-h2" data-i18n="sc_ready">Ready to prove your first book?</h2>
+  <p class="rp-sub" data-i18n="sc_ready_sub">Start with a classic, join a reading challenge, or ask your teacher for an assignment.</p>
+  <div class="rp-actions" style="justify-content:center">
+    <a class="btn btn-primary btn-lg" href="/challenge/" data-i18n="sc_browse">Browse challenges</a>
+    <a class="btn btn-ghost" href="/teachers/" data-i18n="sc_imteacher">I’m a teacher</a>
+  </div>
+</div></section>
+</main>
+
+<footer class="rp-footer"><div class="wrap">
+  <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood it.</span></div>
+  <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/teachers/" data-i18n="nav_teachers">Teachers</a> · <a href="/verify/" data-i18n="nav_verify">Verify</a></div>
+</div></footer>
+
+<script>
+(async function(){
+  const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function apiGet(path){
+    for(const b of BASES){
+      try{ const r = await fetch(b + path); if(r.ok) return await r.json(); }catch(e){}
+    }
+    throw new Error('offline');
+  }
+  const lp = document.getElementById('liveProof');
+  const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
+  try{
+    const p = await apiGet('/api/proofs');
+    const list = Array.isArray(p) ? p : (p.proofs || []);
+    const ver = list.filter(x => ['Reading Verified','Comprehension Verified','verified'].includes(x.status));
+    const latest = ver.slice().sort((a,b) => String(b.timestamp||'').localeCompare(String(a.timestamp||'')))[0];
+    if(!latest){ lp.innerHTML = '<div class="cert"><div class="cert-k">ReadProof Certificate</div><p class="muted">' + esc(T('lp_first', 'No verified proofs on the network yet — yours can be the first.')) + '</p></div>'; return; }
+    lp.innerHTML = `<div class="cert"><div class="cert-k">ReadProof Certificate · ✓ Verified</div>` +
+      `<h3>${esc(latest.bookId)}</h3><div class="cert-book">${esc(latest.chapterId||'')}</div>` +
+      `<p class="muted" style="margin:6px 0 0;font-size:.9rem">${esc(T('lp_line', 'Demonstrated understanding · Score:'))} ${esc(String(latest.score))}/${esc(String(latest.total))}</p>` +
+      `<div class="cert-meta"><span class="mono">${esc((latest.proofHash||'').slice(0,12))}</span><span>${esc((latest.timestamp||'').slice(0,10))}</span><span>✓ ${esc(T('lp_verified', 'Verified proof'))}</span></div>` +
+      `<div class="rp-actions" style="justify-content:center;margin:14px 0 0"><a class="btn btn-ghost btn-sm" href="/verify/">${esc(T('sc_verify', 'Verify a certificate'))}</a></div></div>`;
+  }catch(e){ lp.innerHTML = '<div class="cert"><div class="cert-k">ReadProof Certificate</div><p class="muted">' + esc(T('lp_offline', 'Network offline — certificates load live when the API is reachable.')) + '</p></div>'; }
+})();
+</script>
+<script src="/assets/i18n.js"></script>
+</body>
+</html>

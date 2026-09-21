@@ -10,17 +10,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
+<style>.lang-sw{display:inline-flex;border:1px solid #E7E0CE;border-radius:999px;overflow:hidden;background:#fff}.lang-sw button{border:0;background:transparent;padding:7px 11px;font:inherit;font-size:.76rem;font-weight:700;color:#7A8699;cursor:pointer}.lang-sw button.on{background:#1B5E3B;color:#fff}</style>
 </head>
 <body>
 <main class="wrap">
   <div class="redirect-box">
-    <a class="rp-brand" href="https://readproof.pages.dev/" style="justify-content:center"><span class="rp-brand-mark">R</span>ReadProof</a>
-    <h1 class="rp-h2" style="margin-top:18px">ReadProof has a new home.</h1>
-    <p class="rp-sub" style="margin:0 auto 6px">A new version of ReadProof is ready.<br><strong>You’ll be redirected in <span id="secs">5</span> seconds…</strong></p>
+    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en" class="on">EN</button></span>
+    <a class="rp-brand" href="https://readproof.pages.dev/" style="justify-content:center;margin-top:12px"><span class="rp-brand-mark">R</span>ReadProof</a>
+    <h1 class="rp-h2" style="margin-top:18px" data-i18n="t">ReadProof has a new home.</h1>
+    <p class="rp-sub" style="margin:0 auto 6px"><span data-i18n="s">A new version of ReadProof is ready.</span><br><strong><span data-i18n="r">You’ll be redirected in</span> <span id="secs">5</span> <span data-i18n="sec">seconds…</span></strong></p>
     <div class="count" id="count" aria-hidden="true">5</div>
     <div class="spinner" role="status" aria-label="Redirecting"></div>
     <div class="rp-actions" style="justify-content:center;margin-top:18px">
-      <a class="btn btn-primary btn-lg" href="https://readproof.pages.dev/">Open ReadProof now →</a>
+      <a class="btn btn-primary btn-lg" href="https://readproof.pages.dev/"><span data-i18n="b">Open ReadProof now</span> →</a>
     </div>
     <noscript>
       <p class="muted" style="margin-top:16px">JavaScript is disabled — <a href="https://readproof.pages.dev/">click here to open ReadProof</a>. Your browser will also redirect you automatically in 5 seconds.</p>
@@ -29,6 +31,25 @@
 </main>
 <script>
 (function(){
+  var PL = {t:"ReadProof ma nowy dom.", s:"Nowa wersja ReadProof jest gotowa.", r:"Zostaniesz przekierowany za", sec:"sekund…", b:"Otwórz ReadProof teraz"};
+  var KEY = "rp-lang";
+  function cur(){ try{ return localStorage.getItem(KEY) || ((navigator.language||"en").toLowerCase().indexOf("pl")===0 ? "pl" : "en"); }catch(e){ return "en"; } }
+  function apply(l){
+    try{ localStorage.setItem(KEY, l); }catch(e){}
+    document.documentElement.lang = l;
+    document.querySelectorAll("[data-i18n]").forEach(function(el){
+      if(el.dataset.orig === undefined) el.dataset.orig = el.innerHTML;
+      el.innerHTML = (l === "pl" && PL[el.dataset.i18n]) ? PL[el.dataset.i18n] : el.dataset.orig;
+    });
+    document.querySelectorAll(".lang-sw button").forEach(function(b){ b.classList.toggle("on", b.dataset.lang === l); });
+  }
+  document.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".lang-sw button") : null;
+    if(!b) return;
+    try{ localStorage.setItem(KEY, b.dataset.lang); }catch(err){}
+    location.reload();
+  });
+  apply(cur());
   var target = 'https://readproof.pages.dev/';
   var n = 5;
   var count = document.getElementById('count');

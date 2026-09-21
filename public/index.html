@@ -1,262 +1,486 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReadProof — Read a real book. Prove you understood it.</title>
-<meta name="description" content="ReadProof helps students, readers and teachers verify real understanding of books — not just whether someone says they read them.">
-<link rel="icon" type="image/png" href="/books/icons/readproof-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Kacper Sikora — Full Stack & AI Engineer. Portfolio, projekty i aplikacje webowe."
+    />
+    <title>Kacper Sikora | Full Stack & AI Engineer</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --bg-elev: #121a2c;
+        --panel: rgba(17, 24, 39, 0.75);
+        --panel-border: rgba(148, 163, 184, 0.18);
+        --text: #e5edf9;
+        --muted: #9aa9c2;
+        --primary: #7dd3fc;
+        --primary-strong: #38bdf8;
+        --accent: #a78bfa;
+        --good: #34d399;
+        --shadow: 0 24px 60px rgba(8, 15, 29, 0.45);
+      }
 
-<nav class="rp-nav"><div class="wrap">
-  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
-  <div class="rp-links">
-    <a href="/students/" class="keep">Students</a>
-    <a href="/teachers/" class="keep">Teachers</a>
-    <a href="/challenge/">Challenges</a>
-    <a href="/publisher/">Publishers</a>
-    <a href="/verify/">Verify</a>
-    <a href="#start" class="cta">Get started</a>
-  </div>
-</div></nav>
+      * { box-sizing: border-box; }
 
-<header class="rp-hero"><div class="wrap">
-  <div>
-    <span class="rp-eyebrow">Reading · Understanding · Proof</span>
-    <h1 class="rp-h1">Read a real book.<br><em>Prove you understood it.</em></h1>
-    <p class="rp-lead">ReadProof helps students, readers and teachers verify real understanding of books — not just whether someone says they read them.</p>
-    <div class="rp-actions" id="start">
-      <a class="btn btn-primary" href="/students/">For Students</a>
-      <a class="btn btn-gold" href="/teachers/">For Teachers</a>
-      <a class="btn btn-ghost" href="#how">Explore ReadProof</a>
-    </div>
-    <div class="rp-proofline">
-      <span><b>✓</b> Real books, real chapters</span>
-      <span><b>✓</b> Comprehension challenges</span>
-      <span><b>✓</b> Verifiable certificates</span>
-    </div>
-  </div>
-  <div class="panel">
-    <div class="hero-split"><div class="panel">
-      <p class="rp-kicker">How it works</p>
-      <svg viewBox="0 0 320 120" style="width:100%;height:auto" role="img" aria-label="Book, Read, Challenge, Proof">
-        <use href="/assets/roles.svg#rp-flow"></use>
-      </svg>
-      <ol class="steps" style="margin-top:16px">
-        <li><b>Choose a book</b><p>Pick a real book from the catalog or your class assignment.</p></li>
-        <li><b>Read it</b><p>Read the physical book. The app never replaces reading.</p></li>
-        <li><b>Take the challenge</b><p>Answer 5 comprehension questions per chapter.</p></li>
-        <li><b>Get your proof</b><p>A ReadProof Certificate of demonstrated understanding.</p></li>
-      </ol>
-    </div></div>
-  </div>
-</div></header>
+      html { scroll-behavior: smooth; }
 
-<main>
-<!-- ═══ AUDIENCE ═══ -->
-<section class="rp-section tight"><div class="wrap rp-center">
-  <p class="rp-kicker">Who is it for</p>
-  <h2 class="rp-h2">ReadProof for everyone who reads.</h2>
-  <p class="rp-sub">One platform, three ways to use it. Reading is easy to claim. Understanding is harder to prove.</p>
-</div>
-<div class="wrap"><div class="rp-grid cols-3" style="margin-top:26px">
-  <article class="card role-card student">
-    <div class="role-band"></div>
-    <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Student illustration"><use href="/assets/roles.svg#rp-student"/></svg>
-    <span class="role-tag">For Students</span>
-    <h3>Learn your books. Prove what you know.</h3>
-    <ul class="check-list">
-      <li>Literature practice &amp; chapter challenges</li>
-      <li>Matura preparation</li>
-      <li>Exam preparation &amp; personal progress</li>
-      <li>Verifiable ReadProof Certificates</li>
-    </ul>
-    <a class="btn btn-primary btn-sm" href="/students/">For Students →</a>
-  </article>
-  <article class="card role-card reader">
-    <div class="role-band"></div>
-    <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Reader illustration"><use href="/assets/roles.svg#rp-reader"/></svg>
-    <span class="role-tag">For Readers</span>
-    <h3>Read. Understand. Prove it.</h3>
-    <ul class="check-list">
-      <li>Reading challenges &amp; comprehension checks</li>
-      <li>Personal reading history</li>
-      <li>Proof of understanding for every book</li>
-      <li>Track progress across your library</li>
-    </ul>
-    <a class="btn btn-dark btn-sm" href="/students/">For Readers →</a>
-  </article>
-  <article class="card role-card teacher">
-    <div class="role-band"></div>
-    <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Teacher illustration"><use href="/assets/roles.svg#rp-teacher"/></svg>
-    <span class="role-tag">For Teachers</span>
-    <h3>See who actually understands the reading.</h3>
-    <ul class="check-list">
-      <li>Create classes &amp; assign books</li>
-      <li>Monitor progress &amp; review results</li>
-      <li>Spot students who need help</li>
-      <li>Generate certificates</li>
-    </ul>
-    <a class="btn btn-gold btn-sm" href="/teachers/">For Teachers →</a>
-  </article>
-</div></div></section>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 30%),
+          radial-gradient(circle at right, rgba(167, 139, 250, 0.12), transparent 28%),
+          var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
 
-<!-- ═══ HOW ═══ -->
-<section class="rp-section" id="how"><div class="wrap">
-  <p class="rp-kicker">Inside a challenge</p>
-  <h2 class="rp-h2">Reading is easy to claim.<br>Understanding is harder to prove.</h2>
-  <p class="rp-sub">Each chapter ends with 5 short questions about <strong>meaning</strong> — characters, motives, cause and effect. Never trivia like “what color was the watch”. Here’s the idea:</p>
-  <div class="rp-grid cols-2" style="align-items:start;margin-top:26px">
-    <div class="card">
-      <p class="rp-kicker">Example · Alice in Wonderland, Ch. 1</p>
-      <h3 style="font-size:1.2rem">Why does Alice follow the White Rabbit?</h3>
-      <div class="check-list" style="margin-top:14px">
-        <li style="font-weight:700;color:var(--green-dark)">Curiosity — a talking rabbit in a waistcoat is too strange to ignore</li>
-        <li>She wants to steal his pocket watch</li>
-        <li>Her sister tells her to go after it</li>
-        <li>She is already late for tea and hopes he knows the way</li>
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      a:hover { text-decoration: underline; }
+
+      .container {
+        width: min(1100px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(14px);
+        background: rgba(11, 16, 32, 0.7);
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 18px 0;
+      }
+
+      .brand {
+        font-size: 1.05rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        color: var(--muted);
+      }
+
+      .nav-links a { color: var(--muted); }
+
+      .hero {
+        padding: 72px 0 40px;
+      }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1.35fr 0.85fr;
+        gap: 36px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border: 1px solid rgba(125, 211, 252, 0.25);
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.08);
+        color: var(--primary);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 18px 0 16px;
+        font-size: clamp(2.7rem, 5vw, 5rem);
+        line-height: 0.96;
+        letter-spacing: -0.06em;
+      }
+
+      .lead {
+        max-width: 640px;
+        margin: 0 0 26px;
+        font-size: 1.08rem;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 30px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font-weight: 700;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+      }
+
+      .button:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+      }
+
+      .button.primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+        color: #02131f;
+      }
+
+      .button.secondary {
+        border-color: var(--panel-border);
+        background: rgba(15, 23, 42, 0.68);
+        color: var(--text);
+      }
+
+      .metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+      }
+
+      .metric {
+        min-width: 120px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 1.5rem;
+        letter-spacing: -0.04em;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .portrait {
+        position: relative;
+        border-radius: 26px;
+        min-height: 440px;
+        background:
+          linear-gradient(180deg, rgba(125, 211, 252, 0.12), rgba(167, 139, 250, 0.08)),
+          var(--bg-elev);
+        border: 1px solid var(--panel-border);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .portrait::before {
+        content: "";
+        position: absolute;
+        inset: 20px;
+        border-radius: 24px;
+        background:
+          radial-gradient(circle at 30% 25%, rgba(125, 211, 252, 0.42), transparent 25%),
+          radial-gradient(circle at 70% 22%, rgba(167, 139, 250, 0.34), transparent 26%),
+          linear-gradient(180deg, rgba(148, 163, 184, 0.08), rgba(15, 23, 42, 0.1));
+        border: 1px solid rgba(148, 163, 184, 0.08);
+      }
+
+      .portrait-content {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        height: 100%;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .portrait-card {
+        width: min(280px, 80%);
+        padding: 22px 20px;
+        border: 1px solid rgba(125, 211, 252, 0.22);
+        border-radius: 20px;
+        background: rgba(15, 23, 42, 0.6);
+        box-shadow: var(--shadow);
+      }
+
+      .avatar {
+        display: grid;
+        place-items: center;
+        width: 88px;
+        height: 88px;
+        margin: 0 auto 12px;
+        border-radius: 50%;
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, rgba(125, 211, 252, 0.18), rgba(167, 139, 250, 0.17));
+        border: 1px solid rgba(125, 211, 252, 0.3);
+      }
+
+      .portrait-card h2 {
+        margin: 0 0 6px;
+        font-size: 1.3rem;
+      }
+
+      .portrait-card p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .section {
+        padding: 32px 0 10px;
+      }
+
+      .section-header {
+        margin-bottom: 18px;
+      }
+
+      .section-header h3 {
+        margin: 0 0 8px;
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        letter-spacing: -0.05em;
+      }
+
+      .section-header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        padding: 22px 20px;
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid var(--panel-border);
+        box-shadow: var(--shadow);
+      }
+
+      .card h4 {
+        margin: 0 0 8px;
+        font-size: 1.15rem;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tag {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(125, 211, 252, 0.07);
+        border: 1px solid rgba(125, 211, 252, 0.18);
+        color: var(--primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      footer {
+        padding: 34px 0 52px;
+        color: var(--muted);
+      }
+
+      .footer-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding-top: 18px;
+        border-top: 1px solid var(--panel-border);
+      }
+
+      @media (max-width: 820px) {
+        .hero-inner {
+          grid-template-columns: 1fr;
+        }
+
+        .portrait {
+          min-height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <nav>
+          <div class="brand">KACPER SIKORA</div>
+          <div class="nav-links">
+            <a href="#about">O mnie</a>
+            <a href="#work">Projekty</a>
+            <a href="#stack">Stack</a>
+            <a href="/books/">ReadProof</a>
+          </div>
+        </nav>
       </div>
-      <div class="proof-mini">✓ Correct — and the app explains <em>why</em>, so a miss becomes a lesson, not just a score.</div>
-      <p style="margin:12px 0 0"><span class="demo-tag">DEMO · illustrative question</span></p>
-    </div>
-    <div>
-      <div class="card flat" style="margin-bottom:14px"><h3>📖 Comprehension, not memory</h3><p>Questions check whether you understood the story — not whether you memorized details.</p></div>
-      <div class="card flat" style="margin-bottom:14px"><h3>✏️ 5 questions per chapter</h3><p>Mixed types: choices, who-said-it, ordering, open answers judged for meaning.</p></div>
-      <div class="card flat"><h3>📜 Pass it → prove it</h3><p>Your score becomes a <a href="/verify/">verifiable certificate</a> — one link, checkable by anyone.</p></div>
-    </div>
-  </div>
-</div></section>
+    </header>
 
-<!-- ═══ CERTIFICATE ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="rp-grid cols-2" style="align-items:center">
-    <div>
-      <p class="rp-kicker">Certificates</p>
-      <h2 class="rp-h2">A certificate of demonstrated understanding.</h2>
-      <p class="rp-sub">Finish a challenge and receive a ReadProof Certificate with your score and a verifiable proof ID. Anyone — a teacher, a school, an employer — can check it with one link.</p>
-      <div class="rp-actions">
-        <a class="btn btn-primary" href="/students/#certificate">See how it works</a>
-        <a class="btn btn-ghost" href="/verify/">Verify a certificate</a>
-      </div>
-    </div>
-    <div class="cert">
-      <div class="cert-k">ReadProof Certificate</div>
-      <h3>Dziady, Part III</h3>
-      <div class="cert-book">Adam Mickiewicz</div>
-      <div class="cert-name">Alexandra Nowak</div>
-      <p class="muted" style="margin:6px 0 0;font-size:.9rem">Demonstrated understanding · Score: 92%</p>
-      <div class="cert-meta"><span>Certificate ID: RP-7K2Q</span><span>✓ Verified proof</span></div>
-      <div style="margin-top:12px"><span class="demo-tag">DEMO · illustrative example</span></div>
-    </div>
-  </div>
-</div></section>
+    <main class="container">
+      <section class="hero">
+        <div class="hero-inner">
+          <div>
+            <div class="eyebrow">Full Stack & AI Engineer</div>
+            <h1>Buduję narzędzia, które łączą produkcję, dane i AI.</h1>
+            <p class="lead">
+              Tworzę aplikacje webowe, produkty cyfrowe i doświadczenia użytkownika, które łączą
+              szybkość działania z przejrzystą architekturą. Moja praca skupia się na produktach,
+              które wykorzystują nowoczesne technologie bez komplikowania procesu.
+            </p>
 
-<!-- ═══ CATALOG ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <p class="rp-kicker">Library</p>
-  <h2 class="rp-h2">Start with the classics.</h2>
-  <p class="rp-sub">Public-domain books from Project Gutenberg plus reading challenges from publishers. Live catalog below — served by the ReadProof API.</p>
-  <div class="book-grid" id="booksGrid"><p class="muted">Loading catalog…</p></div>
-</div></section>
+            <div class="actions">
+              <a class="button primary" href="/books/">Zobacz ReadProof</a>
+              <a class="button secondary" href="#work">Moje projekty</a>
+            </div>
 
-<!-- ═══ TEACHERS STRIP ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="card flat" style="background:var(--gold-soft);border-color:#E3CE9C">
-    <div class="rp-grid cols-2" style="align-items:center">
-      <div>
-        <p class="rp-kicker">For schools</p>
-        <h2 class="rp-h2" style="font-size:1.7rem">Turn reading assignments into measurable understanding.</h2>
-        <p class="rp-sub" style="margin-bottom:18px">Create a class, assign a book, see results — including who needs help. Simple dashboard, no setup calls.</p>
-        <div class="rp-actions" style="margin:0">
-          <a class="btn btn-dark" href="/teachers/">For Teachers</a>
-          <a class="btn btn-ghost" href="/teacher/">Open demo dashboard</a>
+            <div class="metrics">
+              <div class="metric">
+                <strong>5+</strong>
+                <span>lat doświadczenia</span>
+              </div>
+              <div class="metric">
+                <strong>20+</strong>
+                <span>zrealizowanych projektów</span>
+              </div>
+              <div class="metric">
+                <strong>AI</strong>
+                <span>i automatyzacja</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="portrait" aria-label="Profil Kacper Sikora">
+            <div class="portrait-content">
+              <div class="portrait-card">
+                <div class="avatar">KS</div>
+                <h2>Kacper Sikora</h2>
+                <p>Software Engineer • Full Stack • AI</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="section">
+        <div class="section-header">
+          <h3>O mnie</h3>
+          <p>Pracuję nad produktami, które łączą code quality, UX i realną wartość biznesową.</p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <h4>Produkty cyfrowe</h4>
+            <p>Projektuję i wdrażam rozwiązania webowe, aplikacje oraz integracje, które wspierają użytkownika i biznes.</p>
+          </article>
+          <article class="card">
+            <h4>Architektura</h4>
+            <p>Buduję skalowalne systemy z naciskiem na czytelność, wydajność i łatwość utrzymania.</p>
+          </article>
+          <article class="card">
+            <h4>AI & automatyzacja</h4>
+            <p>Wdrażam procesy wykorzystujące AI, automatyzację i bardziej inteligentne doświadczenia użytkownika.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="work" class="section">
+        <div class="section-header">
+          <h3>Wybrane projekty</h3>
+          <p>Różnorodne obszary: od aplikacji webowych po eksperymenty z wykorzystaniem AI.</p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <h4>ReadProof</h4>
+            <p>Projekt weryfikujący zrozumienie materiału przez użytkownika i wspierający mechanikę nagród oraz kampanii wydawców.</p>
+            <div class="tags">
+              <span class="tag">Web</span>
+              <span class="tag">AI</span>
+              <span class="tag">Product</span>
+            </div>
+          </article>
+          <article class="card">
+            <h4>Publisher Panel</h4>
+            <p>Staticzny panel dla wydawców pozwalający zarządzać kampaniami, treścią i pulą nagród.</p>
+            <div class="tags">
+              <span class="tag">Static</span>
+              <span class="tag">CMS</span>
+              <span class="tag">UI</span>
+            </div>
+          </article>
+          <article class="card">
+            <h4>Custom integrations</h4>
+            <p>Integracje backendowe, automatyzacja danych i narzędzia wspierające realne procesy produktowe.</p>
+            <div class="tags">
+              <span class="tag">API</span>
+              <span class="tag">Automation</span>
+              <span class="tag">Data</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="stack" class="section">
+        <div class="section-header">
+          <h3>Stack</h3>
+          <p>Nowoczesne technologię i podejście do budowy produktów.</p>
+        </div>
+
+        <div class="tags">
+          <span class="tag">JavaScript</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">Node.js</span>
+          <span class="tag">React</span>
+          <span class="tag">Next.js</span>
+          <span class="tag">Swift</span>
+          <span class="tag">Python</span>
+          <span class="tag">AI</span>
+          <span class="tag">Cloudflare</span>
+          <span class="tag">GitHub Pages</span>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container footer-box">
+        <div>© Kacper Sikora</div>
+        <div>
+          <a href="/books/">ReadProof</a>
+          <span> · </span>
+          <a href="/publisher/">Publisher</a>
         </div>
       </div>
-      <div class="stat-grid" style="grid-template-columns:1fr 1fr">
-        <div class="stat"><div class="l">Class 2A · students</div><div class="v">28</div></div>
-        <div class="stat"><div class="l">Completion</div><div class="v">84%</div></div>
-        <div class="stat"><div class="l">Average score</div><div class="v">86%</div></div>
-        <div class="stat"><div class="l">Needs attention</div><div class="v">5</div></div>
-      </div>
-    </div>
-    <p style="margin:14px 0 0"><span class="demo-tag">DEMO DATA · illustrative example</span></p>
-  </div>
-</div></section>
-
-<!-- ═══ PUBLISHERS STRIP ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="rp-grid cols-2" style="align-items:center">
-    <div>
-      <p class="rp-kicker">For publishers</p>
-      <h2 class="rp-h2">Create reading challenges around your books.</h2>
-      <p class="rp-sub">Select a book, create a challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.</p>
-      <div class="rp-actions" style="margin:0">
-        <a class="btn btn-primary" href="/publisher/">Publisher panel</a>
-        <a class="btn btn-ghost" href="/challenge/">See example challenge</a>
-      </div>
-    </div>
-    <div class="card">
-      <p class="rp-kicker">Example challenge</p>
-      <h3>The Hobbit — Reading Challenge</h3>
-      <div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-top:14px">
-        <div class="stat"><div class="l">Participants</div><div class="v">1,284</div></div>
-        <div class="stat"><div class="l">Completed</div><div class="v">847</div></div>
-        <div class="stat"><div class="l">Reward pool</div><div class="v">1,000 USDC</div></div>
-        <div class="stat"><div class="l">Avg. score</div><div class="v">84%</div></div>
-      </div>
-      <p style="margin:14px 0 0"><span class="demo-tag">DEMO DATA · illustrative example</span></p>
-    </div>
-  </div>
-</div></section>
-
-<!-- ═══ TECH (blockchain in background) ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="tech-band">
-    <p class="rp-kicker" style="color:#E9CE8F">Under the hood</p>
-    <h3>Proof you can trust, infrastructure you never notice.</h3>
-    <p>Every verified result is recorded as a tamper-evident proof. You read, take challenges and earn certificates — verification just works in the background.</p>
-    <ul class="tech-checks">
-      <li>✓ Challenge completed &amp; understanding verified</li>
-      <li>✓ Proof recorded — checkable by ID in <a href="/verify/" style="color:#E9CE8F">Proof Details</a></li>
-      <li><span class="pill" style="background:rgba(255,255,255,.1);color:#E9CE8F">Verified on-chain</span> <code>Network: Solana Devnet · Proof ID · Transaction</code></li>
-    </ul>
-    <p style="font-size:.82rem">Demo environment: test network, no real funds. Book texts and answers are never stored on-chain — only the proof hash.</p>
-  </div>
-</div></section>
-
-<!-- ═══ APP ═══ -->
-<section class="rp-section tight"><div class="wrap rp-center">
-  <p class="rp-kicker">iOS app</p>
-  <h2 class="rp-h2">Take ReadProof anywhere.</h2>
-  <p class="rp-sub">Native iOS app with roles for students, readers and teachers. Pick your role once — the whole interface adapts.</p>
-  <div class="rp-actions" style="justify-content:center">
-    <a class="btn btn-dark" href="/students/">Choose your role</a>
-  </div>
-</div></section>
-</main>
-
-<footer class="rp-footer"><div class="wrap">
-  <div><span class="fbrand">ReadProof</span><br>Read a real book. Prove you understood it.</div>
-  <div>
-    <a href="/students/">Students</a> · <a href="/teachers/">Teachers</a> · <a href="/publisher/">Publishers</a> · <a href="/verify/">Verify</a> · <a href="/portfolio/">About the author</a>
-  </div>
-</div></footer>
-
-<script>
-(async function(){
-  const grid = document.getElementById('booksGrid');
-  try{
-    const books = await fetch('https://frog02.mikr.us:32287/api/books').then(r=>r.json());
-    grid.innerHTML = books.slice(0,4).map(b =>
-      `<div class="book-card">${b.coverUrl ? `<img src="${b.coverUrl}" alt="" loading="lazy" onerror="this.remove()">` : ''}<h4>${b.title}</h4><div class="a">${b.author||''} · ${b.totalChapters||((b.chapters||[]).length)} chapters</div><span class="pill ok">${b.rewardPerChapter||'Challenge'}</span></div>`
-    ).join('');
-  }catch(e){ grid.innerHTML = '<p class="muted">Catalog temporarily offline — the app works with bundled books. Classics: Alice in Wonderland, Sherlock Holmes, Treasure Island, Tom Sawyer, Around the World in 80 Days.</p>'; }
-})();
-</script>
-</body>
+    </footer>
+  </body>
 </html>
