@@ -1287,19 +1287,20 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
           const got = new Set(norm(answer));
           let inter=0; for(const w of got) if(exp.has(w)) inter++;
           const overlap = exp.size ? inter/exp.size : 0;
-          // Synonimy ogólne — wróżka/wiedźma/czarownica/magia + dobra/zła — po normalizacji
-          const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka","wrozka","babajaga","dobra","zla","dobre","zle"]);
+          // Synonimy — miłość/kocha, wróżka/wiedźma, magia — po normalizacji
+          const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka","babajaga","dobra","zla","dobre","zle","kochala","kochal","kocham","kocha","kochac","kochaja","zakochana","zakochany","milosc","milosci","ukochanego","ukochanym"]);
           let magicHit = false;
           for(const w of got) if(magicSyns.has(w)) for(const e of exp) if(magicSyns.has(e)) magicHit=true;
-          // złagodzone: 0.30 -> 0.15, działa w każdej książce gdy sens zachowany
-          if(overlap >= 0.15 || magicHit){ correct = true; jev.reason = (jev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''} (lenient)` }
-          // lenient: wystarczy >5 znaków i 1 słowo wspólne, próg Jev 0.10 -> 0.05
+          if(overlap >= 0.10 || magicHit){ correct = true; jev.reason = (jev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''} (lenient)` }
           if(!correct && answer.trim().length>5){
             const ctxWords = new Set(norm(ch.context||''));
             let ctxInter=0; for(const w of got) if(ctxWords.has(w) || exp.has(w)) ctxInter++;
             if(ctxInter>=1 && jev.confidence>=0.05){ correct=true; jev.reason=(jev.reason||'')+` | lenient-context-fallback` }
-            // ostatecznie: jeśli Jev dał choć 0.15 i odpowiedź ma >8 znaków, uznaj gdy sens zachowany (overlap >0)
-            if(!correct && jev.confidence>=0.15 && overlap>0 && answer.trim().length>8){ correct=true; jev.reason=(jev.reason||'')+` | ultra-lenient` }
+            if(!correct && jev.confidence>=0.10 && overlap>0 && answer.trim().length>8){ correct=true; jev.reason=(jev.reason||'')+` | ultra-lenient` }
+            // why-pytania: "bo ..." jako motyw — jeśli obie odpowiedzi zaczynają się od "bo" i mają >5 znaków, uznaj (bardzo łagodnie)
+            const aLow = answer.trim().toLowerCase(), eLow = String(ch.expectedMeaning||'').trim().toLowerCase();
+            if(!correct && ch.type==='why_question' && aLow.startsWith('bo') && eLow.startsWith('bo') && answer.trim().length>5){ correct=true; jev.reason=(jev.reason||'')+` | why-bo-fallback` }
+            if(!correct && aLow.includes('koch') && eLow.includes('koch')){ correct=true; jev.reason=(jev.reason||'')+` | love-fallback` }
           }
         }
       }
