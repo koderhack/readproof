@@ -124,6 +124,10 @@ function normalizeChallenge(c){
   // true_false boolean string -> int
   if(n.type==='true_false' && typeof n.correctAnswer==='boolean') n.correctAnswer = n.correctAnswer?1:0;
   if(n.type==='true_false' && typeof n.correctAnswer==='string') n.correctAnswer = (n.correctAnswer==='true'||n.correctAnswer==='Prawda')?1:0;
+  // ordering/ranking bez pytania — fallback, żeby nie było pustego nagłówka
+  if((n.type==='ordering' || n.type==='ranking') && (!n.question || !String(n.question).trim())){
+    n.question = 'Uporządkuj w kolejności chronologicznej:';
+  }
   return n;
 }
 async function pickForSession(chapterId, lang='pl'){
@@ -142,7 +146,7 @@ async function pickForSession(chapterId, lang='pl'){
   for(const jev of jevs){ if(jevCount>=2) break; if(!picked.find(p=>p.id===jev.id)){ picked[picked.length%5]=jev; jevCount++; } }
   return picked.slice(0,5);
 }
-const SESSION_TIMING_DEMO = [0, 120, 240, 360, 480];
+const SESSION_TIMING_DEMO = [0, 0, 0, 0, 0];
 const SESSION_TIMING_DEV = [0, 0, 0, 0, 0]; // admin dev mode — natychmiastowe odblokowanie
 const SESSION_TIMING_REAL = [0, 300, 600, 900, 1200]; // 5 min / pytanie — bez blokady czasowej, spokojne czytanie
 
@@ -1476,14 +1480,37 @@ app.get('/api/challenges/:chapterId', (req,res)=>{
 });
 
 app.post('/api/evaluate', async (req,res)=>{
-  const {question, expectedMeaning, userAnswer, context} = req.body;
+  const {question, expectedMeaning, userAnswer, context, type='open_question'} = req.body;
   const lang=langOf(req);
   if(!question || !expectedMeaning || !userAnswer) return res.status(400).json({error:'question, expectedMeaning, userAnswer required'});
   const trimmed=String(userAnswer).trim();
   if(trimmed.length<3) return res.status(400).json({error: lang==='en'?'Too short':'Za krótka odpowiedź'});
   const fromJev=await callJev({question, expectedMeaning, userAnswer:trimmed, context: context||'', lang});
   if(!fromJev) return res.status(503).json({error: lang==='en'?'Jev unavailable — set TYPESAFE_API_KEY in backend/.env':'Jev niedostępny — ustaw TYPESAFE_API_KEY w backend/.env', lang});
-  res.json({...fromJev, source:'jev', lang});
+  // Fallbacky takie same jak w /api/proofs — nie być restrykcyjnie
+  let correct = fromJev.correct && fromJev.confidence >= JEV_THRESHOLD;
+  const ch = {type, question, expectedMeaning, context: context||''};
+  if(!correct && typeof userAnswer==='string' && expectedMeaning){
+    const norm = s=> s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,'').split(/\s+/).filter(w=>w.length>2);
+    const exp = new Set(norm(expectedMeaning));
+    const got = new Set(norm(userAnswer));
+    let inter=0; for(const w of got) if(exp.has(w)) inter++;
+    const overlap = exp.size ? inter/exp.size : 0;
+    const magicSyns = new Set(["wrozka","wiedzma","czarownica","magia","zaczarowane","zaczarowany","czary","czarodziejka","babajaga","dobra","zla","dobre","zle","kochala","kochal","kocham","kocha","kochac","kochaja","zakochana","zakochany","milosc","milosci","ukochanego","ukochanym"]);
+    let magicHit = false;
+    for(const w of got) if(magicSyns.has(w)) for(const e of exp) if(magicSyns.has(e)) magicHit=true;
+    if(overlap >= 0.10 || magicHit){ correct = true; fromJev.reason = (fromJev.reason||'') + ` | keyword-fallback overlap ${(overlap*100).toFixed(0)}%${magicHit?' magic':''} (lenient)` }
+    if(!correct && userAnswer.trim().length>5){
+      const ctxWords = new Set(norm(context||''));
+      let ctxInter=0; for(const w of got) if(ctxWords.has(w) || exp.has(w)) ctxInter++;
+      if(ctxInter>=1 && fromJev.confidence>=0.05){ correct=true; fromJev.reason=(fromJev.reason||'')+` | lenient-context-fallback` }
+      if(!correct && fromJev.confidence>=0.10 && overlap>0 && userAnswer.trim().length>8){ correct=true; fromJev.reason=(fromJev.reason||'')+` | ultra-lenient` }
+      const aLow = userAnswer.trim().toLowerCase(), eLow = String(expectedMeaning||'').trim().toLowerCase();
+      if(!correct && ch.type==='why_question' && aLow.startsWith('bo') && eLow.startsWith('bo') && userAnswer.trim().length>5){ correct=true; fromJev.reason=(fromJev.reason||'')+` | why-bo-fallback` }
+      if(!correct && aLow.includes('koch') && eLow.includes('koch')){ correct=true; fromJev.reason=(fromJev.reason||'')+` | love-fallback` }
+    }
+  }
+  res.json({...fromJev, correct, source:'jev', lang});
 });
 
 app.post('/api/proofs', async (req,res)=>{
