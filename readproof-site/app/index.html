@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ReadProof App — czytaj, udowodnij, zgarnij</title>
+<meta name="description" content="Webowa aplikacja ReadProof: wybierz książkę i rozdział, przejdź quiz ze zrozumienia, zdobądź zweryfikowany dowód. Wynik liczy serwer.">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+/* ── aplikacja: Kahoot-prostota + identyfikacja ReadProof ── */
+.app-top{position:sticky;top:0;z-index:30;background:color-mix(in srgb, var(--paper) 88%, transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.app-top .wrap{display:flex;align-items:center;gap:10px;min-height:58px}
+.app-view{max-width:640px;margin:0 auto;padding:20px 16px 64px}
+.q-progress{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
+.q-progress .bar{flex:1;height:10px;border-radius:999px;background:var(--line-soft,#E7E4DA);overflow:hidden}
+.q-progress .bar > span{display:block;height:100%;width:0;background:var(--green);border-radius:999px;transition:width .35s ease}
+.q-progress .n{font-family:var(--font-mono);font-size:.8rem;color:var(--muted);white-space:nowrap}
+.q-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px 18px;box-shadow:0 14px 40px rgba(20,25,15,.08);animation:qin .25s ease}
+@keyframes qin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.q-card{animation:none}.q-progress .bar > span{transition:none}}
+.q-type{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.q-text{font-family:var(--font-display);font-size:clamp(1.25rem,4.6vw,1.6rem);line-height:1.25;margin:10px 0 4px;user-select:none;-webkit-user-select:none}
+.q-ctx{font-size:.92rem;color:var(--muted);margin:0 0 16px;user-select:none;-webkit-user-select:none}
+.ans{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.ans-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:13px 15px;border-radius:16px;border:2px solid var(--line);background:#fff;font:inherit;font-weight:600;font-size:1.02rem;color:var(--ink);cursor:pointer;text-align:left;transition:transform .08s ease, border-color .12s ease, background .12s ease;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.ans-btn:active{transform:scale(.985)}
+.ans-btn:not(:disabled):hover{border-color:var(--green)}
+.ans-btn .k{flex:0 0 auto;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--paper);font-family:var(--font-mono);font-size:.85rem;color:var(--muted)}
+.ans-btn:disabled{cursor:default;opacity:.85}
+.ans-btn.hit{border-color:var(--green);background:var(--green-soft)}
+.ans-btn.hit .k{background:var(--green);color:#fff}
+.ans-btn.miss{border-color:#D66;background:#FDECEC}
+.ans-btn.dim{opacity:.55}
+.ans-check{display:flex;align-items:flex-start;gap:10px;min-height:58px;padding:12px 14px;border-radius:16px;border:2px solid var(--line);background:#fff;font-weight:600;cursor:pointer;user-select:none;-webkit-user-select:none}
+.ans-check input{width:22px;height:22px;margin-top:2px;accent-color:var(--green)}
+.ord-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:#fff;margin-bottom:8px;font-weight:600}
+.ord-row .t{flex:1}
+.ord-row button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:1.1rem;cursor:pointer}
+.match-row{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:#fff;margin-bottom:8px}
+.match-row .l{font-weight:700}
+.match-row select{font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-height:48px}
+.big-input{width:100%;font:inherit;padding:14px;border:2px solid var(--line);border-radius:14px;min-height:56px;background:#fff}
+textarea.big-input{min-height:120px;resize:vertical}
+.feedback{margin-top:14px;border-radius:14px;padding:13px 15px;font-weight:600}
+.feedback.ok{background:var(--green-soft);color:var(--green-dark)}
+.feedback.bad{background:#FDECEC;color:#8f1d1d}
+.feedback .sub{display:block;font-weight:500;font-size:.88rem;margin-top:4px}
+.lock-wrap{text-align:center;padding:34px 10px}
+.lock-num{font-family:var(--font-mono);font-size:2.6rem;font-weight:600}
+.seal{border:3px double var(--green);border-radius:14px;color:var(--green-dark);font-family:var(--font-display);font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:12px 18px;display:inline-block;transform:rotate(-3deg);background:rgba(232,255,214,.6)}
+.wallet-pill{font-family:var(--font-mono);font-size:.72rem;border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.book-row{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.book-row img{width:52px;height:72px;object-fit:cover;border-radius:8px;background:var(--paper)}
+.book-row .t{flex:1;min-width:0}
+.book-row .t b{display:block;font-family:var(--font-display);font-size:1.05rem;line-height:1.25}
+.book-row .t span{font-size:.82rem;color:var(--muted)}
+.hist-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dotted var(--line);font-size:.88rem}
+.hist-row:last-child{border-bottom:0}
+@media (min-width:760px){.app-view{padding-top:30px}}
+</style>
+</head>
+<body>
+<header class="app-top"><div class="wrap">
+  <a class="rp-brand" href="/" style="text-decoration:none"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <span class="pill info">App</span>
+  <span style="flex:1"></span>
+  <span class="wallet-pill" id="walletPill">niezalogowany</span>
+</div></header>
+
+<main class="app-view" id="view"></main>
+
+<footer class="rp-footer"><div class="wrap">
+  <div><span class="fbrand">ReadProof App</span><br><span class="muted" style="font-size:.78rem">Wynik liczy serwer. Dane na żywo z API · Solana Devnet (demo).</span></div>
+  <div><a href="/">Strona główna</a> · <a href="/verify/">Weryfikuj</a></div>
+</div></footer>
+
+<script>
+(function(){
+'use strict';
+/* ═══ konfiguracja / API (te same endpointy co apka iOS) ═══ */
+const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path, opts){
+  let lastErr = null;
+  for(const b of BASES){
+    try{
+      const r = await fetch(b + path, {headers:{'Content-Type':'application/json','X-Lang':'pl'}, ...opts});
+      const j = await r.json().catch(()=>({}));
+      if(!r.ok){ const e = new Error(j.error || ('HTTP ' + r.status)); e.status = r.status; e.body = j; throw e; }
+      return j;
+    }catch(e){ lastErr = e; if(e.status) throw e; }
+  }
+  throw lastErr || new Error('API offline');
+}
+
+/* ═══ konto: portfel Solana (jak w apce) albo Gość (syntetyczny, jak iOS) ═══ */
+function isValidSolanaAddress(a){
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(a||'').trim());
+}
+function guestWallet(){
+  let g = null;
+  try{ g = localStorage.getItem('rp_app_guest'); }catch(e){}
+  if(!g){
+    const abc = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let s = 'G';
+    const rnd = (crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(43)) : Array.from({length:43},()=>Math.floor(Math.random()*abc.length)));
+    for(let i=0;i<43;i++) s += abc[rnd[i] % abc.length];
+    g = s;
+    try{ localStorage.setItem('rp_app_guest', g); }catch(e){}
+  }
+  return g;
+}
+function getWallet(){ try{ return (localStorage.getItem('rp_app_wallet')||'').trim(); }catch(e){ return ''; } }
+function setWallet(w){ try{ w ? localStorage.setItem('rp_app_wallet', w) : localStorage.removeItem('rp_app_wallet'); }catch(e){} paintWallet(); }
+function paintWallet(){
+  const w = getWallet(), el = document.getElementById('walletPill');
+  if(el) el.textContent = w ? ('● ' + w.slice(0,4) + '…' + w.slice(-4)) : 'niezalogowany';
+}
+
+/* ═══ bezpieczeństwo: nigdy nie trzymaj/renderuj pól z odpowiedziami ═══ */
+const SECRET_KEYS = ['correctAnswer','correctAnswers','correctOrder','errorIndex','expectedMeaning','correctText'];
+function stripSecrets(ch){
+  const c = Object.assign({}, ch);
+  SECRET_KEYS.forEach(k => { delete c[k]; });
+  return c;
+}
+
+/* ═══ stan / routing (#/...) ═══ */
+const view = document.getElementById('view');
+let BOOKS = [], CAMPS = [];
+let SESSION = null;         // odświeżany obiekt sesji (po stripSecrets)
+let SESSION_META = {};      // {bookTitle, chapterTitle}
+let LAST_RESULT = null;
+try{ LAST_RESULT = JSON.parse(localStorage.getItem('rp_app_last_result') || 'null'); }catch(e){}
+
+function nav(hash){ location.hash = hash; }
+function route(){
+  const h = (location.hash || '#/').replace(/^#/, '');
+  const seg = h.split('/').filter(Boolean);
+  if(seg.length === 0) return renderAccount();
+  if(seg[0] === 'books') return renderBooks();
+  if(seg[0] === 'book' && seg[1]) return renderBook(seg[1]);
+  if(seg[0] === 'chapter' && seg[1] && seg[2]) return renderChapter(seg[1], decodeURIComponent(seg[2]));
+  if(seg[0] === 'quiz' && seg[1]) return renderQuiz(seg[1]);
+  if(seg[0] === 'result') return renderResult();
+  if(seg[0] === 'proofs') return renderProofs();
+  return renderAccount();
+}
+window.addEventListener('hashchange', route);
+
+/* ═══ #/ konto + start ═══ */
+function renderAccount(){
+  const w = getWallet();
+  view.innerHTML = `
+    <p class="rp-kicker">Konto</p>
+    <h1 class="rp-h2" style="font-size:1.9rem">Zacznij czytać.</h1>
+    <p class="rp-sub">Zaloguj portfel Solana albo wejdź jako Gość. Portfel jest wymagany do startu sesji — tak jak w aplikacji mobilnej.</p>
+    <div class="card">
+      <div class="field"><label for="wAddr">Portfel Solana (Devnet)</label>
+        <input id="wAddr" class="mono big-input" style="font-size:.85rem" placeholder="wklej adres" value="${esc(w)}" autocomplete="off">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="bSave">Zapisz portfel</button>
+        <button class="btn btn-ghost" id="bPhantom">Phantom</button>
+        <button class="btn btn-ghost" id="bGuest">Wejdź jako Gość</button>
+      </div>
+      <p class="muted" style="font-size:.8rem;margin:10px 0 0" id="wMsg"></p>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-lg" id="bGo" ${w ? '' : 'disabled style="opacity:.5"'}>Wybierz książkę →</button>
+      <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
+    </div>`;
+  document.getElementById('bSave').addEventListener('click', ()=>{
+    const v = document.getElementById('wAddr').value.trim();
+    if(!isValidSolanaAddress(v)){ document.getElementById('wMsg').textContent = 'To nie wygląda na adres Solana (base58, 32–44 znaki).'; return; }
+    setWallet(v); renderAccount();
+  });
+  document.getElementById('bPhantom').addEventListener('click', async ()=>{
+    try{
+      const sol = window.solana;
+      if(!sol || !sol.isPhantom){ window.open('https://phantom.app/','_blank'); return; }
+      const r = await sol.connect();
+      setWallet(r.publicKey.toString()); renderAccount();
+    }catch(e){ document.getElementById('wMsg').textContent = 'Phantom: ' + (e.message || e); }
+  });
+  document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); renderAccount(); });
+  const go = document.getElementById('bGo');
+  if(go) go.addEventListener('click', ()=>nav('#/books'));
+}
+
+/* ═══ #/books katalog (książki + kampanie — jak HomeView) ═══ */
+async function renderBooks(){
+  view.innerHTML = `<p class="rp-kicker">Katalog</p><h1 class="rp-h2" style="font-size:1.9rem">Wybierz książkę.</h1><div id="bl"><p class="muted">Ładowanie…</p></div>`;
+  try{
+    const [books, cj] = await Promise.all([
+      api('/api/books'),
+      api('/api/publisher/campaigns').catch(()=>({campaigns:[]})),
+    ]);
+    BOOKS = Array.isArray(books) ? books : [];
+    CAMPS = (cj && cj.campaigns) || [];
+    let html = BOOKS.map(b=>`
+      <div class="book-row">
+        ${b.coverUrl?`<img src="${esc(b.coverUrl)}" alt="" loading="lazy" onerror="this.remove()">`:''}
+        <div class="t"><b>${esc(b.title)}</b><span>${esc(b.author||'')} · ${(b.chapters||[]).length||b.totalChapters||'?'} rozdz.</span></div>
+        <a class="btn btn-primary btn-sm" href="#/book/${esc(b.id)}">Wybierz</a>
+      </div>`).join('');
+    if(CAMPS.length){
+      html += `<p class="rp-kicker" style="margin-top:18px">Kampanie wydawców</p>` + CAMPS.filter(c=>c.status==='active').map(c=>`
+      <div class="book-row">
+        <div class="t"><b>${esc(c.title)}</b><span>${esc(c.author||'')} · pula: ${esc(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}</span></div>
+        <button class="btn btn-ghost btn-sm" data-camp="${esc(c.id)}">Start</button>
+      </div>`).join('');
+    }
+    document.getElementById('bl').innerHTML = html || '<p class="muted">Brak książek.</p>';
+    document.querySelectorAll('[data-camp]').forEach(btn=>btn.addEventListener('click', ()=>startCampaign(btn.dataset.camp)));
+  }catch(e){
+    document.getElementById('bl').innerHTML = `<div class="card"><p class="muted">Katalog offline: ${esc(e.message)}. Spróbuj ponownie.</p><button class="btn btn-ghost" id="bRetry">Odśwież</button></div>`;
+    document.getElementById('bRetry').addEventListener('click', renderBooks);
+  }
+}
+function findBook(id){ return BOOKS.find(b=>String(b.id)===String(id)); }
+
+/* ═══ #/book/:id informacje + rozdziały ═══ */
+function renderBook(id){
+  const b = findBook(id);
+  if(!b){ view.innerHTML = `<p class="muted">Najpierw wczytaj katalog.</p><a class="btn btn-ghost" href="#/books">Katalog</a>`; return; }
+  const chapters = b.chapters || [];
+  view.innerHTML = `
+    <a class="btn btn-ghost btn-sm" href="#/books">← Katalog</a>
+    <h1 class="rp-h2" style="font-size:1.7rem;margin-top:12px">${esc(b.title)}</h1>
+    <p class="muted">${esc(b.author||'')} · domena publiczna (Gutenberg)</p>
+    ${b.coverUrl?`<img src="${esc(b.coverUrl)}" alt="Okładka" style="width:120px;border-radius:12px" onerror="this.remove()">`:''}
+    <p style="font-size:.95rem">${esc(b.description||'')}</p>
+    <p class="rp-kicker" style="margin-top:16px">Rozdziały (${chapters.length})</p>
+    ${chapters.map((c,i)=>`
+      <div class="book-row"><div class="t"><b>${i+1}. ${esc(c.title||c.id)}</b><span>${esc((c.summary||'').slice(0,90))}</span></div>
+      <a class="btn btn-primary btn-sm" href="#/chapter/${esc(b.id)}/${esc(c.id)}">Czytaj</a></div>`).join('') || '<p class="muted">Brak rozdziałów.</p>'}`;
+}
+
+/* ═══ #/chapter/:bookId/:chapterId intro + start ═══ */
+function renderChapter(bookId, chapterId){
+  const b = findBook(bookId);
+  const c = b && (b.chapters||[]).find(x=>String(x.id)===String(chapterId));
+  if(!b || !c){ view.innerHTML = `<p class="muted">Nie znaleziono rozdziału.</p><a class="btn btn-ghost" href="#/books">Katalog</a>`; return; }
+  const w = getWallet();
+  view.innerHTML = `
+    <a class="btn btn-ghost btn-sm" href="#/book/${esc(b.id)}">← ${esc(b.title)}</a>
+    <div class="q-card" style="margin-top:12px">
+      <p class="rp-kicker">${esc(b.title)}</p>
+      <h1 class="rp-h2" style="font-size:1.6rem">${esc(c.title||c.id)}</h1>
+      <p class="muted" style="font-size:.9rem;user-select:none;-webkit-user-select:none">${esc((c.contextExcerpt||c.summary||'').slice(0,280))}</p>
+      <p><span class="pill ok">5 pytań</span> <span class="pill info">nagroda: ${esc(c.reward||b.rewardPerChapter||'5 USDC')}</span></p>
+      ${w ? `<button class="btn btn-primary btn-lg" id="bStart" style="width:100%">Start →</button>`
+          : `<p class="muted">Najpierw podaj portfel.</p><a class="btn btn-primary" href="#/">Konto →</a>`}
+      <p class="muted" style="font-size:.78rem;margin:10px 0 0" id="startMsg"></p>
+    </div>`;
+  const btn = document.getElementById('bStart');
+  if(btn) btn.addEventListener('click', ()=>startSession(b, c));
+}
+async function startSession(b, c){
+  const msg = document.getElementById('startMsg');
+  try{
+    msg.textContent = 'Startowanie sesji…';
+    const r = await api('/api/sessions/start', {method:'POST', body: JSON.stringify({walletAddress: getWallet(), bookId: b.id, chapterId: c.id})});
+    SESSION_META = {bookTitle: b.title, chapterTitle: c.title || c.id};
+    nav('#/quiz/' + (r.id || r.sessionId));
+  }catch(e){
+    msg.textContent = e.status === 409 ? 'Ten rozdział masz już zweryfikowany (1 lektura = 1 dowód). Historia: #/proofs.' : ('Błąd startu: ' + e.message);
+  }
+}
+async function startCampaign(campaignId){
+  const c = CAMPS.find(x=>String(x.id)===String(campaignId));
+  if(!c) return;
+  if(!getWallet()){ nav('#/'); return; }
+  try{
+    const r = await api('/api/publisher/campaigns/' + encodeURIComponent(campaignId) + '/start', {method:'POST', body: JSON.stringify({walletAddress: getWallet()})});
+    SESSION_META = {bookTitle: c.title, chapterTitle: 'kampania wydawcy'};
+    nav('#/quiz/' + (r.sessionId || r.id));
+  }catch(e){ alert('Błąd startu kampanii: ' + e.message); }
+}
+
+/* ═══ #/quiz/:sid — jedno pytanie na ekran, staged unlock, ocena serwera ═══ */
+let pollTimer = null;
+async function fetchSession(sid){
+  const s = await api('/api/sessions/' + encodeURIComponent(sid));
+  s.challenges = (s.challenges || []).map(stripSecrets);
+  SESSION = s;
+  return s;
+}
+function answeredIds(){
+  const a = (SESSION && SESSION.answers) || {};
+  return new Set(Object.keys(a));
+}
+function currentQuestion(){
+  const done = answeredIds();
+  const open = (SESSION.challenges || []).filter(c=>!c.locked && !done.has(c.id));
+  if(open.length) return {q: open[0], done: done.size, total: SESSION.challenges.length};
+  const locked = (SESSION.challenges || []).filter(c=>c.locked);
+  if(locked.length){
+    locked.sort((x,y)=>new Date(x.releaseAt) - new Date(y.releaseAt));
+    return {lockedAt: locked[0].releaseAt, hint: locked[0].hint, done: done.size, total: SESSION.challenges.length};
+  }
+  return {finished: true, done: done.size, total: SESSION.challenges.length};
+}
+async function renderQuiz(sid){
+  clearInterval(pollTimer);
+  view.innerHTML = `<p class="muted">Ładowanie sesji…</p>`;
+  try{ await fetchSession(sid); }
+  catch(e){ view.innerHTML = `<div class="card"><p class="muted">Błąd sesji: ${esc(e.message)}</p><a class="btn btn-ghost" href="#/books">Katalog</a></div>`; return; }
+  paintQuiz(sid);
+  pollTimer = setInterval(async ()=>{
+    if(!location.hash.includes('#/quiz/')){ clearInterval(pollTimer); return; }
+    try{ await fetchSession(sid); paintQuiz(sid, true); }catch(e){}
+  }, 5000);
+  document.addEventListener('visibilitychange', visibilityHandler);
+}
+function visibilityHandler(){
+  const m = location.hash.match(/^#\/quiz\/(.+)$/);
+  if(!m) return;
+  const sid = m[1];
+  if(document.hidden){ api('/api/sessions/' + encodeURIComponent(sid) + '/pause', {method:'POST', body:'{}'}).catch(()=>{}); }
+  else{ api('/api/sessions/' + encodeURIComponent(sid) + '/resume', {method:'POST', body:'{}'}).then(()=>fetchSession(sid).then(()=>paintQuiz(sid))).catch(()=>{}); }
+}
+function progressHTML(done, total){
+  const pct = total ? Math.round(done/total*100) : 0;
+  return `<div class="q-progress"><div class="bar"><span style="width:${pct}%"></span></div><div class="n">${done}/${total}</div></div>`;
+}
+function paintQuiz(sid, soft){
+  const st = currentQuestion();
+  if(st.finished){ paintFinish(sid, st); return; }
+  if(st.lockedAt){
+    const secs = Math.max(0, Math.round((new Date(st.lockedAt) - Date.now())/1000));
+    view.innerHTML = `${progressHTML(st.done, st.total)}
+      <div class="q-card"><div class="lock-wrap">
+        <p class="rp-kicker">Czytaj dalej</p>
+        <div class="lock-num" id="cd">${fmtTime(secs)}</div>
+        <p class="muted">${esc(st.hint || 'Kolejne pytanie odblokuje się wkrótce…')}</p>
+        <p class="muted" style="font-size:.78rem">Sesja: <span class="mono">${esc(sid.slice(0,8))}…</span></p>
+      </div></div>`;
+    const cd = setInterval(()=>{
+      if(!document.getElementById('cd')){ clearInterval(cd); return; }
+      const left = Math.max(0, Math.round((new Date(st.lockedAt) - Date.now())/1000));
+      document.getElementById('cd').textContent = fmtTime(left);
+      if(left <= 0){ clearInterval(cd); fetchSession(sid).then(()=>paintQuiz(sid)).catch(()=>{}); }
+    }, 1000);
+    return;
+  }
+  paintQuestion(sid, st.q, st.done, st.total);
+}
+function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+
+const TYPE_LABEL = {multiple_choice:'Wybór', true_false:'Prawda / fałsz', multiple_select:'Wybierz wszystkie', open_question:'Otwarte', why_question:'Dlaczego', ordering:'Uporządkuj', who_said:'Kto to powiedział', match:'Dopasuj', what_next:'Co dalej', find_error:'Znajdź błąd'};
+function paintQuestion(sid, q, done, total){
+  const letters = ['A','B','C','D','E','F'];
+  let body = '';
+  if(q.type === 'multiple_choice' || q.type === 'what_next' || q.type === 'true_false'){
+    body = `<div class="ans">` + (q.options||[]).map((o,i)=>`
+      <button class="ans-btn" data-i="${i}"><span class="k">${letters[i]||i+1}</span><span>${esc(o)}</span></button>`).join('') + `</div>`;
+  } else if(q.type === 'multiple_select'){
+    body = `<div class="ans">` + (q.options||[]).map((o,i)=>`
+      <label class="ans-check"><input type="checkbox" value="${i}"><span>${esc(o)}</span></label>`).join('') + `</div>
+      <button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%;margin-top:14px">Sprawdź</button>`;
+  } else if(q.type === 'find_error'){
+    const rows = q.statements || q.options || [];
+    body = `<div class="ans">` + rows.map((o,i)=>`
+      <button class="ans-btn" data-i="${i}"><span class="k">${i+1}</span><span>${esc(o)}</span></button>`).join('') + `</div>`;
+  } else if(q.type === 'ordering'){
+    body = `<div id="ordList">` + (q.items||[]).map((o,i)=>`
+      <div class="ord-row" data-i="${i}"><span class="t">${esc(o)}</span>
+      <button data-mv="-1" aria-label="W górę">↑</button><button data-mv="1" aria-label="W dół">↓</button></div>`).join('') + `</div>
+      <button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%;margin-top:14px">Sprawdź kolejność</button>`;
+  } else if(q.type === 'who_said'){
+    const quote = (q.pairs && q.pairs[0]) ? (q.pairs[0].left || '') : '';
+    body = `${quote?`<p class="q-ctx" style="font-style:italic">„${esc(quote)}"</p>`:''}
+      <div class="field"><label for="aText">Kto to powiedział? (imię lub nazwisko wystarczy)</label>
+      <input id="aText" class="big-input" autocomplete="off" placeholder="…"></div>
+      <button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%">Sprawdź</button>`;
+  } else if(q.type === 'match'){
+    const rights = (q.pairs||[]).map((p,i)=>({t:p.right,i})).sort(()=>Math.random()-.5);
+    body = (q.pairs||[]).map((p,i)=>`
+      <div class="match-row"><span class="l">${esc(p.left)}</span>
+      <select data-l="${i}"><option value="">— wybierz —</option>${rights.map(r=>`<option value="${r.i}">${esc(r.t)}</option>`).join('')}</select></div>`).join('')
+      + `<button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%;margin-top:14px">Sprawdź dopasowanie</button>`;
+  } else if(q.type === 'open_question' || q.type === 'why_question'){
+    body = `<div class="field"><label for="aText">Twoja odpowiedź (min. 3 znaki — ocenia model znaczeniowy)</label>
+      <textarea id="aText" class="big-input" placeholder="Własnymi słowami…"></textarea></div>
+      <button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%">Sprawdź</button>`;
+  } else {
+    body = `<p class="muted">Nieznany typ pytania: ${esc(q.type)}</p>`;
+  }
+  view.innerHTML = `${progressHTML(done,total)}
+    <div class="q-card">
+      <p class="q-type">${esc(TYPE_LABEL[q.type] || q.type)}</p>
+      <h2 class="q-text">${esc(q.question)}</h2>
+      ${q.context?`<p class="q-ctx">${esc(q.context)}</p>`:''}
+      ${body}
+      <div id="fb"></div>
+    </div>`;
+  // single-tap submit (Kahoot)
+  view.querySelectorAll('.ans-btn[data-i]').forEach(b=>b.addEventListener('click', ()=>{
+    if(b.disabled) return;
+    view.querySelectorAll('.ans-btn').forEach(x=>x.disabled = true);
+    submitAnswer(sid, q, Number(b.dataset.i));
+  }));
+  // ordering arrows
+  view.querySelectorAll('.ord-row button').forEach(b=>b.addEventListener('click', ()=>{
+    const row = b.closest('.ord-row'), list = document.getElementById('ordList');
+    const rows = Array.from(list.children);
+    const i = rows.indexOf(row), j = i + Number(b.dataset.mv);
+    if(j < 0 || j >= rows.length) return;
+    list.insertBefore(row, Number(b.dataset.mv) < 0 ? rows[j] : rows[j].nextSibling);
+  }));
+  const sub = document.getElementById('bSubmit');
+  if(sub) sub.addEventListener('click', ()=>{
+    let ans = null;
+    if(q.type === 'multiple_select'){
+      ans = Array.from(view.querySelectorAll('.ans-check input:checked')).map(x=>Number(x.value));
+      if(!ans.length){ flash('Zaznacz co najmniej jedną odpowiedź.'); return; }
+    } else if(q.type === 'ordering'){
+      ans = Array.from(document.getElementById('ordList').children).map(r=>Number(r.dataset.i));
+    } else if(q.type === 'match'){
+      ans = {};
+      view.querySelectorAll('.match-row select').forEach(s=>{ if(s.value !== '') ans[s.dataset.l] = Number(s.value); });
+      if(Object.keys(ans).length !== (q.pairs||[]).length){ flash('Dopasuj wszystkie pary.'); return; }
+    } else {
+      const t = document.getElementById('aText');
+      ans = (t.value || '').trim();
+      if(!ans.length){ flash('Wpisz odpowiedź.'); return; }
+      if((q.type === 'open_question' || q.type === 'why_question') && ans.length < 3){ flash('Za krótka odpowiedź (min. 3 znaki).'); return; }
+    }
+    sub.disabled = true;
+    submitAnswer(sid, q, ans);
+  });
+}
+function flash(msg){
+  let f = document.getElementById('fb');
+  f.innerHTML = `<div class="feedback bad">${esc(msg)}</div>`;
+}
+async function submitAnswer(sid, q, ans){
+  const f = document.getElementById('fb');
+  f.innerHTML = `<p class="muted">Sprawdzanie…</p>`;
+  try{
+    const r = await api('/api/sessions/' + encodeURIComponent(sid) + '/answer', {method:'POST', body: JSON.stringify({challengeId: q.id, answer: ans})});
+    await fetchSession(sid);
+    const cls = r.correct ? 'ok' : 'bad';
+    const head = r.correct ? 'Dobrze ✓' : 'Nie tym razem';
+    f.innerHTML = `<div class="feedback ${cls}">${esc(head)}${r.correctText?`<span class="sub">${esc(r.correctText)}</span>`:''}${r.aiDetected?`<span class="sub">Wykryto wklejenie / AI — odpowiedź niezaliczona.</span>`:''}</div>
+      <button class="btn btn-primary btn-lg" id="bNext" style="width:100%;margin-top:12px">Dalej →</button>`;
+    // oznacz wybraną odpowiedź (tylko po ocenie serwera)
+    document.getElementById('bNext').addEventListener('click', ()=>paintQuiz(sid));
+  }catch(e){
+    if(e.status === 423 || e.status === 409){ await fetchSession(sid); paintQuiz(sid); return; }
+    if(e.status === 503){ f.innerHTML = `<div class="feedback bad">Ocena semantyczna chwilowo niedostępna (model offline). Spróbuj ponownie.</div>`; }
+    else f.innerHTML = `<div class="feedback bad">Błąd: ${esc(e.message)}</div>`;
+    const sub = document.getElementById('bSubmit');
+    if(sub) sub.disabled = false;
+    view.querySelectorAll('.ans-btn').forEach(x=>x.disabled = false);
+  }
+}
+function paintFinish(sid, st){
+  view.innerHTML = `${progressHTML(st.done, st.total)}
+    <div class="q-card" style="text-align:center">
+      <p class="rp-kicker">Koniec pytań</p>
+      <h2 class="rp-h2">Sprawdź wynik.</h2>
+      <p class="rp-sub">Wynik policzy serwer na podstawie Twoich odpowiedzi — nie da się go zmienić w przeglądarce.</p>
+      <button class="btn btn-primary btn-lg" id="bDone" style="width:100%">Zakończ i sprawdź wynik</button>
+      <p class="muted" style="font-size:.78rem;margin:10px 0 0" id="doneMsg"></p>
+    </div>`;
+  document.getElementById('bDone').addEventListener('click', async ()=>{
+    document.getElementById('doneMsg').textContent = 'Liczenie wyniku…';
+    try{
+      const r = await api('/api/sessions/' + encodeURIComponent(sid) + '/complete', {method:'POST', body:'{}'});
+      LAST_RESULT = {proof: r.proof, verification: r.verification, results: r.results, meta: SESSION_META};
+      try{ localStorage.setItem('rp_app_last_result', JSON.stringify(LAST_RESULT)); }catch(e){}
+      saveLocalProof(LAST_RESULT.proof);
+      nav('#/result');
+    }catch(e){ document.getElementById('doneMsg').textContent = 'Błąd: ' + e.message; }
+  });
+}
+
+/* ═══ #/result — pieczęć, wynik, reward, historia ═══ */
+function saveLocalProof(p){
+  if(!p) return;
+  try{
+    const k = 'rp_app_proofs';
+    const list = JSON.parse(localStorage.getItem(k) || '[]');
+    if(!list.some(x=>x.proofHash === p.proofHash)) list.unshift({proofHash:p.proofHash, bookId:p.bookId, chapterId:p.chapterId, score:p.score, total:p.total, status:p.status, timestamp:p.timestamp});
+    localStorage.setItem(k, JSON.stringify(list.slice(0,50)));
+  }catch(e){}
+}
+function renderResult(){
+  const r = LAST_RESULT;
+  if(!r || !r.proof){ view.innerHTML = `<p class="muted">Brak wyniku.</p><a class="btn btn-ghost" href="#/books">Katalog</a>`; return; }
+  const p = r.proof;
+  const ok = (p.status === 'Reading Verified' || p.status === 'Comprehension Verified' || p.status === 'verified');
+  view.innerHTML = `
+    <div class="q-card" style="text-align:center">
+      <div class="seal">${ok ? '✓ Verified' : esc(p.status || 'Wynik')}</div>
+      <h1 class="rp-h2" style="margin-top:14px">${esc(String(p.score))} / ${esc(String(p.total))}</h1>
+      <p class="muted">${esc(SESSION_META.bookTitle || p.bookId)} · ${esc(SESSION_META.chapterTitle || p.chapterId || '')}</p>
+      ${p.reward ? `<p><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>` : `<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5 (Devnet, demo).</p>`}
+      <div class="card flat" style="text-align:left;margin-top:14px">
+        <p class="rp-kicker">Proof Details</p>
+        <p class="mono" style="font-size:.78rem;word-break:break-all">hash: ${esc(p.proofHash||'—')}</p>
+        <p class="mono" style="font-size:.78rem">Network: Solana Devnet · czas: ${esc(String(p.durationSec ?? ''))}s</p>
+        ${p.txSignature?`<p style="font-size:.85rem"><a href="${esc(p.explorerUrl||('https://explorer.solana.com/tx/'+p.txSignature+'?cluster=devnet'))}" target="_blank">Transakcja w explorerze →</a></p>`:`<p class="muted" style="font-size:.8rem">Transakcja: zapis devnet (demo, bez prawdziwych środków).</p>`}
+        <button class="btn btn-ghost btn-sm" id="bCopy">Kopiuj hash</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px">
+        <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
+        <a class="btn btn-primary" href="#/books">Kolejna książka →</a>
+      </div>
+    </div>`;
+  document.getElementById('bCopy').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(p.proofHash || '').then(()=>{ document.getElementById('bCopy').textContent = 'OK'; });
+  });
+}
+
+/* ═══ #/proofs historia (API + lokalnie) ═══ */
+async function renderProofs(){
+  const w = getWallet();
+  view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Konto</a>
+    <h1 class="rp-h2" style="font-size:1.7rem;margin-top:12px">Moje dowody.</h1><div id="pl"><p class="muted">Ładowanie…</p></div>`;
+  let list = [];
+  if(w){ try{ const j = await api('/api/proofs?wallet=' + encodeURIComponent(w)); list = Array.isArray(j) ? j : (j.proofs || []); }catch(e){} }
+  let local = [];
+  try{ local = JSON.parse(localStorage.getItem('rp_app_proofs') || '[]'); }catch(e){}
+  const seen = new Set(list.map(p=>p.proofHash));
+  local.forEach(p=>{ if(p.proofHash && !seen.has(p.proofHash)) list.push(p); });
+  document.getElementById('pl').innerHTML = list.length ? list.slice(0,30).map(p=>`
+    <div class="hist-row"><span class="pill ${['Reading Verified','Comprehension Verified','verified'].includes(p.status)?'ok':'mut'}">${esc(String(p.score))}/${esc(String(p.total))}</span>
+    <span style="flex:1"><b>${esc(p.bookId||'')}</b><br><span class="muted" style="font-size:.78rem">${esc(p.chapterId||'')} · ${esc((p.timestamp||'').slice(0,10))}</span></span>
+    <a class="btn btn-ghost btn-sm" href="/verify/?id=${esc((p.proofHash||'').slice(0,6))}">Sprawdź</a></div>`).join('')
+    : '<p class="muted">Brak dowodów. Ukończ pierwszy quiz.</p>';
+}
+
+paintWallet();
+route();
+})();
+</script>
+</body>
+</html>
