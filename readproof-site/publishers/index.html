@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReadProof for Publishers — Create reading challenges around your books</title>
+<meta name="description" content="Publishers select a book, create a Reading Challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<nav class="rp-nav"><div class="wrap">
+  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <div class="rp-links">
+    <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
+    <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+    <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
+    <a href="/publishers/" class="keep" data-i18n="nav_publishers">Publishers</a>
+    <a href="/verify/" data-i18n="nav_verify">Verify</a>
+    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en">EN</button></span>
+    <a href="/publisher/" class="cta" data-i18n="pp_panel_cta">Publisher panel</a>
+  </div>
+</div></nav>
+
+<header class="rp-hero"><div class="wrap">
+  <div>
+    <span class="rp-eyebrow" data-i18n="pp_eyebrow">For Publishers</span>
+    <h1 class="rp-h1"><span data-i18n="pp_h_a">Turn your books into</span><br><em data-i18n="pp_h_b">reading challenges.</em></h1>
+    <p class="rp-lead" data-i18n="pp_sub">Select a book, create a challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.</p>
+    <div class="rp-actions">
+      <a class="btn btn-primary" href="/publisher/" data-i18n="pp_open">Open publisher panel</a>
+      <a class="btn btn-ghost" href="#flow" data-i18n="pp_how">How it works</a>
+    </div>
+  </div>
+  <div class="panel">
+    <p class="rp-kicker" data-i18n="pp_reward_k">Reward pool</p>
+    <h3 style="font-size:1.6rem;margin:0 0 6px" data-i18n="pp_reward_h">Promotion powered by people who actually finished the book.</h3>
+    <p class="muted" style="font-size:.92rem" data-i18n="pp_reward_p">You fund a fixed pool per challenge. Only verified proofs qualify for rewards — no bots, no skimmed pages.</p>
+  </div>
+</div></header>
+
+<main>
+<section class="rp-section tight" id="flow"><div class="wrap">
+  <p class="rp-kicker" data-i18n="pp_flow_k">Your flow</p>
+  <h2 class="rp-h2" data-i18n="pp_flow_h">From manuscript to measurable readers.</h2>
+  <ol class="steps" style="margin-top:22px">
+    <li><b data-i18n="pp_f1">Select a book</b><p data-i18n="pp_f1p">Your title or a public-domain classic — with ISBN and cover.</p></li>
+    <li><b data-i18n="pp_f2">Create a Reading Challenge</b><p data-i18n="pp_f2p">Name, description, dates, participant limit, eligibility and reward rules.</p></li>
+    <li><b data-i18n="pp_f3">Fund the reward pool</b><p data-i18n="pp_f3p">A fixed amount per challenge. Details in the panel — settled on Solana Devnet while in demo.</p></li>
+    <li><b data-i18n="pp_f4">Readers participate</b><p data-i18n="pp_f4p">They read the real book and complete chapter challenges.</p></li>
+    <li><b data-i18n="pp_f5">ReadProof verifies understanding</b><p data-i18n="pp_f5p">Meaning-checked answers, anti-cheat on device. Only verified proofs qualify.</p></li>
+    <li><b data-i18n="pp_f6">Rewards are distributed</b><p data-i18n="pp_f6p">Automatically, according to the rules you published.</p></li>
+  </ol>
+</div></section>
+
+<section class="rp-section tight"><div class="wrap">
+  <div class="rp-grid cols-2" style="align-items:start">
+    <div class="card">
+      <p class="rp-kicker" data-i18n="pp_live_k">Live challenges</p>
+      <h3 data-i18n="pp_live_h">Running on the network right now.</h3>
+      <div id="liveCamps" style="margin-top:10px"><p class="muted">Loading live challenges from the network…</p></div>
+      <div class="rp-actions" style="margin:12px 0 0">
+        <a class="btn btn-ghost btn-sm" href="/challenge/" data-i18n="pp_all">All challenges</a>
+      </div>
+    </div>
+    <div>
+      <div class="card flat" style="margin-bottom:14px"><h3><span data-i18n="pp_c1">Real participation data</span></h3><p data-i18n="pp_c1p">Participants, completions, average score — per challenge, live from the API.</p></div>
+      <div class="card flat" style="margin-bottom:14px"><h3><span data-i18n="pp_c2">Verifiable by design</span></h3><p data-i18n="pp_c2p">Every reward maps to a proof ID anyone can check. <span class="pill info">Verified on-chain</span></p></div>
+      <div class="card flat"><h3><span data-i18n="pp_c3">Book content stays private</span></h3><p data-i18n="pp_c3p">Full text lives server-side for question generation. On-chain goes only the proof hash.</p></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="rp-section tight"><div class="wrap rp-center">
+  <h2 class="rp-h2" data-i18n="pp_ready">Ready to challenge your readers?</h2>
+  <p class="rp-sub" data-i18n="pp_ready_sub">Three steps in the panel: register (draft) → upload content → fund the pool.</p>
+  <div class="rp-actions" style="justify-content:center">
+    <a class="btn btn-primary btn-lg" href="/publisher/" data-i18n="pp_open2">Open publisher panel →</a>
+  </div>
+</div></section>
+</main>
+
+<footer class="rp-footer"><div class="wrap">
+  <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood it.</span></div>
+  <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/challenge/" data-i18n="nav_challenges">Challenges</a> · <a href="/publisher/" data-i18n="pp_panel_cta">Publisher panel</a></div>
+</div></footer>
+
+<script>
+(async function(){
+  const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
+  const box = document.getElementById('liveCamps');
+  try{
+    let camps = [];
+    for(const b of BASES){
+      try{ const r = await fetch(b + '/api/publisher/campaigns'); if(r.ok){ const j = await r.json(); camps = j.campaigns || []; break; } }catch(e){}
+    }
+    if(!camps.length){ box.innerHTML = '<p class="muted">' + esc(T('no_camps', 'No live challenges right now.')) + '</p>'; return; }
+    box.innerHTML = camps.slice(0,3).map(c =>
+      `<div class="camp-row"><span><strong>${esc(c.title)}</strong><br><span class="muted" style="font-size:.8rem">${esc(c.author||'')} · ${esc(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}</span></span><span class="pill ${c.status==='active'?'ok':'mut'}">${esc(c.status)}</span></div>`
+    ).join('');
+  }catch(e){ box.innerHTML = '<p class="muted">Network offline — challenges load live when the API is reachable.</p>'; }
+})();
+</script>
+<script src="/assets/i18n.js"></script>
+</body>
+</html>
