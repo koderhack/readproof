@@ -260,14 +260,14 @@ function renderLogin(){
     </div>
     <p class="muted" style="font-size:.82rem;margin-top:12px">Wydawca? <a href="#/publisher">Panel wydawcy →</a></p>`;
   document.getElementById('bPhantom').addEventListener('click', async ()=>{
-    try{ const sol = window.solana; if(!sol||!sol.isPhantom){window.open('https://phantom.app/','_blank');return;} const r = await sol.connect(); setWallet(r.publicKey.toString()); nav('#/'); }catch(e){ const m=document.getElementById('wMsg'); if(m)m.textContent='Phantom: '+(e.message||e); }
+    try{ const sol = window.solana; if(!sol||!sol.isPhantom){window.open('https://phantom.app/','_blank');return;} const r = await sol.connect(); setWallet(r.publicKey.toString()); route(); }catch(e){ const m=document.getElementById('wMsg'); if(m)m.textContent='Phantom: '+(e.message||e); }
   });
-  document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); nav('#/'); });
+  document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); route(); });
   const fn = document.getElementById('uFirst'), ln = document.getElementById('uLast'), bn = document.getElementById('bSaveName');
   if(fn&&ln&&bn) bn.addEventListener('click', ()=>{
     try{ localStorage.setItem('rp_first', fn.value.trim()); localStorage.setItem('rp_last', ln.value.trim()); const full=(fn.value.trim()+' '+ln.value.trim()).trim(); if(full) localStorage.setItem('rp_display_name', full); if(getWallet()&&full) api('/api/users',{method:'POST',body:JSON.stringify({walletAddress:getWallet(),displayName:full})}).catch(()=>{}); bn.textContent='Zapisano ✓'; setTimeout(()=>bn.textContent='Zapisz',1500); }catch(e){}
   });
-  document.getElementById('bGo').addEventListener('click', ()=>nav('#/'));
+  document.getElementById('bGo').addEventListener('click', ()=>route());
   if(!getWallet()) mountPrivyUser();
 }
 let privyMountedUser = false;
@@ -284,7 +284,7 @@ async function mountPrivyUser(){
     const e = React.createElement;
     function Inner(){
       const {ready, authenticated, user, login} = privy.usePrivy();
-      React.useEffect(()=>{ const addr = user && (user.wallet.address || (user.solanaWallet && user.solanaWallet.address)); if(authenticated&&addr){setWallet(addr); nav('#/');} },[authenticated, user]);
+      React.useEffect(()=>{ const addr = user && (user.wallet.address || (user.solanaWallet && user.solanaWallet.address)); if(authenticated&&addr){setWallet(addr); route();} },[authenticated, user]);
       if(!ready) return e('span',{className:'muted'},'Inicjalizacja…');
       if(authenticated) return e('span',{className:'muted'},'Zalogowano — otwieranie…');
       return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj emailem');
