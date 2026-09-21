@@ -159,9 +159,14 @@ function renderAccount(){
   view.innerHTML = `
     <p class="rp-kicker">Konto</p>
     <h1 class="rp-h2" style="font-size:1.9rem">Zacznij czytać.</h1>
-    <p class="rp-sub">Zaloguj portfel Solana albo wejdź jako Gość. Portfel jest wymagany do startu sesji — tak jak w aplikacji mobilnej.</p>
+    <p class="rp-sub">Zaloguj emailem albo podaj portfel Solana. Portfel jest wymagany do startu sesji — tak jak w aplikacji mobilnej.</p>
     <div class="card">
-      <div class="field"><label for="wAddr">Portfel Solana (Devnet)</label>
+      <p class="rp-kicker">Konto emailem (Privy)</p>
+      <div id="privyUserRoot"><p class="muted">Ładowanie logowania…</p></div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <p class="rp-kicker">Portfel Solana (Devnet)</p>
+      <div class="field"><label for="wAddr">Adres portfela</label>
         <input id="wAddr" class="mono big-input" style="font-size:.85rem" placeholder="wklej adres" value="${esc(w)}" autocomplete="off">
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -192,6 +197,43 @@ function renderAccount(){
   document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); renderAccount(); });
   const go = document.getElementById('bGo');
   if(go) go.addEventListener('click', ()=>nav('#/books'));
+  if(!getWallet()) mountPrivyUser();
+}
+let privyMountedUser = false;
+async function mountPrivyUser(){
+  if(privyMountedUser) return;
+  const box = document.getElementById('privyUserRoot');
+  if(!box) return;
+  privyMountedUser = true;
+  const t = (p, ms) => Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))]);
+  try{
+    const [{default:React},{createRoot},privy] = await Promise.all([
+      t(import('https://esm.sh/react@18.3.1'), 25000),
+      t(import('https://esm.sh/react-dom@18.3.1/client'), 25000),
+      t(import('https://esm.sh/@privy-io/react-auth@3.16.0?deps=react@18.3.1,react-dom@18.3.1'), 60000)
+    ]);
+    const e = React.createElement;
+    function Inner(){
+      const {ready, authenticated, user, login} = privy.usePrivy();
+      React.useEffect(()=>{
+        const addr = user && (user.wallet.address || (user.solanaWallet && user.solanaWallet.address));
+        if(authenticated && addr){ setWallet(addr); renderAccount(); }
+      },[authenticated, user]);
+      if(!ready) return e('span',{className:'muted'},'Inicjalizacja…');
+      if(authenticated) return e('span',{className:'muted'},'Zalogowano — otwieranie…');
+      return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj emailem');
+    }
+    function App(){
+      return e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{
+        loginMethods:['email'],
+        embeddedWallets:{createOnLogin:'users-without-wallets'}
+      }}, e(Inner));
+    }
+    createRoot(box).render(e(App));
+  }catch(err){
+    privyMountedUser = false;
+    if(box) box.innerHTML = `<p class="muted">Logowanie emailem niedostępne (${esc(err.message||err)}). Użyj portfela lub Gościa poniżej.</p>`;
+  }
 }
 
 /* ═══ #/books katalog (książki + kampanie — jak HomeView) ═══ */
