@@ -148,6 +148,7 @@ function route(){
   if(seg[0] === 'quiz' && seg[1]) return renderQuiz(seg[1]);
   if(seg[0] === 'result') return renderResult();
   if(seg[0] === 'proofs') return renderProofs();
+  if(seg[0] === 'publisher') return renderPublisher();
   return renderAccount();
 }
 window.addEventListener('hashchange', route);
@@ -173,7 +174,8 @@ function renderAccount(){
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-primary btn-lg" id="bGo" ${w ? '' : 'disabled style="opacity:.5"'}>Wybierz książkę →</button>
       <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
-    </div>`;
+    </div>
+    <p class="muted" style="font-size:.82rem;margin-top:14px">Wydawca? <a href="#/publisher">Panel wydawcy →</a></p>`;
   document.getElementById('bSave').addEventListener('click', ()=>{
     const v = document.getElementById('wAddr').value.trim();
     if(!isValidSolanaAddress(v)){ document.getElementById('wMsg').textContent = 'To nie wygląda na adres Solana (base58, 32–44 znaki).'; return; }
@@ -572,6 +574,133 @@ async function renderProofs(){
     <span style="flex:1"><b>${esc(p.bookId||'')}</b><br><span class="muted" style="font-size:.78rem">${esc(p.chapterId||'')} · ${esc((p.timestamp||'').slice(0,10))}</span></span>
     <a class="btn btn-ghost btn-sm" href="/verify/?id=${esc((p.proofHash||'').slice(0,6))}">Sprawdź</a></div>`).join('')
     : '<p class="muted">Brak dowodów. Ukończ pierwszy quiz.</p>';
+}
+
+/* ═══ #/publisher — konto wydawcy przez Privy + statystyki + nowa kampania ═══ */
+const PRIVY_DEFAULT_APP_ID = 'cmu9win8e01oo0ckzvcz6j0qg'; // bookprof (publiczne App ID)
+function getPubWallet(){ try{ return (localStorage.getItem('readproof_publisher_wallet')||'').trim(); }catch(e){ return ''; } }
+function setPubWallet(w){ try{ w ? localStorage.setItem('readproof_publisher_wallet', w) : localStorage.removeItem('readproof_publisher_wallet'); }catch(e){} }
+async function renderPublisher(){
+  const w = getPubWallet();
+  if(!w){
+    view.innerHTML = `
+      <a class="btn btn-ghost btn-sm" href="#/">← Konto</a>
+      <p class="rp-kicker" style="margin-top:12px">Wydawca</p>
+      <h1 class="rp-h2" style="font-size:1.7rem">Zaloguj się kontem wydawcy.</h1>
+      <p class="rp-sub">Logowanie przez Privy (portfel Solana). Po zalogowaniu zobaczysz statystyki swoich kampanii i dodasz nową.</p>
+      <div class="card"><div id="privyRoot"><p class="muted">Ładowanie logowania…</p></div></div>
+      <div class="card" style="margin-top:10px">
+        <div class="field"><label for="pManual">…albo wklej adres portfela ręcznie</label>
+        <input id="pManual" class="mono big-input" style="font-size:.85rem" placeholder="adres Solana" autocomplete="off"></div>
+        <button class="btn btn-ghost" id="bManual">Użyj adresu</button>
+      </div>`;
+    document.getElementById('bManual').addEventListener('click', ()=>{
+      const v = document.getElementById('pManual').value.trim();
+      if(!isValidSolanaAddress(v)){ alert('To nie wygląda na adres Solana.'); return; }
+      setPubWallet(v); renderPublisher();
+    });
+    mountPrivyApp();
+    return;
+  }
+  view.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <a class="btn btn-ghost btn-sm" href="#/">← Konto</a>
+      <span class="pill ok">wydawca</span>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" id="bPubOut">Wyloguj</button>
+    </div>
+    <h1 class="rp-h2" style="font-size:1.7rem;margin-top:12px">Panel kampanii.</h1>
+    <p class="mono muted" style="font-size:.75rem">${esc(w.slice(0,6)+'…'+w.slice(-4))}</p>
+    <div id="pStats"><p class="muted">Ładowanie statystyk…</p></div>
+    <p class="rp-kicker" style="margin-top:18px">Moje kampanie</p>
+    <div id="pCamps"><p class="muted">Ładowanie…</p></div>
+    <div class="card" style="margin-top:16px">
+      <p class="rp-kicker">Nowa kampania</p>
+      <div class="field"><label for="nTitle">Tytuł *</label><input id="nTitle" class="big-input" placeholder="Boska Komedia — Piekło" autocomplete="off"></div>
+      <div class="field"><label for="nAuthor">Autor</label><input id="nAuthor" class="big-input" placeholder="Dante Alighieri" autocomplete="off"></div>
+      <div class="field"><label for="nIsbn">ISBN (10/13)</label><input id="nIsbn" class="big-input mono" placeholder="9780140448955" autocomplete="off"></div>
+      <div class="field"><label for="nReward">Nagroda / dowód (USDC, Devnet)</label><input id="nReward" class="big-input" type="number" value="5" min="1"></div>
+      <div class="field"><label for="nDesc">Opis</label><textarea id="nDesc" class="big-input" rows="2" placeholder="Krótki opis kampanii…"></textarea></div>
+      <button class="btn btn-primary btn-lg" id="bCreate" style="width:100%">Utwórz kampanię</button>
+      <p class="muted" style="font-size:.8rem" id="createMsg"></p>
+    </div>`;
+  document.getElementById('bPubOut').addEventListener('click', ()=>{ setPubWallet(''); renderPublisher(); });
+  document.getElementById('bCreate').addEventListener('click', async ()=>{
+    const msg = document.getElementById('createMsg');
+    try{
+      const body = {publisherWallet: getPubWallet(), title: document.getElementById('nTitle').value.trim(), author: document.getElementById('nAuthor').value.trim(), isbn: document.getElementById('nIsbn').value.trim(), description: document.getElementById('nDesc').value.trim(), rewardPerProof: Number(document.getElementById('nReward').value)||5, currency: 'USDC'};
+      if(!body.title){ msg.textContent = 'Podaj tytuł.'; return; }
+      msg.textContent = 'Tworzenie…';
+      const j = await api('/api/publisher/campaigns', {method:'POST', body: JSON.stringify(body)});
+      msg.textContent = 'Utworzono ' + (j.campaign && j.campaign.id) + ' (draft). Treść i pulę dodasz w pełnym panelu.';
+      loadPubData();
+    }catch(e){ msg.textContent = 'Błąd: ' + e.message; }
+  });
+  loadPubData();
+}
+async function loadPubData(){
+  const w = getPubWallet();
+  try{
+    const [cj, proofs] = await Promise.all([
+      api('/api/publisher/campaigns'),
+      api('/api/proofs').catch(()=>[])
+    ]);
+    const all = (cj && cj.campaigns) || [];
+    const mine = all.filter(c=>(c.publisherWallet||'')===w);
+    const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
+    const mineIds = new Set(mine.map(c=>c.id));
+    const mp = list.filter(p=>mineIds.has(p.bookId) || mineIds.has(p.chapterId));
+    const ver = mp.filter(p=>['Reading Verified','Comprehension Verified','verified'].includes(p.status));
+    const pool = mine.reduce((a,c)=>a+Number(String(c.rewardPool).split(' ')[0]||c.rewardPool||0),0);
+    const cells = [['Kampanie',mine.length],['Pula',pool],['Dowody',mp.length],['Zweryfikowane',ver.length],['Czytelnicy',new Set(mp.map(p=>p.walletAddress).filter(Boolean)).size],['W sieci',all.length]];
+    document.getElementById('pStats').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">` +
+      cells.map(([l,v])=>`<div class="card" style="padding:12px"><div class="muted" style="font-size:.72rem">${l}</div><div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800">${esc(String(v))}</div></div>`).join('') + `</div>`;
+    document.getElementById('pCamps').innerHTML = mine.length ? mine.map(c=>`
+      <div class="book-row"><div class="t"><b>${esc(c.title)}</b><span>${esc(c.status)} · pula: ${esc(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}</span></div>
+      <a class="btn btn-ghost btn-sm" href="/publishers/?campaign=${esc(c.id)}">Szczegóły</a></div>`).join('')
+      : '<p class="muted">Brak kampanii na tym portfelu — utwórz pierwszą poniżej.</p>';
+  }catch(e){
+    document.getElementById('pStats').innerHTML = `<p class="muted">Statystyki offline: ${esc(e.message)}</p>`;
+  }
+}
+let privyMountedApp = false;
+async function mountPrivyApp(){
+  if(privyMountedApp) return;
+  privyMountedApp = true;
+  const box = document.getElementById('privyRoot');
+  const t = (p, ms) => Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))]);
+  try{
+    const [{default:React},{createRoot},privy,privySol] = await Promise.all([
+      t(import('https://esm.sh/react@18.3.1'), 25000),
+      t(import('https://esm.sh/react-dom@18.3.1/client'), 25000),
+      t(import('https://esm.sh/@privy-io/react-auth@3.16.0?deps=react@18.3.1,react-dom@18.3.1'), 60000),
+      t(import('https://esm.sh/@privy-io/react-auth@3.16.0/solana?deps=react@18.3.1,react-dom@18.3.1'), 60000)
+    ]);
+    const e = React.createElement;
+    function Inner(){
+      const {ready, authenticated, user, login} = privy.usePrivy();
+      const wallets = (privySol.useWallets ? privySol.useWallets().wallets : []) || [];
+      React.useEffect(()=>{
+        const w0 = wallets[0];
+        const addr = (w0 && w0.address) || (user && user.wallet && (user.wallet.address || (user.solanaWallet && user.solanaWallet.address)));
+        if(authenticated && addr){ setPubWallet(addr); renderPublisher(); }
+      },[authenticated, wallets, user]);
+      if(!ready) return e('span',{className:'muted'},'Inicjalizacja…');
+      if(authenticated) return e('span',{className:'muted'},'Zalogowano — otwieranie panelu…');
+      return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj przez Privy');
+    }
+    function App(){
+      return e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{
+        appearance:{walletChainType:'solana-only',showWalletLoginFirst:true},
+        loginMethods:['wallet','email'],
+        embeddedWallets:{createOnLogin:'users-without-wallets'}
+      }}, e(Inner));
+    }
+    createRoot(box).render(e(App));
+  }catch(err){
+    privyMountedApp = false;
+    if(box) box.innerHTML = `<p class="muted">Privy nie załadowało się (${esc(err.message||err)}). Użyj adresu ręcznie poniżej.</p>`;
+  }
 }
 
 paintWallet();
