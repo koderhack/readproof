@@ -490,8 +490,25 @@ function ensureProctorListeners(){
   }, true);
   window.addEventListener('hashchange', ()=>{ if(!location.hash.startsWith('#/quiz/')) stopProctor(); });
 }
+async function canRetry(bookId, chapterId){
+  const w = getWallet();
+  try{
+    const j = await api('/api/proofs?wallet='+encodeURIComponent(w)).catch(()=>null);
+    const list = Array.isArray(j) ? j : (j.proofs||j.users||[]);
+    // actually /api/proofs returns array or {proofs:[]}
+    const arr = Array.isArray(j) ? j : (j && j.proofs ? j.proofs : []);
+    const last = arr.filter(p=>String(p.bookId)===String(bookId) && String(p.chapterId)===String(chapterId)).sort((a,b)=> new Date(b.timestamp||0)-new Date(a.timestamp||0))[0];
+    if(last && last.timestamp){
+      const diff = (Date.now() - new Date(last.timestamp).getTime())/(1000*60*60*24);
+      if(diff < 5) return {ok:false, days:(5-diff).toFixed(1)};
+    }
+  }catch(e){}
+  return {ok:true};
+}
 async function startSession(b, c){
   const msg = document.getElementById('startMsg');
+  const chk = await canRetry(b.id, c.id);
+  if(!chk.ok){ msg.textContent = 'Możesz poprawić wynik dopiero za '+chk.days+' dni (limit co 5 dni).'; return; }
   try{
     msg.textContent = 'Startowanie sesji…';
     const r = await api('/api/sessions/start', {method:'POST', body: JSON.stringify({walletAddress: getWallet(), bookId: b.id, chapterId: c.id})});
@@ -748,7 +765,7 @@ async function submitAnswer(sid, q, ans){
     const cls = r.correct ? 'ok' : 'bad';
     const head = r.correct ? 'Dobrze ✓' : 'Nie tym razem';
     f.innerHTML = `<div class="feedback ${cls}">${esc(head)}${r.correctText?`<span class="sub">${esc(r.correctText)}</span>`:''}${r.aiDetected?`<span class="sub">Wykryto wklejenie / AI — odpowiedź niezaliczona.</span>`:''}</div>
-      <button class="btn btn-primary btn-lg" id="bNext" style="width:100%;margin-top:12px">Dalej →</button>`;
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary" id="bNext" style="flex:1">Dalej →</button><a class="btn btn-ghost btn-sm" target="_blank" href="https://github.com/koderhack/readproof/issues/new?title=${encodeURIComponent('Błąd w pytaniu '+q.id)}&body=${encodeURIComponent('Pytanie: '+q.question+'%0A%0AOpis błędu:%0A')}" style="align-self:center">Zgłoś błąd</a></div>`;
     // oznacz wybraną odpowiedź (tylko po ocenie serwera)
     document.getElementById('bNext').addEventListener('click', ()=>paintQuiz(sid));
   }catch(e){
