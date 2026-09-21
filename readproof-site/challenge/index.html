@@ -49,7 +49,7 @@
     <h2 class="rp-h2" data-i18n="ch_want">Want a challenge for your book?</h2>
     <p class="rp-sub" data-i18n="ch_want_sub">Publishers create and fund challenges in the publisher panel.</p>
     <div class="rp-actions" style="justify-content:center">
-      <a class="btn btn-primary" href="/publisher/" data-i18n="pub_panel">Publisher panel</a>
+      <a class="btn btn-primary" href="/publishers/#panel" data-i18n="pub_panel">Publisher panel</a>
       <a class="btn btn-ghost" href="/" data-i18n="ch_back">Back home</a>
     </div>
   </section>
@@ -96,7 +96,7 @@
         `<div class="stat"><div class="l">${T('ch_ver', 'Verified')}</div><div class="v">${ver.length}</div></div>` +
         `<div class="stat"><div class="l">${T('ch_pool', 'Reward pool')}</div><div class="v" style="font-size:1.2rem">${esc(pool)}</div></div>` +
         `<div class="stat"><div class="l">${T('ch_avg', 'Avg. score')}</div><div class="v">${avg}</div></div></div>` +
-        `<div class="rp-actions" style="margin:12px 0 0"><a class="btn btn-ghost btn-sm" href="/publisher/?campaign=${esc(c.id)}">${T('ch_details', 'Details & rewards')}</a></div></div>`;
+        `<div class="rp-actions" style="margin:12px 0 0"><a class="btn btn-ghost btn-sm" href="/publishers/?campaign=${esc(c.id)}">${T('ch_details', 'Details & rewards')}</a></div></div>`;
     }).join('') + '</div>';
   }catch(e){
     document.getElementById('apiStatus').textContent = T('offline', 'offline');
