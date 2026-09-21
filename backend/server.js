@@ -484,33 +484,6 @@ async function callJev({question, expectedMeaning, userAnswer, context, lang='pl
   return null;
 }
 
-// --- AI-writing detect — czy odpowiedź otwartą napisało AI (ChatGPT/LLM), a nie człowiek ---
-// Fail-open: brak klucza / błąd / timeout => null (nie blokujemy). Próg blokady 0.85.
-async function callAiDetect(question, userAnswer, lang='pl'){
-  if(!OPENROUTER_KEY) return null;
-  if(!userAnswer || String(userAnswer).trim().length < 20) return null; // za krótka na ocenę
-  const prompt = lang==='en'
-  ? `Decide if the following reading-test answer was WRITTEN BY AN AI (ChatGPT/LLM) or BY A HUMAN student. Question: "${question}". Answer: "${userAnswer}". AI tells: essay-like structure, overly formal/generic filler, perfectly balanced sentences, no typos, hedged academic tone. Human tells: short, colloquial, typos, uneven style, personal. Return ONLY JSON: {"ai": true/false, "confidence": 0-1}`
-  : `Oceń, czy poniższa odpowiedź z testu z lektury została NAPISANA PRZEZ AI (ChatGPT/LLM), czy PRZEZ CZŁOWIEKA (ucznia). Pytanie: "${question}". Odpowiedź: "${userAnswer}". Poszlaki AI: wypracowana struktura, nadęty formalny styl, ogólniki, zero literówek, akademicki ton. Poszlaki człowieka: krótko, potocznie, literówki, nierówny styl, osobisty ton. Zwróć TYLKO JSON: {"ai": true/false, "confidence": 0-1}`;
-  try{
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${OPENROUTER_KEY}`,'Content-Type':'application/json','HTTP-Referer':'https://readproof.app'},
-      body: JSON.stringify({model: OPENROUTER_MODEL, messages:[{role:'user',content:prompt}], temperature:0, max_tokens:200}),
-      signal: AbortSignal.timeout(30000)
-    });
-    if(!res.ok) return null;
-    const j = await res.json();
-    const content = j.choices?.[0]?.message?.content;
-    if(!content) return null;
-    const m = content.match(/\{[^}]*\}/);
-    if(!m) return null;
-    const p = JSON.parse(m[0]);
-    if(typeof p.ai !== 'boolean') return null;
-    return {ai: p.ai, confidence: Number(p.confidence)||0};
-  }catch(e){ return null; }
-}
-
 // --- LLM generate challenges — NA ŻYWO w języku urządzenia/nastawionym, nawet gdy tekst książki EN ---
 // Solidny extractor JSON — LLM (OpenRouter free) potrafi dodać fenced code, smy poza {} i zepsuć parsowanie
 function extractJSON(text){
@@ -1426,36 +1399,19 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     s.suspicious = 1;
     s.suspiciousReason = `too_fast_answer: ${ch.id} ${elapsed}s`;
   }
-  // AI-writing: odpowiedź otwarta napisana przez AI (wklejona z ChatGPT) — blokada jak przy cheatowaniu.
-  // Warstwa 1 (sight on AI writing, lokalna heurystyka, free): frazy LLM PL/EN, markdown/listy,
-  // em-dashe, równe zdania (burstiness), wypełniacze, długość/ogólnikowość, self-declaration.
-  // Warstwa 2 (sędzia LLM OpenRouter free, próg 0.85). Wystarczy jedna warstwa → BLOCKED.
+  // AI-writing sight: heurystyka lokalna (aiDetector.js, bez płatnego API, bez latencji) —
+  // odpowiedź wklejona z ChatGPT/LLM blokuje sesję jak cheatowanie (screenshot/too_fast)
   let aiDetected = false;
   let aiDetail = null;
   if((ch.type==='open_question'||ch.type==='why_question') && typeof answer==='string' && !s.isDevBypass){
-    try {
-      const local = detectAIWriting(answer, { context: `${ch.question||''} ${ch.expectedMeaning||''} ${ch.context||''}` });
-      if (local.suspected) {
-        aiDetected = true;
-        aiDetail = { layer: 'heuristic', score: local.score, signals: local.signals };
-      }
-    } catch(e) { /* fail-open dla heurystyki */ }
-    if (!aiDetected) {
-      const det = await callAiDetect(ch.question, answer, s.lang);
-      if(det && det.ai && det.confidence >= 0.85){
-        aiDetected = true;
-        aiDetail = { layer: 'llm-judge', confidence: det.confidence };
-      }
-    }
-    if (aiDetected) {
+    const det = detectAIWriting(answer, {context: ch.context || '', threshold: Number(process.env.AI_DETECT_THRESHOLD || 0.55)});
+    if(det.suspected){
+      aiDetected = true;
       correct = false;
       s.suspicious = 1;
-      s.suspiciousReason = `ai_generated_answer: ${ch.id} ${aiDetail.layer}=${aiDetail.layer==='heuristic' ? aiDetail.score : aiDetail.confidence}`;
-      const extra = aiDetail.layer==='heuristic'
-        ? ` | AI-writing sight score=${aiDetail.score} (${(aiDetail.signals||[]).slice(0,4).join(',')})`
-        : ` | AI-writing conf=${Number(aiDetail.confidence).toFixed(2)}`;
-      jev = jev ? {...jev, reason: (jev.reason||'') + extra} : jev;
-      console.log(`[ai-detect] ${s.walletAddress?.slice(0,6)}.. ${ch.id.slice(0,8)} BLOCKED via ${aiDetail.layer}`);
+      s.suspiciousReason = `ai_generated_answer: ${ch.id} score=${det.score} [${det.signals.slice(0,3).join(',')}]`;
+      jev = jev ? {...jev, reason: (jev.reason||'') + ` | AI-sight score=${det.score}`} : jev;
+      console.log(`[ai-detect] ${s.walletAddress?.slice(0,6)}.. ${ch.id.slice(0,8)} BLOCKED score=${det.score} signals=${det.signals.slice(0,3).join(',')}`);
     }
   }
   s.answers[challengeId] = {answer, answeredAt: answeredAt.toISOString(), correct, jev, elapsed};

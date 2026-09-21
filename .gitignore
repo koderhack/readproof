@@ -37,6 +37,5 @@ build
 build/
 Models/
 tools/
-ReadProof/*.mlmodelc/
 pitch/
 ReadProof.xcodeproj/project.xcworkspace/xcuserdata/
