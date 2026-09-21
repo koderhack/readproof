@@ -129,6 +129,10 @@ textarea.big-input{min-height:110px;resize:vertical}
   <a class="rp-brand" href="#/" style="text-decoration:none"><span class="rp-brand-mark">R</span>ReadProof</a>
   <span class="pill info">App</span>
   <span style="flex:1"></span>
+  <select id="langSelect" class="big-input mono" style="width:auto;padding:4px 8px;font-size:.75rem" aria-label="Language">
+    <option value="pl">🇵🇱 PL</option>
+    <option value="en">🇬🇧 EN</option>
+  </select>
   <span class="wallet-pill" id="walletPill">niezalogowany</span>
 </div></header>
 
@@ -136,9 +140,10 @@ textarea.big-input{min-height:110px;resize:vertical}
 
 <!-- ═══ bottom nav ═══ -->
 <nav class="bottom-nav" id="bottomNav" style="display:none">
-  <a href="#/" data-tab="katalog" class="active"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>Katalog</span></a>
-  <a href="#/dowody" data-tab="dowody"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span>Dowody</span></a>
-  <a href="#/nagrody" data-tab="nagrody"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span><span>Nagrody</span></a>
+  <a href="#/" data-tab="katalog" class="active"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span data-i18n="nav.catalog">Katalog</span></a>
+  <a href="#/dowody" data-tab="dowody"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span data-i18n="nav.proofs">Dowody</span></a>
+  <a href="#/nagrody" data-tab="nagrody"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span><span data-i18n="nav.rewards">Nagrody</span></a>
+  <a href="#/publisher" data-tab="wydawca" style="display:none"><span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.7c0-.6-.4-1-1-1h-2.5l-.5-2.5c0-.6-.4-1-1-1h-3c-.6 0-1 .4-1 1L14 12.7H11.5c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1.5l.5 2.5c0 .6.4 1 1 1h3c.6 0 1-.4 1-1l.5-2.5H19c.6 0 1-.4 1-1v-1z"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19c1.1 0 2 .9 2 2v15A2.5 2.5 0 0 1 19 19.5H5A2.5 2.5 0 0 1 2.5 17"/></svg></span><span data-i18n="nav.publisher">Wydawca</span></a>
 </nav>
 
 <script>
@@ -159,6 +164,174 @@ async function api(path, opts){
     }catch(e){ lastErr = e; if(e.status) throw e; }
   }
   throw lastErr || new Error('API offline');
+}
+
+/* ═══ i18n ═══ */
+const I18N = {
+  pl: {
+    'nav.catalog': 'Katalog',
+    'nav.proofs': 'Dowody',
+    'nav.rewards': 'Nagrody',
+    'nav.publisher': 'Wydawca',
+    'app.start_reading': 'Zacznij czytać.',
+    'app.login_sub': 'Zaloguj portfelem Solana albo wejdź jako Gość. Portfel jest wymagany do startu sesji.',
+    'app.login_privy': 'Logowanie Privy…',
+    'app.guest': 'Wejdź jako Gość',
+    'app.phantom': 'Phantom',
+    'app.logged_as': 'Zalogowano: ',
+    'app.cert_data': 'Dane do certyfikatu',
+    'app.first_name': 'Imię',
+    'app.last_name': 'Nazwisko',
+    'app.save': 'Zapisz',
+    'app.choose_book': 'Wybierz książkę →',
+    'app.logout': 'Wyloguj',
+    'app.select_book': 'Wybierz książkę.',
+    'app.loading': 'Ładowanie…',
+    'app.no_books': 'Brak książek.',
+    'app.chapters': 'Rozdziały',
+    'app.questions': 'pytań',
+    'app.reward': 'nagroda',
+    'app.start': 'Start →',
+    'app.sign_in_first': 'Najpierw zaloguj się.',
+    'app.join_class': 'Dołącz',
+    'app.class_code_placeholder': 'KOD KLASY',
+    'app.left_class': 'Opusć klasę',
+    'app.catalog': 'Katalog',
+    'app.proofs_title': 'Moje dowody.',
+    'app.no_proofs': 'Brak dowodów. Ukończ pierwszy quiz.',
+    'app.rewards_title': 'Certyfikaty i nagrody.',
+    'app.wallet': 'Portfel',
+    'app.log_in_rewards': 'Zaloguj się, aby widzieć nagrody.',
+    'app.certificates': 'Certyfikaty',
+    'app.total_reward': 'Łączna nagroda',
+    'app.no_certs': 'Brak certyfikatów. Ukończ quiz z 5/5!',
+    'app.verify_age': 'Weryfikacja wieku',
+    'app.age_notice': 'Aby korzystać z nagród, potwierdź datę urodzenia.',
+    'app.dob': 'Data urodzenia',
+    'app.teacher_panel': 'Panel nauczyciela.',
+    'app.my_classes': 'Twoje klasy',
+    'app.new_class': '+ Nowa klasa',
+    'app.create_class': 'Utwórz klasę',
+    'app.class_name': 'Nazwa klasy',
+    'app.class_book': 'Książka do lektury',
+    'app.class_chapters': 'Rozdziały',
+    'app.assign_quiz': 'Przypisz quiz',
+    'app.students': 'Uczniowie',
+    'app.progress': 'Postępy',
+    'app.assign': 'Przypisz',
+    'app.class_code': 'Kod dla uczniów',
+    'app.student_panel': 'Panel ucznia.',
+    'app.join_class': 'Dołącz do klasy',
+    'app.enter_code': 'Podaj kod klasy odebrany od nauczyciela.',
+    'app.leave_class': 'Opusć klasę',
+    'app.assigned_quizzes': 'Przypisane quizy',
+    'app.start_quiz': 'Rozpocznij',
+    'app.publisher_panel': 'Panel wydawcy.',
+    'app.my_campaigns': 'Moje kampanie',
+    'app.quiz_questions': 'pytań',
+    'app.checking': 'Sprawdzanie…',
+    'app.correct': 'Dobrze ✓',
+    'app.wrong': 'Nie tym razem',
+    'app.next': 'Dalej →',
+    'app.finish': 'Zakończ i sprawdź wynik',
+    'app.calculating': 'Liczenie wyniku…',
+    'app.certificate': 'Certyfikat',
+    'app.verified': '✓ Verified',
+    'app.partial': '◐ Częściowe zrozumienie',
+    'app.none': '✗ Nie wykazano zrozumienia',
+    'app.score': '/',
+    'app.view_proofs': 'Moje dowody',
+    'app.next_book': 'Kolejna książka →',
+  },
+  en: {
+    'nav.catalog': 'Catalog',
+    'nav.proofs': 'Proofs',
+    'nav.rewards': 'Rewards',
+    'nav.publisher': 'Publisher',
+    'app.start_reading': 'Start reading.',
+    'app.login_sub': 'Log in with Solana wallet or enter as Guest. Wallet required to start session.',
+    'app.login_privy': 'Loading Privy…',
+    'app.guest': 'Enter as Guest',
+    'app.phantom': 'Phantom',
+    'app.logged_as': 'Logged in: ',
+    'app.cert_data': 'Certificate data',
+    'app.first_name': 'First name',
+    'app.last_name': 'Last name',
+    'app.save': 'Save',
+    'app.choose_book': 'Choose book →',
+    'app.logout': 'Logout',
+    'app.select_book': 'Select a book.',
+    'app.loading': 'Loading…',
+    'app.no_books': 'No books available.',
+    'app.chapters': 'Chapters',
+    'app.questions': 'questions',
+    'app.reward': 'reward',
+    'app.start': 'Start →',
+    'app.sign_in_first': 'Please sign in first.',
+    'app.join_class': 'Join',
+    'app.class_code_placeholder': 'CLASS CODE',
+    'app.left_class': 'Leave class',
+    'app.catalog': 'Catalog',
+    'app.proofs_title': 'My proofs.',
+    'app.no_proofs': 'No proofs yet. Complete your first quiz.',
+    'app.rewards_title': 'Certificates & rewards.',
+    'app.wallet': 'Wallet',
+    'app.log_in_rewards': 'Log in to see rewards.',
+    'app.certificates': 'Certificates',
+    'app.total_reward': 'Total reward',
+    'app.no_certs': 'No certificates. Complete quiz with 5/5!',
+    'app.verify_age': 'Age verification',
+    'app.age_notice': 'To earn rewards, confirm your date of birth.',
+    'app.dob': 'Date of birth',
+    'app.teacher_panel': 'Teacher panel.',
+    'app.my_classes': 'My classes',
+    'app.new_class': '+ New class',
+    'app.create_class': 'Create class',
+    'app.class_name': 'Class name',
+    'app.class_book': 'Reading book',
+    'app.class_chapters': 'Chapters',
+    'app.assign_quiz': 'Assign quiz',
+    'app.students': 'Students',
+    'app.progress': 'Progress',
+    'app.assign': 'Assign',
+    'app.class_code': 'Class code for students',
+    'app.student_panel': 'Student panel.',
+    'app.join_class': 'Join class',
+    'app.enter_code': 'Enter class code from your teacher.',
+    'app.leave_class': 'Leave class',
+    'app.assigned_quizzes': 'Assigned quizzes',
+    'app.start_quiz': 'Start',
+    'app.publisher_panel': 'Publisher panel.',
+    'app.my_campaigns': 'My campaigns',
+    'app.quiz_questions': 'questions',
+    'app.checking': 'Checking…',
+    'app.correct': 'Correct ✓',
+    'app.wrong': 'Not this time',
+    'app.next': 'Next →',
+    'app.finish': 'Finish & check result',
+    'app.calculating': 'Calculating…',
+    'app.certificate': 'Certificate',
+    'app.verified': '✓ Verified',
+    'app.partial': '◐ Partial understanding',
+    'app.none': '✗ No understanding shown',
+    'app.score': '/',
+    'app.view_proofs': 'My proofs',
+    'app.next_book': 'Next book →',
+  }
+};
+
+function getLang(){ return localStorage.getItem('rp_lang') || 'pl'; }
+function setLang(l){ localStorage.setItem('rp_lang', l); document.documentElement.lang = l; applyI18n(); }
+function t(key){ return I18N[getLang()][key] || key; }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(I18N[getLang()][key]) el.textContent = I18N[getLang()][key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-placeholder');
+    if(I18N[getLang()][key]) el.placeholder = I18N[getLang()][key];
+  });
 }
 
 /* ═══ konto: portfel Solana / Gość / Role ═══ */
@@ -207,14 +380,24 @@ try{ LAST_RESULT = JSON.parse(localStorage.getItem('rp_app_last_result') || 'nul
 function nav(hash){ location.hash = hash; }
 function updateNav(){
   const h = (location.hash||'').replace('#','');
-  document.querySelectorAll('#bottomNav a').forEach(a => {
+  const w = getWallet();
+  const role = getRole();
+  const tabs = document.querySelectorAll('#bottomNav a');
+  tabs.forEach(a => {
     const tab = a.dataset.tab;
     let active = false;
     if(tab==='katalog' && (h===''||h==='/')) active = true;
     if(tab==='dowody' && h.startsWith('dowody')) active = true;
     if(tab==='nagrody' && h.startsWith('nagrody')) active = true;
     a.classList.toggle('active', active);
+    // show/hide based on role
+    if(tab==='nagrody'){
+      a.style.display = (w && (role==='user' || role==='publisher')) ? 'flex' : 'none';
+    }
   });
+  // publisher tab only for publisher role
+  const pubTab = document.querySelector('#bottomNav a[data-tab="wydawca"]');
+  if(pubTab) pubTab.style.display = (w && role==='publisher') ? 'flex' : 'none';
 }
 window.addEventListener('hashchange', () => { updateNav(); route(); });
 
@@ -227,6 +410,7 @@ function route(){
   if(seg.length === 0 || seg[0]==='' || seg[0]==='katalog'){
     return w ? renderKatalog() : renderLogin();
   }
+  if(seg[0]==='teachers') return renderTeacher();
   if(seg[0]==='publisher') return renderPublisher();
   if(seg[0]==='dowody') return renderDowody();
   if(seg[0]==='nagrody') return renderNagrody();
@@ -306,7 +490,19 @@ async function mountPrivyUser(){
 
 /* ═══ KATALOG ═══ */
 async function renderKatalog(){
-  view.innerHTML = `<p class="rp-kicker">Katalog</p><h1 class="rp-h2" style="font-size:1.7rem">Wybierz książkę.</h1><div id="bl"><p class="muted">Ładowanie…</p></div>`;
+  const classCode = getClassCode();
+  view.innerHTML = `<p class="rp-kicker">Katalog</p><h1 class="rp-h2" style="font-size:1.7rem">Wybierz książkę.</h1><div id="bl"><p class="muted">Ładowanie…</p></div>
+    ${classCode ? `<div class="card" style="margin-top:14px;padding:12px;background:var(--green-soft);border-color:var(--green)">
+      <strong>✓ Dołączono do klasy: ${esc(classCode)}</strong>
+      <button class="btn btn-ghost btn-sm" id="bLeaveClass" style="margin-left:10px">Opusć klasę</button>
+    </div>` : `<div class="card" style="margin-top:14px">
+      <p class="rp-kicker">Uczeń?</p>
+      <p class="muted" style="font-size:.85rem">Masz kod klasy od nauczyciela? Wpisz go tutaj.</p>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="joinCodeInput" class="big-input mono" placeholder="KOD KLASY" style="text-transform:uppercase;letter-spacing:.1em;flex:1;max-width:140px">
+        <button class="btn btn-primary btn-sm" id="bJoinClass">Dołącz</button>
+      </div>
+    </div>`}`;
   try{
     const books = await api('/api/books');
     BOOKS = Array.isArray(books) ? books : [];
@@ -321,6 +517,11 @@ async function renderKatalog(){
     document.getElementById('bl').innerHTML = `<div class="card"><p class="muted">Katalog offline: ${esc(e.message)}. <button class="btn btn-ghost btn-sm" id="bRetry">Odśwież</button></div>`;
     document.getElementById('bRetry').addEventListener('click', renderKatalog);
   }
+  const bJoin = document.getElementById('bJoinClass');
+  if(bJoin) bJoin.addEventListener('click', ()=>{
+    const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+    if(code.length===6){ setClassCode(code); renderKatalog(); }
+  });
 }
 function findBook(id){ return BOOKS.find(b=>String(b.id)===String(id)); }
 function renderBook(id){
@@ -835,6 +1036,8 @@ function procToast(msg){ let t=document.getElementById('procToast'); if(!t){t=do
 function failFinish(sid, reason){ stopProctor(); try{api('/api/sessions/'+encodeURIComponent(sid)+'/complete?fail=1',{method:'POST',body:'{}'}).then(r=>{LAST_RESULT={proof:r.proof,verification:r.verification,results:r.results,meta:SESSION_META};try{localStorage.setItem('rp_app_last_result',JSON.stringify(LAST_RESULT));}catch(e){}saveLocalProof(LAST_RESULT.proof);nav('#/result');}).catch(()=>{view.innerHTML=`<div class="card"><h3>Sesja zakończona (naruszenie).</h3><a class="btn btn-ghost" href="#/">Katalog</a></div>`;});}catch(e){} }
 
 /* ═══ init ═══ */
+document.getElementById('langSelect').addEventListener('change', e=>setLang(e.target.value));
+applyI18n();
 paintWallet();
 updateNav();
 route();
