@@ -265,8 +265,14 @@ function showAccountForm(){
     <div class="field"><label for="aWallet">Portfel Solana (tylko do wypłat i filtrowania kampanii)</label><input id="aWallet" class="mono" value="${esc2(w)}" placeholder="adres Solana" autocomplete="off"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
       <button class="btn btn-primary btn-sm" id="btnSaveAccount">Zapisz konto</button>
+      <button class="btn btn-ghost btn-sm" id="btnGuest">Wejdź jako zwykły użytkownik</button>
       <button class="btn btn-ghost btn-sm" id="btnPhantom">Użyj adresu z Phantom</button>
     </div>`;
+  $('btnGuest').addEventListener('click', ()=>{
+    localStorage.setItem('rp_pub_name', 'Gość');
+    localStorage.removeItem('rp_pub_email');
+    setWallet2(''); renderMine2(); renderStats2();
+  });
   $('btnSaveAccount').addEventListener('click', ()=>{
     localStorage.setItem('rp_pub_name', $('aName').value.trim());
     localStorage.setItem('rp_pub_email', $('aEmail').value.trim());
