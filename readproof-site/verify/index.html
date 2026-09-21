@@ -60,6 +60,25 @@
     }
     throw new Error('offline');
   }
+  /* ludzkie tytuły (display only) + ID w rogu */
+  const BOOK_TITLES_PL = {alice:'Alicja w Krainie Czarów', sherlock:'Sherlock Holmes', treasure:'Wyspa Skarbów', tomsawyer:'Tomek Sawyer', around:'W 80 dni dookoła świata', grimm:'Bajki Braci Grimm', andersen:'Baśnie Andersena', oz:'Czarnoksiężnik z Oz', peterrabbit:'Piotruś Królik', pinocchio:'Pinokio', threepigs:'Trzy świnki'};
+  let BOOKCAT = null;
+  async function bookCat(){
+    if(BOOKCAT) return BOOKCAT;
+    try{ const b = await apiGet('/api/books'); BOOKCAT = Array.isArray(b) ? b : []; }
+    catch(e){ BOOKCAT = []; }
+    return BOOKCAT;
+  }
+  function bookTitle(id){
+    if(BOOK_TITLES_PL[id]) return BOOK_TITLES_PL[id];
+    const b = (BOOKCAT||[]).find(x=>String(x.id)===String(id));
+    return (b && b.title) || String(id || '');
+  }
+  function chapterTitle(bookId, chapterId){
+    const b = (BOOKCAT||[]).find(x=>String(x.id)===String(bookId));
+    const c = b && (b.chapters||[]).find(x=>String(x.id)===String(chapterId));
+    return (c && (c.title || c.id)) || String(chapterId || '');
+  }
   async function verify(id){
     id = (id || '').trim().toUpperCase();
     if(!id){ out.innerHTML = ''; return; }
@@ -71,7 +90,8 @@
       const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
       const hit = list.find(p => (p.proofHash || '').toUpperCase().startsWith(id.replace('RP-','')) || (p.id || '').toUpperCase() === id);
       if(hit){
-        out.innerHTML = certHTML({ book: hit.bookId, author: '', holder: (hit.walletAddress||'').slice(0,10) + '…', score: hit.score + '/' + hit.total, date: hit.timestamp || '' }, false, hit);
+        await bookCat();
+        out.innerHTML = certHTML({ book: bookTitle(hit.bookId), bookId: hit.bookId, chapter: chapterTitle(hit.bookId, hit.chapterId), chapterId: hit.chapterId, author: '', holder: (hit.walletAddress||'').slice(0,10) + '…', score: hit.score + '/' + hit.total, date: hit.timestamp || '' }, false, hit);
         return;
       }
     }catch(e){ /* offline → demo lookup */ }
@@ -97,14 +117,17 @@
     return '<div class="cert">'
       + '<div class="cert-k">ReadProof Certificate · ' + badge + '</div>'
       + '<h3>' + esc(d.book) + '</h3>'
+      + (d.chapter ? '<div class="cert-book">' + esc(d.chapter) + '</div>' : '')
       + (d.author ? '<div class="cert-book">' + esc(d.author) + '</div>' : '')
       + '<div class="cert-name">' + esc(d.holder) + '</div>'
       + '<p class="muted" style="margin:6px 0 0;font-size:.9rem">' + tierLine + ' ' + esc(d.score) + '</p>'
       + '<div class="cert-meta"><span>' + esc(q.value.toUpperCase()) + '</span><span>✓ ' + esc(T('vf_proofrec', 'Proof recorded')) + '</span></div>'
+      + '<div class="cert-meta" style="margin-top:6px"><span class="mono">id: ' + esc(d.bookId || d.book || '') + (d.chapterId ? ' · ' + esc(d.chapterId) : '') + '</span></div>'
       + '<div class="proof-mini" style="text-align:left;margin-top:18px"><b>' + esc(T('vf_details', 'Proof Details')) + '</b><br>'
       + '<span class="mono" style="font-size:.75rem">' + esc(T('vf_net', 'Network: Solana Devnet')) + '<br>' + esc(T('vf_proofid', 'Proof ID:')) + ' ' + esc(q.value.toUpperCase()) + '<br>'
       + (raw && raw.txSignature ? esc(T('vf_tx', 'Transaction:')) + ' ' + esc(raw.txSignature) : esc(T('vf_tx', 'Transaction:')) + ' ' + esc(T('vf_devnet', 'devnet record')) + (demo ? ' (demo)' : '')) + '</span></div>'
       + (demo ? '<div style="margin-top:12px"><span class="demo-tag">' + esc(T('vf_demo', 'DEMO · illustrative example')) + '</span></div>' : '')
+      + '<div style="margin-top:14px;text-align:center"><a class="btn btn-ghost btn-sm" target="_blank" href="' + (raw && raw.txSignature ? 'https://explorer.solana.com/tx/' + encodeURIComponent(raw.txSignature) + '?cluster=devnet' : 'https://explorer.solana.com/?cluster=devnet') + '">' + esc(T('vf_explorer', 'Zobacz w Solana Explorer →')) + '</a></div>'
       + '</div>';
   }
   document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); history.replaceState(null,'','?id=' + encodeURIComponent(q.value.trim().toUpperCase())); verify(q.value); });

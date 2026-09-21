@@ -562,6 +562,17 @@ function paintFinish(sid, st){
 }
 
 /* ═══ #/result — pieczęć, wynik, reward, historia ═══ */
+const BOOK_TITLES_PL = {alice:'Alicja w Krainie Czarów', sherlock:'Sherlock Holmes', treasure:'Wyspa Skarbów', tomsawyer:'Tomek Sawyer', around:'W 80 dni dookoła świata', grimm:'Bajki Braci Grimm', andersen:'Baśnie Andersena', oz:'Czarnoksiężnik z Oz', peterrabbit:'Piotruś Królik', pinocchio:'Pinokio', threepigs:'Trzy świnki'};
+function plBookTitle(id, fallback){
+  if(BOOK_TITLES_PL[id]) return BOOK_TITLES_PL[id];
+  const b = BOOKS.find(x=>String(x.id)===String(id));
+  return (b && b.title) || fallback || String(id || '');
+}
+function plChapterTitle(bookId, chapterId, fallback){
+  const b = BOOKS.find(x=>String(x.id)===String(bookId));
+  const c = b && (b.chapters||[]).find(x=>String(x.id)===String(chapterId));
+  return (c && (c.title || c.id)) || fallback || String(chapterId || '');
+}
 function saveLocalProof(p){
   if(!p) return;
   try{
@@ -579,11 +590,15 @@ function renderResult(){
   const tier = ratio >= 1 ? 'full' : (ratio >= 0.6 ? 'partial' : 'none');
   const ok = tier === 'full';
   const seal = tier === 'full' ? '✓ Verified' : tier === 'partial' ? '◐ Częściowe zrozumienie' : '✗ Nie wykazano zrozumienia';
+  const bookName = plBookTitle(p.bookId, SESSION_META.bookTitle);
+  const chapterName = plChapterTitle(p.bookId, p.chapterId, SESSION_META.chapterTitle);
+  const explorerUrl = p.txSignature ? ('https://explorer.solana.com/tx/' + encodeURIComponent(p.txSignature) + '?cluster=devnet') : 'https://explorer.solana.com/?cluster=devnet';
   view.innerHTML = `
     <div class="q-card" style="text-align:center">
       <div class="seal">${esc(seal)}</div>
       <h1 class="rp-h2" style="margin-top:14px">${esc(String(p.score))} / ${esc(String(p.total))}</h1>
-      <p class="muted">${esc(SESSION_META.bookTitle || p.bookId)} · ${esc(SESSION_META.chapterTitle || p.chapterId || '')}</p>
+      <p class="muted">${esc(bookName)}${chapterName ? ' · ' + esc(chapterName) : ''}</p>
+      <p class="mono muted" style="font-size:.72rem">id: ${esc(p.bookId || '')}${p.chapterId ? ' · ' + esc(p.chapterId) : ''}</p>
       ${p.reward ? `<p><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>` : `<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5 (Devnet, demo).</p>`}
       <div class="card flat" style="text-align:left;margin-top:14px">
         <p class="rp-kicker">Proof Details</p>
@@ -592,6 +607,7 @@ function renderResult(){
         ${p.txSignature?`<p style="font-size:.85rem"><a href="${esc(p.explorerUrl||('https://explorer.solana.com/tx/'+p.txSignature+'?cluster=devnet'))}" target="_blank">Transakcja w explorerze →</a></p>`:`<p class="muted" style="font-size:.8rem">Transakcja: zapis devnet (demo, bez prawdziwych środków).</p>`}
         <button class="btn btn-ghost btn-sm" id="bCopy">Kopiuj hash</button>
       </div>
+      <div style="margin-top:12px"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">Zobacz w Solana Explorer →</a></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px">
         <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
         <a class="btn btn-primary" href="#/books">Kolejna książka →</a>
