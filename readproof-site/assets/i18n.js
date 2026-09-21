@@ -15,6 +15,7 @@
     hero_b: "Udowodnij, że ją zrozumiałeś.",
     hero_sub: "ReadProof pomaga uczniom, czytelnikom i nauczycielom sprawdzać prawdziwe zrozumienie książek — a nie tylko to, czy ktoś mówi, że je przeczytał.",
     cta_students: "Dla uczniów", cta_teachers: "Dla nauczycieli", cta_explore: "Poznaj ReadProof",
+    cta_challenges: "Znajdź wyzwanie",
     pl_books: "Prawdziwe książki, prawdziwe rozdziały",
     pl_challenges: "Wyzwania ze zrozumienia",
     pl_certs: "Weryfikowalne certyfikaty",
