@@ -189,17 +189,47 @@
       + '<p class="muted" style="font-size:.78rem;margin:8px 0 0">' + esc(T('vf_lic_how', 'Profil → Dodaj sekcję → Licencje i certyfikaty → wklej powyższe.')) + '</p>'
       + '</div></details>';
   }
-  document.addEventListener('click', function(e){
+  document.addEventListener('click', async function(e){
     if(e.target && e.target.id === 'bShare'){
       const url = location.origin + location.pathname + '?id=' + encodeURIComponent((document.getElementById('q')||{}).value || '');
       const title = document.querySelector('.cert h3');
-      const text = 'ReadProof Certificate — ' + (title ? title.textContent : 'Proof of Comprehension');
+      const holder = document.querySelector('.cert-name');
+      const book = title ? title.textContent : 'Proof of Comprehension';
+      const isPl = (document.documentElement.lang||'pl').toLowerCase().startsWith('pl');
+      const text = isPl
+        ? 'Uzyskałem certyfikat ukończenia książki „' + book + '” wykazując zrozumienie lektury — ReadProof ✓'
+        : 'I earned a book completion certificate for „' + book + '” by demonstrating comprehension — ReadProof ✓';
+      // załącz obrazek jeśli system na to pozwala
+      const scoreEl = document.querySelector('.cert p[style*="font-weight:800"]');
+      const qv = (document.getElementById('q')||{}).value || '';
+      const d = {book, holder: holder?holder.textContent:'', score: scoreEl?scoreEl.textContent:'', id: qv, tierLabel: document.querySelector('.cert-k')?document.querySelector('.cert-k').textContent:'', seal: 'VERIFIED'};
+      try{
+        const dataUrl = certPNG(d);
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], 'readproof-'+(qv||'cert')+'.png', {type:'image/png'});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({title: 'ReadProof', text, url, files:[file]});
+          return;
+        }
+      }catch(err){}
       if(navigator.share){ navigator.share({title: 'ReadProof', text, url}).catch(()=>{}); }
       else{ navigator.clipboard.writeText(text + ' ' + url).then(()=>{ e.target.textContent = 'OK'; }); }
     }
   });
   document.addEventListener('click', function(e){
-    if(e.target && e.target.id === 'bPdf'){ window.print(); }
+    if(e.target && e.target.id === 'bPdf'){
+      const h3 = document.querySelector('.cert h3');
+      const holder = document.querySelector('.cert-name');
+      const score = document.querySelector('.cert p[style*="font-weight:800"]');
+      const qv = (document.getElementById('q')||{}).value || '';
+      const d = {book: h3?h3.textContent:'', holder: holder?holder.textContent:'', score: score?score.textContent:'', id: qv, tierLabel: document.querySelector('.cert-k')?document.querySelector('.cert-k').textContent:'', seal: 'VERIFIED'};
+      const url = certPNG(d);
+      const w = window.open('', '_blank');
+      if(!w){ const a=document.createElement('a'); a.href=url; a.download='readproof-'+(qv||'cert')+'.png'; a.click(); return; }
+      w.document.write('<html><head><title>ReadProof Certificate</title><style>@page{size:A4 landscape;margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#fff}img{width:100%;max-width:1120px;box-shadow:0 4px 24px rgba(0,0,0,.15)}@media print{body{background:#fff}}</style></head><body><img src="'+url+'"></body></html>');
+      w.document.close(); setTimeout(()=>{ try{w.print();}catch(e){} }, 600);
+    }
   });
   document.addEventListener('click', function(e){
     if(e.target && e.target.id === 'bPng'){
@@ -211,15 +241,57 @@
       const a=document.createElement('a'); a.href=certPNG(d); a.download='readproof-'+(qv||'cert')+'.png'; a.click();
     }
   });
+  // LinkedIn: dodaj jako Licencje i certyfikaty (jak certyfikaty programowania) — prefill
   document.addEventListener('click', function(e){
     const t = e.target && (e.target.id === 'bLinkedIn' || e.target.id === 'bX') ? e.target : null;
     if(!t) return;
-    const url = encodeURIComponent(location.origin + location.pathname + '?id=' + encodeURIComponent((document.getElementById('q')||{}).value || ''));
-    const title = document.querySelector('.cert h3');
-    const text = encodeURIComponent('ReadProof Certificate — ' + (title ? title.textContent : 'Proof of Comprehension'));
-    t.href = t.id === 'bLinkedIn'
-      ? 'https://www.linkedin.com/sharing/share-offsite/?url=' + url
-      : 'https://twitter.com/intent/tweet?text=' + text + '&url=' + url;
+    const qv = (document.getElementById('q')||{}).value || '';
+    const h3 = document.querySelector('.cert h3');
+    const book = h3 ? h3.textContent : 'Proof of Comprehension';
+    const certUrl = location.origin + location.pathname + '?id=' + encodeURIComponent(qv);
+    const lang = (document.documentElement.lang || '').toLowerCase().startsWith('pl') ? 'pl' : 'en';
+    if(t.id === 'bLinkedIn'){
+      const name = 'ReadProof Certificate — ' + book;
+      const y = new Date().getFullYear(), m = new Date().getMonth()+1;
+      t.href = 'https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME'
+        + '&name=' + encodeURIComponent(name)
+        + '&organizationName=' + encodeURIComponent('ReadProof')
+        + '&issueYear=' + y + '&issueMonth=' + m
+        + '&certUrl=' + encodeURIComponent(certUrl)
+        + '&certId=' + encodeURIComponent(qv);
+      return;
+    }
+    // X: załącz zdjęcie certyfikatu + tekst zależny od języka
+    const isPl = lang === 'pl';
+    const shareText = isPl
+      ? 'Uzyskałem certyfikat ukończenia książki „' + book + '” wykazując zrozumienie lektury — ReadProof ✓'
+      : 'I earned a book completion certificate for „' + book + '” by demonstrating comprehension — ReadProof ✓';
+    // próbuj Web Share z plikiem (obrazek)
+    const h = document.querySelector('.cert-name');
+    const scoreEl = document.querySelector('.cert p[style*="font-weight:800"]');
+    const d = {book, holder: h?h.textContent:'', score: scoreEl?scoreEl.textContent:'', id: qv, tierLabel: document.querySelector('.cert-k')?document.querySelector('.cert-k').textContent:'', seal: 'VERIFIED'};
+    const dataUrl = certPNG(d);
+    const tryFileShare = async ()=>{
+      try{
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], 'readproof-'+(qv||'cert')+'.png', {type:'image/png'});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({text: shareText + ' ' + certUrl, files:[file]});
+          return true;
+        }
+      }catch(e){}
+      return false;
+    };
+    // handler async — nie ustawiamy href od razu, tylko na klik
+    e.preventDefault();
+    tryFileShare().then(ok=>{
+      if(!ok){
+        const url = encodeURIComponent(certUrl);
+        const text = encodeURIComponent(shareText);
+        window.open('https://twitter.com/intent/tweet?text=' + text + '&url=' + url, '_blank');
+      }
+    });
   });
   document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); history.replaceState(null,'','?id=' + encodeURIComponent(q.value.trim().toUpperCase())); verify(q.value); });
   verify(new URLSearchParams(location.search).get('id') || '');

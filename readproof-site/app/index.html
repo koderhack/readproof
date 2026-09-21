@@ -185,6 +185,7 @@ function renderAccount(){
         <button class="btn btn-ghost" id="bGuest">Wejdź jako Gość</button>
       </div>
       <p class="muted" style="font-size:.8rem;margin:10px 0 0" id="wMsg"></p>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:.85rem"><input type="checkbox" id="isAdult" ${localStorage.getItem('rp_is_adult')==='1'?'checked':''}> Mam 18 lat (wypłata nagrody tylko dla pełnoletnich)</label>
     </div>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-primary btn-lg" id="bGo" ${w ? '' : 'disabled style="opacity:.5"'}>Wybierz książkę →</button>
@@ -205,6 +206,8 @@ function renderAccount(){
     }catch(e){ document.getElementById('wMsg').textContent = 'Phantom: ' + (e.message || e); }
   });
   document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); renderAccount(); });
+  const adultChk = document.getElementById('isAdult');
+  if(adultChk) adultChk.addEventListener('change', ()=>{ try{ localStorage.setItem('rp_is_adult', adultChk.checked?'1':'0'); }catch(e){} });
   const go = document.getElementById('bGo');
   if(go) go.addEventListener('click', ()=>nav('#/books'));
   if(!getWallet()) mountPrivyUser();
@@ -405,9 +408,30 @@ function paintCamBlocked(){
     }catch(e){ procToast('Brak dostępu do kamery.'); }
   });
 }
+function showRulesModal(){
+  return new Promise(resolve=>{
+    const m = document.createElement('div');
+    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(11,11,15,.75);display:grid;place-items:center;padding:16px';
+    m.innerHTML = `<div class="card" style="max-width:420px"><h3 style="margin:0 0 8px">Zasady sesji weryfikacyjnej</h3>
+      <ul style="margin:0 0 12px 18px;font-size:.9rem;line-height:1.5">
+        <li>Nie wychodź poza pełny ekran — 3 wyjścia kończą sesję.</li>
+        <li>Nie oszukuj — drugi telefon/urządzenie wykrywane kamerą i kończy sesję.</li>
+        <li>Kamera musi być włączona — sesja może być nagrywana/weryfikowana.</li>
+        <li>Nie kopiuj, nie rób zrzutów — są wykrywane.</li>
+        <li>Wypłata za przeczytanie tylko dla pełnoletnich i za 5/5.</li>
+      </ul>
+      <button class="btn btn-primary" id="bRulesOk" style="width:100%">Rozumiem, zacznij</button>
+      <button class="btn btn-ghost" id="bRulesCancel" style="width:100%;margin-top:8px">Anuluj</button></div>`;
+    document.body.appendChild(m);
+    document.getElementById('bRulesOk').addEventListener('click', ()=>{ m.remove(); resolve(true); });
+    document.getElementById('bRulesCancel').addEventListener('click', ()=>{ m.remove(); resolve(false); });
+  });
+}
 async function startGuarded(b, c){
   const msg = document.getElementById('startMsg');
   if(navigator.webdriver){ msg.textContent = 'Wykryto tryb automatyzacji przeglądarki — wyłącz go, aby zacząć.'; return; }
+  const ok = await showRulesModal();
+  if(!ok) return;
   msg.textContent = 'Tryb weryfikacji: pełny ekran + kamera…';
   try{ if(document.fullscreenEnabled) await document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){}
   let stream = null;
@@ -813,6 +837,7 @@ async function renderResult(){
       <p class="mono muted" style="font-size:.72rem;margin-top:4px">czas: ${esc(String(p.durationSec ?? ''))}s · ${esc(p.verificationVersion||'readproof-v1')}</p>
       ${p.reward ? `<p style="margin-top:6px"><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>` : `<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5 (Devnet, demo).</p>`}
     </div>
+    ${tier === 'full' ? (localStorage.getItem('rp_is_adult')==='1' ? `<div class="card flat no-print" style="margin-top:10px"><p class="rp-kicker">Nagroda</p><p style="font-size:.9rem">Wypłata za przeczytanie — tylko dla pełnoletnich. Środki trafią na Twój portfel Solana (Devnet, demo).</p><button class="btn btn-primary" id="bClaim">Wyślij środki na portfel</button><p class="muted" style="font-size:.78rem" id="claimMsg"></p></div>` : `<p class="muted no-print" style="font-size:.82rem;margin-top:8px">Nagroda za 5/5 dostępna tylko dla pełnoletnich — zaznacz w koncie.</p>`) : ''}
     <div class="no-print" style="margin-top:14px;text-align:center"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">${esc(explorerLabel)}</a></div>
     <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px">
       <button class="btn btn-primary btn-sm" id="bShare">Udostępnij</button>
@@ -828,6 +853,15 @@ async function renderResult(){
     </div>`;
   document.getElementById('bCopy').addEventListener('click', ()=>{
     navigator.clipboard.writeText(p.proofHash || '').then(()=>{ document.getElementById('bCopy').textContent = 'OK'; });
+  });
+  const bClaim = document.getElementById('bClaim');
+  if(bClaim) bClaim.addEventListener('click', async ()=>{
+    bClaim.disabled = true; document.getElementById('claimMsg').textContent = 'Wysyłanie… (Devnet, demo)';
+    try{
+      // nagroda jest już w p.reward / p.txSignature gdy 5/5 — tu tylko UI demo
+      await new Promise(r=>setTimeout(r, 900));
+      document.getElementById('claimMsg').textContent = 'Gotowe — środki w kolejce wypłat (Devnet, demo). Sprawdź Explorer.';
+    }catch(e){ document.getElementById('claimMsg').textContent = 'Błąd: ' + e.message; bClaim.disabled = false; }
   });
   const shareUrl = location.origin + '/verify/?id=' + encodeURIComponent((p.proofHash || '').slice(0,8).toUpperCase());
   const shareText = 'Certyfikat ReadProof — ' + bookName + ' ' + p.score + '/' + p.total;
@@ -849,13 +883,55 @@ async function renderResult(){
   document.getElementById('bPng').addEventListener('click', ()=>{
     const a=document.createElement('a'); a.href=certPNGApp(); a.download='readproof-'+(p.proofHash||'cert').slice(0,8)+'.png'; a.click();
   });
-  document.getElementById('bShare').addEventListener('click', ()=>{
-    if(navigator.share){ navigator.share({title:'ReadProof', text:shareText, url:shareUrl}).catch(()=>{}); }
-    else navigator.clipboard.writeText(shareText + ' ' + shareUrl).then(()=>{ document.getElementById('bShare').textContent = 'OK'; });
+  // LinkedIn: licencje i certyfikaty — prefill jak w certyfikatach programowania
+  const liName = 'ReadProof Certificate — ' + bookName;
+  const y = new Date().getFullYear(), m = new Date().getMonth()+1;
+  document.getElementById('bLinkedIn').href = 'https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME'
+    + '&name=' + encodeURIComponent(liName)
+    + '&organizationName=' + encodeURIComponent('ReadProof')
+    + '&issueYear=' + y + '&issueMonth=' + m
+    + '&certUrl=' + encodeURIComponent(shareUrl)
+    + '&certId=' + encodeURIComponent((p.proofHash||'').slice(0,8).toUpperCase());
+  // X: załącz zdjęcie certyfikatu + napis zależny od języka
+  const isPl = (document.documentElement.lang||'pl').toLowerCase().startsWith('pl');
+  const xText = isPl
+    ? 'Uzyskałem certyfikat ukończenia książki „' + bookName + '” wykazując zrozumienie lektury — ReadProof ✓'
+    : 'I earned a book completion certificate for „' + bookName + '” by demonstrating comprehension — ReadProof ✓';
+  document.getElementById('bX').addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const dataUrl = certPNGApp();
+    try{
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'readproof-'+(p.proofHash||'cert').slice(0,8)+'.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({text: xText + ' ' + shareUrl, files:[file]});
+        return;
+      }
+    }catch(err){}
+    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(xText) + '&url=' + encodeURIComponent(shareUrl), '_blank');
   });
-  document.getElementById('bLinkedIn').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl);
-  document.getElementById('bX').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl);
-  document.getElementById('bPdf').addEventListener('click', ()=>window.print());
+  document.getElementById('bShare').addEventListener('click', async ()=>{
+    const dataUrl = certPNGApp();
+    try{
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'readproof-'+(p.proofHash||'cert').slice(0,8)+'.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({title:'ReadProof', text: xText, url: shareUrl, files:[file]}).catch(()=>{});
+        return;
+      }
+    }catch(err){}
+    if(navigator.share){ navigator.share({title:'ReadProof', text: xText, url: shareUrl}).catch(()=>{}); }
+    else navigator.clipboard.writeText(xText + ' ' + shareUrl).then(()=>{ document.getElementById('bShare').textContent = 'OK'; });
+  });
+  document.getElementById('bPdf').addEventListener('click', ()=>{
+    const dataUrl = certPNGApp();
+    const w = window.open('', '_blank');
+    if(!w){ const a=document.createElement('a'); a.href=dataUrl; a.download='readproof-'+(p.proofHash||'cert').slice(0,8)+'.png'; a.click(); return; }
+    w.document.write('<html><head><title>ReadProof Certificate</title><style>@page{size:A4 landscape;margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#fff}img{width:100%;max-width:1120px;box-shadow:0 4px 24px rgba(0,0,0,.15)}</style></head><body><img src="'+dataUrl+'"></body></html>');
+    w.document.close(); setTimeout(()=>{ try{w.print();}catch(e){} }, 600);
+  });
 }
 
 /* ═══ #/proofs historia (API + lokalnie) ═══ */
