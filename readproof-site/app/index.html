@@ -211,7 +211,7 @@ window.addEventListener('hashchange', () => { updateNav(); route(); });
 function route(){
   const h = (location.hash||'').replace('#','');
   const seg = h.split('/').filter(Boolean);
-  if(seg.length === 0 || seg[0]==='' || seg[0]==='katalog') return renderKatalog();
+  if(seg.length === 0 || seg[0]==='' || seg[0]==='katalog') return renderLogin();
   if(seg[0]==='lektury') return renderLektury(seg[1], seg[2]);
   if(seg[0]==='nagrody') return renderNagrody();
   if(seg[0]==='book' && seg[1]) return renderBook(seg[1]);
@@ -220,7 +220,7 @@ function route(){
   if(seg[0]==='result') return renderResult();
   if(seg[0]==='proofs') return renderProofs();
   if(seg[0]==='publisher') return renderPublisher();
-  return renderKatalog();
+  return renderLogin();
 }
 
 /* ═══ LOGOWANIE ═══ */
