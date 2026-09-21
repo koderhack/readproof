@@ -24,7 +24,13 @@
     st_read: "Przeczytaj", st_read_p: "Przeczytaj fizyczną książkę. Aplikacja nigdy nie zastępuje czytania.",
     st_challenge: "Podejmij wyzwanie", st_challenge_p: "Odpowiedz na 5 pytań ze zrozumienia do każdego rozdziału.",
     st_proof: "Zdobądź dowód", st_proof_p: "Certyfikat ReadProof potwierdzający zrozumienie.",
+    /* readers page */
+    pr_app_cta: "Otwórz aplikację", pr_eyebrow: "Dla czytelników",
+    pr_h_a: "Czytaj.", pr_h_b: "Rozumiej.", pr_h_c: "Udowodnij.",
+    pr_sub: "Bez klasy i zadań — tylko Ty i książka. Sprawdź zrozumienie i zachowaj dowód.",
+    pr_start: "Zacznij czytać", pr_challenges: "Przeglądaj wyzwania",
     /* audience */
+
     who_k: "Dla kogo", who_h: "ReadProof dla każdego, kto czyta.",
     who_sub: "Jedna platforma, trzy sposoby korzystania. Łatwo powiedzieć, że się przeczytało. Trudniej udowodnić zrozumienie.",
     tag_students: "Dla uczniów", tag_readers: "Dla czytelników", tag_teachers: "Dla nauczycieli",
