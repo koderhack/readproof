@@ -161,7 +161,7 @@ async function api(path, opts){
   throw lastErr || new Error('API offline');
 }
 
-/* ═══ konto: portfel Solana / Gość ═══ */
+/* ═══ konto: portfel Solana / Gość / Role ═══ */
 function isValidSolanaAddress(a){ return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(a||'').trim()); }
 function guestWallet(){
   let g = null;
@@ -177,14 +177,19 @@ function guestWallet(){
   return g;
 }
 function getWallet(){ try{ return (localStorage.getItem('rp_app_wallet')||'').trim(); }catch(e){ return ''; } }
+function getRole(){ try{ return (localStorage.getItem('rp_app_role')||'user').trim(); }catch(e){ return 'user'; } }
+function setRole(r){ try{ localStorage.setItem('rp_app_role', r); }catch(e){} }
+function getDob(){ try{ return (localStorage.getItem('rp_app_dob')||'').trim(); }catch(e){ return ''; } }
+function setDob(d){ try{ localStorage.setItem('rp_app_dob', d); }catch(e){} }
+function getClassCode(){ try{ return (localStorage.getItem('rp_class_code')||'').trim(); }catch(e){ return ''; } }
+function setClassCode(c){ try{ localStorage.setItem('rp_class_code', c); }catch(e){} }
+function isAdult(){ const dob = getDob(); if(!dob) return false; const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25*24*60*60*1000)); return age >= 18; }
 function setWallet(w){ try{ w ? localStorage.setItem('rp_app_wallet', w) : localStorage.removeItem('rp_app_wallet'); }catch(e){} paintWallet(); }
 function paintWallet(){
   const w = getWallet(), el = document.getElementById('walletPill');
   if(el) el.textContent = w ? ('● ' + w.slice(0,4) + '…' + w.slice(-4)) : 'niezalogowany';
   const nav = document.getElementById('bottomNav');
   if(nav) nav.style.display = w ? 'flex' : 'none';
-  // auto-nav po logowaniu
-  if(w && (location.hash==='' || location.hash==='#')) nav('#/');
 }
 const SECRET_KEYS = ['correctAnswer','correctAnswers','correctOrder','errorIndex','expectedMeaning','correctText'];
 function stripSecrets(ch){ const c = Object.assign({}, ch); SECRET_KEYS.forEach(k => delete c[k]); return c; }
@@ -216,10 +221,15 @@ function route(){
   const h = (location.hash||'').replace('#','');
   const seg = h.split('/').filter(Boolean);
   const w = getWallet();
-  // domyślny hash '#/' -> katalog jeśli zalogowany, login jeśli nie
+  const role = getRole();
+
+  // domyślny hash -> landing
   if(seg.length === 0 || seg[0]==='' || seg[0]==='katalog'){
-    return w ? renderKatalog() : renderLogin();
+    return w ? renderLanding() : renderLanding();
   }
+  if(seg[0]==='teacher') return renderTeacher();
+  if(seg[0]==='student') return renderStudent();
+  if(seg[0]==='publisher') return renderPublisher();
   if(seg[0]==='dowody') return renderDowody();
   if(seg[0]==='nagrody') return renderNagrody();
   if(seg[0]==='book' && seg[1]) return renderBook(seg[1]);
@@ -227,47 +237,125 @@ function route(){
   if(seg[0]==='quiz' && seg[1]) return renderQuiz(seg[1]);
   if(seg[0]==='result') return renderResult();
   if(seg[0]==='proofs') return renderDowody();
-  if(seg[0]==='publisher') return renderPublisher();
-  return w ? renderKatalog() : renderLogin();
+  return renderLanding();
 }
 
-/* ═══ LOGOWANIE ═══ */
-function renderLogin(){
+/* ═══ LANDING / ROLE SELECTION ═══ */
+function renderLanding(){
   const w = getWallet();
+  const role = getRole();
+  const dob = getDob();
   const isGuest = w && w.startsWith('G');
   const isPrivy = w && !isGuest;
+  const adult = isAdult();
+
+  // Jeśli zalogowany i ma rolę - idź do odpowiedniego widoku
+  if(w && role !== 'user' && role !== ''){
+    const target = role === 'teacher' ? '#/teacher' : role === 'student' ? '#/student' : role === 'publisher' ? '#/publisher' : '#/';
+    return nav(target);
+  }
+
   view.innerHTML = `
-    <p class="rp-kicker">Konto</p>
-    <h1 class="rp-h1" style="font-size:2rem">Zacznij czytać.</h1>
-    <p class="rp-sub">Zaloguj portfelem Solana albo wejdź jako Gość. Portfel jest wymagany do startu sesji.</p>
-    <div class="card" style="margin-top:14px">
+    <p class="rp-kicker">ReadProof</p>
+    <h1 class="rp-h1" style="font-size:2.2rem">Kim jesteś?</h1>
+    <p class="rp-sub">Wybierz swoją rolę, byśmy dostosowali doświadczenie.</p>
+
+    ${!w ? `<div class="card" style="margin-top:16px">
       <p class="rp-kicker">Logowanie</p>
       <div id="privyUserRoot"><p class="muted">Logowanie Privy…</p></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-ghost" id="bGuest">Wejdź jako Gość</button>
         <button class="btn btn-ghost" id="bPhantom">Phantom</button>
       </div>
-      <p class="muted" style="font-size:.78rem;margin-top:8px" id="wMsg">${w ? 'Zalogowano: '+esc(w.slice(0,4)+'…'+w.slice(-4)) : 'Zaloguj się przez Privy lub wejdź jako Gość.'}</p>
+      <p class="muted" style="font-size:.78rem;margin-top:8px" id="wMsg">Zaloguj się przez Privy, Phantom lub wejdź jako Gość.</p>
+    </div>` : `<div class="card" style="margin-top:16px">
+      <p class="muted" style="font-size:.82rem">Zalogowano: ${esc(w.slice(0,4)+'…'+w.slice(-4))} ${isGuest ? '(Gość)' : ''}</p>
+    </div>`}
+
+    <div class="card" style="margin-top:14px">
+      <p class="rp-kicker">Wybierz rolę</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+        <button class="btn btn-ghost role-btn" data-role="user" style="padding:16px;text-align:left">
+          <strong>👤 Użytkownik</strong><br><span class="muted" style="font-size:.78rem">Dorosły · nagrody USDC</span>
+        </button>
+        <button class="btn btn-ghost role-btn" data-role="student" style="padding:16px;text-align:left">
+          <strong>🎓 Uczeń</strong><br><span class="muted" style="font-size:.78rem">Do 18 r. · proofy on-chain bez nagród</span>
+        </button>
+        <button class="btn btn-ghost role-btn" data-role="teacher" style="padding:16px;text-align:left">
+          <strong>👨‍🏫 Nauczyciel</strong><br><span class="muted" style="font-size:.78rem">Klasy, quizy, analityka</span>
+        </button>
+        <button class="btn btn-ghost role-btn" data-role="publisher" style="padding:16px;text-align:left">
+          <strong>📚 Wydawca</strong><br><span class="muted" style="font-size:.78rem">Kampanie, pulpity</span>
+        </button>
+      </div>
     </div>
+
+    ${(!dob || !adult) && !isGuest ? `<div class="card" style="margin-top:14px;border-color:var(--gold)">
+      <p class="rp-kicker" style="color:var(--gold-dark)">⚠️ Weryfikacja wieku</p>
+      <p class="rp-sub">Aby korzystać z nagród, potwierdź datę urodzenia.</p>
+      <div class="field"><label for="dobInput">Data urodzenia</label><input id="dobInput" type="date" class="big-input" max="${new Date().toISOString().split('T')[0]}" value="${esc(dob)}"></div>
+      <button class="btn btn-primary btn-sm" id="bSaveDob" style="margin-top:8px;width:100%">Zapisz</button>
+    </div>` : ''}
+
     ${isPrivy ? `<div class="card" style="margin-top:10px">
       <p class="rp-kicker">Dane do certyfikatu</p>
       <div class="field"><label for="uFirst">Imię</label><input id="uFirst" class="big-input" placeholder="Jan" value="${esc((()=>{try{return localStorage.getItem('rp_first')||''}catch(e){return ''}})())}" autocomplete="given-name"></div>
       <div class="field"><label for="uLast">Nazwisko</label><input id="uLast" class="big-input" placeholder="Kowalski" value="${esc((()=>{try{return localStorage.getItem('rp_last')||''}catch(e){return ''}})())}" autocomplete="family-name"></div>
       <button class="btn btn-ghost" id="bSaveName">Zapisz</button>
     </div>` : ''}
-    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-lg" id="bGo" ${w ? '' : 'disabled style="opacity:.5"'}>Wybierz książkę →</button>
-    </div>
+
+    ${w ? `<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-lg" id="bGo" style="flex:1">Kontynuuj →</button>
+      <button class="btn btn-ghost" id="bLogout">Wyloguj</button>
+    </div>` : ''}
     <p class="muted" style="font-size:.82rem;margin-top:12px">Wydawca? <a href="#/publisher">Panel wydawcy →</a></p>`;
-  document.getElementById('bPhantom').addEventListener('click', async ()=>{
-    try{ const sol = window.solana; if(!sol||!sol.isPhantom){window.open('https://phantom.app/','_blank');return;} const r = await sol.connect(); setWallet(r.publicKey.toString()); route(); }catch(e){ const m=document.getElementById('wMsg'); if(m)m.textContent='Phantom: '+(e.message||e); }
+
+  // Role buttons
+  document.querySelectorAll('.role-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const r = btn.dataset.role;
+      setRole(r);
+      document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      // jeśli student - pokaż date picker jeśli brak
+      if(r === 'student' && !getDob()){
+        const dobCard = document.querySelector('[id^="dobInput"]')?.closest('.card');
+        if(dobCard) dobCard.scrollIntoView({behavior:'smooth'});
+      }
+    });
   });
-  document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); route(); });
+  // highlight current role
+  const currentRoleBtn = document.querySelector(`.role-btn[data-role="${role}"]`);
+  if(currentRoleBtn) currentRoleBtn.classList.add('active');
+
+  // DOB save
+  const dobInput = document.getElementById('dobInput');
+  const bSaveDob = document.getElementById('bSaveDob');
+  if(dobInput && bSaveDob){
+    bSaveDob.addEventListener('click', ()=>{
+      if(dobInput.value){ setDob(dobInput.value); renderLanding(); }
+    });
+  }
+
+  // Auth buttons
+  document.getElementById('bPhantom')?.addEventListener('click', async ()=>{
+    try{ const sol = window.solana; if(!sol||!sol.isPhantom){window.open('https://phantom.app/','_blank');return;} const r = await sol.connect(); setWallet(r.publicKey.toString()); renderLanding(); }catch(e){ const m=document.getElementById('wMsg'); if(m)m.textContent='Phantom: '+(e.message||e); }
+  });
+  document.getElementById('bGuest')?.addEventListener('click', ()=>{ setWallet(guestWallet()); setRole('guest'); renderLanding(); });
+  document.getElementById('bLogout')?.addEventListener('click', ()=>{ setWallet(''); setRole('user'); setDob(''); renderLanding(); });
+  document.getElementById('bGo')?.addEventListener('click', ()=>{
+    const r = getRole();
+    if(r === 'teacher') nav('#/teacher');
+    else if(r === 'student') nav('#/student');
+    else if(r === 'publisher') nav('#/publisher');
+    else nav('#/');
+  });
+
   const fn = document.getElementById('uFirst'), ln = document.getElementById('uLast'), bn = document.getElementById('bSaveName');
   if(fn&&ln&&bn) bn.addEventListener('click', ()=>{
     try{ localStorage.setItem('rp_first', fn.value.trim()); localStorage.setItem('rp_last', ln.value.trim()); const full=(fn.value.trim()+' '+ln.value.trim()).trim(); if(full) localStorage.setItem('rp_display_name', full); if(getWallet()&&full) api('/api/users',{method:'POST',body:JSON.stringify({walletAddress:getWallet(),displayName:full})}).catch(()=>{}); bn.textContent='Zapisano ✓'; setTimeout(()=>bn.textContent='Zapisz',1500); }catch(e){}
   });
-  document.getElementById('bGo').addEventListener('click', ()=>route());
+
   if(!getWallet()) mountPrivyUser();
 }
 let privyMountedUser = false;
@@ -572,7 +660,160 @@ async function renderNagrody(){
   }
 }
 
-/* ═══ publisher ═══ */
+/* ═══ TEACHER PANEL ═══ */
+function generateClassCode(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
+async function renderTeacher(){
+  const w = getWallet(); if(!w){ nav('#/'); return; }
+  view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Konto</a>
+    <p class="rp-kicker">Nauczyciel</p>
+    <h1 class="rp-h2" style="font-size:1.7rem">Panel nauczyciela.</h1>
+    <div class="card" style="margin-top:14px">
+      <p class="rp-kicker">Twoje klasy</p>
+      <div id="classList"><p class="muted">Ładowanie…</p></div>
+      <button class="btn btn-primary btn-sm" id="bNewClass" style="margin-top:10px">+ Nowa klasa</button>
+    </div>
+    <div id="classDetail" style="margin-top:16px;display:none"></div>`;
+  loadTeacherClasses();
+  document.getElementById('bNewClass').addEventListener('click', ()=>showNewClassForm());
+}
+function showNewClassForm(){
+  const detail = document.getElementById('classDetail');
+  detail.style.display = 'block';
+  detail.innerHTML = `<div class="card">
+    <p class="rp-kicker">Nowa klasa</p>
+    <div class="field"><label for="cName">Nazwa klasy</label><input id="cName" class="big-input" placeholder="np. 3A - Polonistyka"></div>
+    <div class="field"><label for="cBook">Książka do lektury</label><select id="cBook" class="big-input"><option value="">Wybierz…</option></select></div>
+    <div class="field"><label for="cChapters">Rozdziały (oddziel przecinkami)</label><input id="cChapters" class="big-input" placeholder="np. 1,2,3"></div>
+    <button class="btn btn-primary btn-lg" id="bCreateClass" style="width:100%;margin-top:10px">Utwórz klasę</button>
+  </div>`;
+  // fill books
+  BOOKS.forEach(b=>{ document.getElementById('cBook').innerHTML += `<option value="${b.id}">${esc(b.title)}</option>`; });
+  document.getElementById('bCreateClass').addEventListener('click', createClass);
+}
+async function createClass(){
+  const name = document.getElementById('cName').value.trim();
+  const bookId = document.getElementById('cBook').value;
+  const chapters = document.getElementById('cChapters').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!name || !bookId || !chapters.length){ alert('Wypełnij wszystkie pola'); return; }
+  const code = generateClassCode();
+  const classData = {id: code, teacher: getWallet(), name, bookId, chapters, created: new Date().toISOString(), students: []};
+  try{
+    const existing = JSON.parse(localStorage.getItem('rp_teacher_classes')||'[]');
+    existing.push(classData);
+    localStorage.setItem('rp_teacher_classes', JSON.stringify(existing));
+    loadTeacherClasses();
+    document.getElementById('classDetail').style.display = 'none';
+    showClassDetail(code);
+  }catch(e){ alert('Błąd: '+e.message); }
+}
+function loadTeacherClasses(){
+  const container = document.getElementById('classList');
+  try{
+    const classes = JSON.parse(localStorage.getItem('rp_teacher_classes')||'[]').filter(c=>c.teacher===getWallet());
+    if(!classes.length){ container.innerHTML = '<p class="muted">Brak klas. Utwórz pierwszą.</p>'; return; }
+    container.innerHTML = classes.map(c=>`<div class="book-row" data-code="${c.id}"><div class="t"><b>${esc(c.name)}</b><br><span class="muted">${esc(c.bookId)} · Kod: ${c.id} · ${c.students?.length||0} uczniów</span></div><button class="btn btn-ghost btn-sm">Otwórz</button></div>`).join('');
+    container.querySelectorAll('[data-code]').forEach(el=>{ el.querySelector('button').addEventListener('click', ()=>showClassDetail(el.dataset.code)); });
+  }catch(e){ container.innerHTML = '<p class="muted">Błąd ładowania.</p>'; }
+}
+function showClassDetail(code){
+  try{
+    const classes = JSON.parse(localStorage.getItem('rp_teacher_classes')||'[]');
+    const cls = classes.find(c=>c.id===code); if(!cls) return;
+    const detail = document.getElementById('classDetail');
+    detail.style.display = 'block';
+    detail.innerHTML = `<div class="card">
+      <p class="rp-kicker">${esc(cls.name)} <span class="muted">(${code})</span></p>
+      <p class="muted">Książka: ${esc(cls.bookId)} | Rozdziały: ${cls.chapters.join(', ')}</p>
+      <div style="margin:10px 0;padding:10px;background:var(--paper);border-radius:8px;font-family:monospace;font-size:.85rem">Kod dla uczniów: <strong>${code}</strong></div>
+      <div class="sub-tabs">
+        <button class="active" data-tab="students">Uczniowie (${cls.students?.length||0})</button>
+        <button data-tab="progress">Postępy</button>
+        <button data-tab="assign">Przypisz quiz</button>
+      </div>
+      <div id="classTabContent"></div>
+    </div>`;
+    document.querySelectorAll('#classDetail .sub-tabs button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('#classDetail .sub-tabs button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        renderClassTab(code, btn.dataset.tab);
+      });
+    });
+    renderClassTab(code, 'students');
+  }catch(e){ alert('Błąd: '+e.message); }
+}
+function renderClassTab(code, tab){
+  const content = document.getElementById('classTabContent');
+  try{
+    const classes = JSON.parse(localStorage.getItem('rp_teacher_classes')||'[]');
+    const cls = classes.find(c=>c.id===code);
+    if(!cls) return;
+    if(tab==='students'){
+      content.innerHTML = cls.students?.length ? cls.students.map(s=>`<div class="hist-row"><span style="flex:1"><b>${esc(s.name||s.wallet.slice(0,6)+'…')}</b><br><span class="muted" style="font-size:.78rem">${esc(s.wallet)} · dołączył: ${esc((s.joined||'').slice(0,10))}</span></span></div>`).join('') : '<p class="muted">Brak uczniów. Podaj im kod klasy.</p>';
+    }else if(tab==='progress'){
+      content.innerHTML = '<p class="muted">Analityka postępów — wkrótce.</p>';
+    }else if(tab==='assign'){
+      content.innerHTML = `<div class="card">
+        <p class="rp-kicker">Przypisz quiz</p>
+        <div class="field"><label for="aChapter">Rozdział</label><select id="aChapter" class="big-input">${cls.chapters.map(ch=>`<option value="${ch}">${ch}</option>`).join('')}</select></div>
+        <button class="btn btn-primary btn-lg" id="bAssignQuiz" style="width:100%;margin-top:10px">Wyślij do klasy</button>
+      </div>`;
+      document.getElementById('bAssignQuiz').addEventListener('click', ()=>{ alert('Quiz przypisany do rozdziału '+document.getElementById('aChapter').value); });
+    }
+  }catch(e){ content.innerHTML = '<p class="muted">Błąd.</p>'; }
+}
+
+/* ═══ STUDENT PANEL ═══ */
+async function renderStudent(){
+  const w = getWallet(); if(!w){ nav('#/'); return; }
+  const classCode = getClassCode();
+  view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Konto</a>
+    <p class="rp-kicker">Uczeń</p>
+    <h1 class="rp-h2" style="font-size:1.7rem">Panel ucznia.</h1>`;
+  if(!classCode){
+    view.innerHTML += `<div class="card" style="margin-top:14px">
+      <p class="rp-kicker">Dołącz do klasy</p>
+      <p class="rp-sub">Podaj kod klasy odebrany od nauczyciela.</p>
+      <div class="field"><input id="joinCode" class="big-input mono" placeholder="KOD KLASY" style="text-transform:uppercase;letter-spacing:.1em"></div>
+      <button class="btn btn-primary btn-lg" id="bJoinClass" style="width:100%;margin-top:10px">Dołącz</button>
+    </div>`;
+    document.getElementById('bJoinClass').addEventListener('click', ()=>{
+      const code = document.getElementById('joinCode').value.trim().toUpperCase();
+      if(code.length===6){ setClassCode(code); renderStudent(); }
+    });
+    return;
+  }
+  // show class info
+  try{
+    const classes = JSON.parse(localStorage.getItem('rp_teacher_classes')||'[]');
+    const cls = classes.find(c=>c.id===classCode);
+    if(!cls){ setClassCode(''); renderStudent(); return; }
+    view.innerHTML += `<div class="card" style="margin-top:14px">
+      <p class="rp-kicker">${esc(cls.name)} <span class="muted">(${classCode})</span></p>
+      <p class="muted">Książka: ${esc(cls.bookId)} | Rozdziały: ${cls.chapters.join(', ')}</p>
+      <button class="btn btn-ghost btn-sm" id="bLeaveClass" style="margin-top:8px">Opusć klasę</button>
+    </div>
+    <p class="rp-kicker" style="margin-top:16px">Przypisane quizy</p>
+    <div id="studentQuizzes"><p class="muted">Ładowanie…</p></div>`;
+    document.getElementById('bLeaveClass').addEventListener('click', ()=>{ setClassCode(''); renderStudent(); });
+    loadStudentQuizzes(classCode, cls);
+  }catch(e){}
+}
+async function loadStudentQuizzes(classCode, cls){
+  const container = document.getElementById('studentQuizzes');
+  try{
+    const proofs = JSON.parse(localStorage.getItem('rp_app_proofs')||'[]');
+    const studentProofs = proofs.filter(p=>p.walletAddress===getWallet() && cls.chapters.includes(p.chapterId));
+    const assignedChapters = cls.chapters;
+    container.innerHTML = assignedChapters.map(ch=>{
+      const done = studentProofs.find(p=>p.chapterId===ch);
+      return `<div class="book-row"><div class="t"><b>Rozdział ${ch}</b><br><span class="muted">${cls.bookId}</span></div>${done ? `<span class="pill ok">${done.score}/${done.total}</span><a class="btn btn-ghost btn-sm" href="#/result">Zobacz</a>` : `<button class="btn btn-primary btn-sm" data-ch="${ch}" data-book="${cls.bookId}">Rozpocznij</button>`}</div>`;
+    }).join('');
+    container.querySelectorAll('[data-ch]').forEach(btn=>{
+      btn.addEventListener('click', ()=>nav('#/chapter/'+btn.dataset.book+'/'+btn.dataset.ch));
+    });
+  }catch(e){ container.innerHTML = '<p class="muted">Błąd.</p>'; }
+}
 const PRIVY_DEFAULT_APP_ID = 'cmu9win8e01oo0ckzvcz6j0qg';
 function getPubWallet(){ try{ return (localStorage.getItem('readproof_publisher_wallet')||'').trim(); }catch(e){ return ''; } }
 function setPubWallet(w){ try{ w?localStorage.setItem('readproof_publisher_wallet',w):localStorage.removeItem('readproof_publisher_wallet'); }catch(e){} }
