@@ -575,10 +575,13 @@ function renderResult(){
   const r = LAST_RESULT;
   if(!r || !r.proof){ view.innerHTML = `<p class="muted">Brak wyniku.</p><a class="btn btn-ghost" href="#/books">Katalog</a>`; return; }
   const p = r.proof;
-  const ok = (p.status === 'Reading Verified' || p.status === 'Comprehension Verified' || p.status === 'verified');
+  const ratio = (Number(p.total) > 0) ? (Number(p.score) / Number(p.total)) : 0;
+  const tier = ratio >= 1 ? 'full' : (ratio >= 0.6 ? 'partial' : 'none');
+  const ok = tier === 'full';
+  const seal = tier === 'full' ? '✓ Verified' : tier === 'partial' ? '◐ Częściowe zrozumienie' : '✗ Nie wykazano zrozumienia';
   view.innerHTML = `
     <div class="q-card" style="text-align:center">
-      <div class="seal">${ok ? '✓ Verified' : esc(p.status || 'Wynik')}</div>
+      <div class="seal">${esc(seal)}</div>
       <h1 class="rp-h2" style="margin-top:14px">${esc(String(p.score))} / ${esc(String(p.total))}</h1>
       <p class="muted">${esc(SESSION_META.bookTitle || p.bookId)} · ${esc(SESSION_META.chapterTitle || p.chapterId || '')}</p>
       ${p.reward ? `<p><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>` : `<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5 (Devnet, demo).</p>`}

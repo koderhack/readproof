@@ -80,13 +80,26 @@
     if(d){ out.innerHTML = certHTML(d, true, null); return; }
     out.innerHTML = '<div class="card rp-center"><h3>' + esc(T('vf_notfound', 'Certificate not found')) + '</h3><p class="muted">' + esc(T('vf_noid_a', 'No certificate with ID')) + ' <span class="mono">' + esc(id) + '</span> ' + esc(T('vf_noid_b', 'in live records or demo set.')) + ' <a href="/verify/?id=RP-7K2Q">RP-7K2Q</a>.</p></div>';
   }
+  /* progi certyfikatu: 5/5 pełne zrozumienie, 3–4/5 (≥60%) częściowe, poniżej brak */
+  function tierOf(score, total){
+    const s = Number(score), t = Number(total);
+    if(t > 0 && s >= t) return 'full';
+    const r = t > 0 ? s / t : ((parseFloat(String(score)) || 0) / 100);
+    return r >= 0.6 ? 'partial' : 'none';
+  }
   function certHTML(d, demo, raw){
+    const tier = raw ? tierOf(raw.score, raw.total) : tierOf(d.score, 100);
+    const badge = tier === 'full' ? '✓ Verified'
+      : tier === 'partial' ? esc(T('tier_ps', '◐ Partial')) : esc(T('tier_ns', '✗ Not demonstrated'));
+    const tierLine = tier === 'full' ? esc(T('lp_line', 'Demonstrated understanding · Score:'))
+      : tier === 'partial' ? esc(T('tier_partial', 'Partial understanding'))
+      : esc(T('tier_none', 'Understanding not demonstrated'));
     return '<div class="cert">'
-      + '<div class="cert-k">ReadProof Certificate · ✓ Verified</div>'
+      + '<div class="cert-k">ReadProof Certificate · ' + badge + '</div>'
       + '<h3>' + esc(d.book) + '</h3>'
       + (d.author ? '<div class="cert-book">' + esc(d.author) + '</div>' : '')
       + '<div class="cert-name">' + esc(d.holder) + '</div>'
-      + '<p class="muted" style="margin:6px 0 0;font-size:.9rem">' + esc(T('lp_line', 'Demonstrated understanding · Score:')) + ' ' + esc(d.score) + '</p>'
+      + '<p class="muted" style="margin:6px 0 0;font-size:.9rem">' + tierLine + ' ' + esc(d.score) + '</p>'
       + '<div class="cert-meta"><span>' + esc(q.value.toUpperCase()) + '</span><span>✓ ' + esc(T('vf_proofrec', 'Proof recorded')) + '</span></div>'
       + '<div class="proof-mini" style="text-align:left;margin-top:18px"><b>' + esc(T('vf_details', 'Proof Details')) + '</b><br>'
       + '<span class="mono" style="font-size:.75rem">' + esc(T('vf_net', 'Network: Solana Devnet')) + '<br>' + esc(T('vf_proofid', 'Proof ID:')) + ' ' + esc(q.value.toUpperCase()) + '<br>'
