@@ -5,14 +5,14 @@ export default {
       return new Response('Not found', { status: 404 });
     }
     
-    const targetUrl = 'http://frog02.mikr.us:32287' + url.pathname + url.search;
+    const targetUrl = 'https://frog02-32287.wykr.es' + url.pathname + url.search;
     const newRequest = new Request(targetUrl, {
       method: request.method,
       headers: request.headers,
       body: request.method !== 'GET' && request.method !== 'HEAD' ? await request.arrayBuffer() : undefined,
       redirect: 'follow'
     });
-    newRequest.headers.set('host', 'frog02.mikr.us:32287');
+    newRequest.headers.set('host', 'frog02-32287.wykr.es');
     
     try {
       const response = await fetch(newRequest);

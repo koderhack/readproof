@@ -1,0 +1,6 @@
+name = "readproof"
+compatibility_date = "2024-09-21"
+pages_build_output_dir = "."
+
+[functions]
+  directory = "functions"
