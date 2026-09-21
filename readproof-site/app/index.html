@@ -6,6 +6,8 @@
 <title>ReadProof App — czytaj, udowodnij, zgarnij</title>
 <meta name="description" content="Webowa aplikacja ReadProof: wybierz książkę i rozdział, przejdź quiz ze zrozumienia, zdobądź zweryfikowany dowód. Wynik liczy serwer.">
 <link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="apple-touch-icon" href="/assets/icon.png">
+<meta name="theme-color" content="#58CC02">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -62,17 +64,18 @@ textarea.big-input{min-height:120px;resize:vertical}
 .hist-row:last-child{border-bottom:0}
 @media (min-width:760px){.app-view{padding-top:30px}}
 @media print{
-  .app-top,.rp-footer,.btn,.no-print{display:none!important}
+  .app-top,.rp-footer,.btn,.no-print,#camPrev,#wmTag,#procToast,#camBlock{display:none!important}
   body{background:#fff}
+  @page{size:A4 landscape;margin:0}
   body *{visibility:hidden}
   .q-card,.q-card *{visibility:visible}
-  .q-card{position:absolute;left:0;top:0;width:100%;box-shadow:none;animation:none}
+  .q-card{position:absolute;left:0;top:0;width:100%;min-height:100vh;box-shadow:none;animation:none;border-radius:0}
 }
 </style>
 </head>
 <body>
 <header class="app-top"><div class="wrap">
-  <a class="rp-brand" href="/" style="text-decoration:none"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <a class="rp-brand" href="#/books" style="text-decoration:none"><span class="rp-brand-mark">R</span>ReadProof</a>
   <span class="pill info">App</span>
   <span style="flex:1"></span>
   <span class="wallet-pill" id="walletPill">niezalogowany</span>
@@ -310,7 +313,158 @@ function renderChapter(bookId, chapterId){
       <p class="muted" style="font-size:.78rem;margin:10px 0 0" id="startMsg"></p>
     </div>`;
   const btn = document.getElementById('bStart');
-  if(btn) btn.addEventListener('click', ()=>startSession(b, c));
+  if(btn) btn.addEventListener('click', ()=>startGuarded(b, c));
+}
+/* ═══ proctoring jak TestPortal: fullscreen, kamera, zakaz kopiowania ═══ */
+let proctor = null;
+function stopProctor(){
+  stopPhoneWatch();
+  try{ if(proctor && proctor.stream) proctor.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  ['camPrev','wmTag','procToast','camBlock'].forEach(id=>{ const el=document.getElementById(id); if(el) el.remove(); });
+  proctor = null;
+}
+function procToast(msg){
+  let t = document.getElementById('procToast');
+  if(!t){ t = document.createElement('div'); t.id = 'procToast';
+    t.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9999;background:#3A2E00;color:#FFE9B0;padding:10px 16px;border-radius:12px;font-size:.85rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:92vw;text-align:center';
+    document.body.appendChild(t); }
+  t.textContent = msg;
+  clearTimeout(t._h); t._h = setTimeout(()=>{ const x=document.getElementById('procToast'); if(x) x.remove(); }, 4000);
+}
+function updateViol(){
+  const el = document.getElementById('violPill');
+  if(el && proctor){ const n = proctor.exits + proctor.copies + proctor.tabs; el.textContent = 'naruszenia: ' + n; }
+}
+let phoneWatch = null;
+function startPhoneWatch(){
+  if(!proctor || !proctor.stream || phoneWatch) return;
+  const vid = document.getElementById('camPrev');
+  if(!vid) return;
+  const cv = document.createElement('canvas'); cv.width = 160; cv.height = 120;
+  const cx = cv.getContext('2d', {willReadFrequently:true});
+  let hits = 0;
+  phoneWatch = setInterval(()=>{
+    if(!proctor || !location.hash.startsWith('#/quiz/')){ clearInterval(phoneWatch); phoneWatch=null; return; }
+    try{
+      cx.drawImage(vid, 0, 0, cv.width, cv.height);
+      const d = cx.getImageData(0,0,cv.width,cv.height).data;
+      let white = 0, edges = 0;
+      for(let i=0;i<d.length;i+=16){
+        const r=d[i],g=d[i+1],b=d[i+2];
+        const luma = 0.2126*r+0.7152*g+0.0722*b;
+        if(r>200&&g>200&&b>200 && luma>210) white++;
+        if(i>640 && Math.abs(r - d[i-640])>55) edges++;
+      }
+      const whiteRatio = white / (cv.width*cv.height/4);
+      // heurystyka: dużo bieli + krawędzie prostokąta = ekran telefonu w kadrze
+      if(whiteRatio > 0.18 && edges > 220){
+        hits++;
+        if(hits >= 2){
+          clearInterval(phoneWatch); phoneWatch=null;
+          procToast('Wykryto drugi ekran/telefon — sesja zablokowana.');
+          failFinish(proctor.sid, 'kamera wykryła drugi ekran');
+        }
+      } else hits = Math.max(0, hits-1);
+    }catch(e){}
+  }, 1800);
+}
+function stopPhoneWatch(){ if(phoneWatch){ clearInterval(phoneWatch); phoneWatch=null; } }
+function attachProctorVisuals(){
+  if(!proctor) return;
+  if(proctor.stream && !document.getElementById('camPrev')){
+    const v = document.createElement('video');
+    v.id = 'camPrev'; v.muted = true; v.setAttribute('playsinline',''); v.setAttribute('autoplay','');
+    v.style.cssText = 'position:fixed;left:10px;bottom:10px;width:96px;height:128px;object-fit:cover;border-radius:12px;border:2px solid var(--line,#E3E8E4);z-index:9998;background:#000';
+    v.srcObject = proctor.stream; v.play().catch(()=>{});
+    document.body.appendChild(v);
+    const track = proctor.stream.getVideoTracks()[0];
+    if(track) track.onended = ()=>{ procToast('Kamera wyłączona — włącz ją, aby kontynuować.'); paintCamBlocked(); };
+  }
+  if(!document.getElementById('wmTag')){
+    const w = document.createElement('div');
+    w.id = 'wmTag';
+    w.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9998;font-family:monospace;font-size:10px;color:rgba(0,0,0,.35);pointer-events:none';
+    w.textContent = (getWallet()||'').slice(0,10) + ' · ' + new Date().toISOString().slice(0,16).replace('T',' ');
+    document.body.appendChild(w);
+  }
+}
+function paintCamBlocked(){
+  if(!location.hash.startsWith('#/quiz/')) return;
+  let o = document.getElementById('camBlock');
+  if(o) return;
+  o = document.createElement('div'); o.id = 'camBlock';
+  o.style.cssText = 'position:fixed;inset:0;z-index:9997;background:rgba(11,11,15,.82);display:grid;place-items:center;padding:20px';
+  o.innerHTML = `<div class="card" style="max-width:340px;text-align:center"><h3>Kamera wyłączona</h3><p class="muted" style="font-size:.88rem">Weryfikacja wymaga włączonej kamery.</p><button class="btn btn-primary" id="bCamRetry" style="width:100%">Włącz kamerę</button></div>`;
+  document.body.appendChild(o);
+  document.getElementById('bCamRetry').addEventListener('click', async ()=>{
+    try{
+      const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false});
+      if(proctor) proctor.stream = s;
+      document.getElementById('camBlock').remove();
+      attachProctorVisuals();
+    }catch(e){ procToast('Brak dostępu do kamery.'); }
+  });
+}
+async function startGuarded(b, c){
+  const msg = document.getElementById('startMsg');
+  if(navigator.webdriver){ msg.textContent = 'Wykryto tryb automatyzacji przeglądarki — wyłącz go, aby zacząć.'; return; }
+  msg.textContent = 'Tryb weryfikacji: pełny ekran + kamera…';
+  try{ if(document.fullscreenEnabled) await document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){}
+  let stream = null;
+  try{ stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false}); }
+  catch(e){
+    msg.innerHTML = 'Kamera niedostępna lub zablokowana. Weryfikacja wymaga kamery. <button class="btn btn-ghost btn-sm" id="bNoCam">Kontynuuj bez kamery</button>';
+    document.getElementById('bNoCam').addEventListener('click', async ()=>{
+      proctor = {stream:null, exits:0, copies:0, tabs:0, sid:null};
+      attachProctorVisuals(); await startSession(b, c);
+    });
+    return;
+  }
+  proctor = {stream, exits:0, copies:0, tabs:0, sid:null};
+  attachProctorVisuals(); startPhoneWatch();
+  await startSession(b, c);
+}
+async function failFinish(sid, reason){
+  stopProctor();
+  try{
+    const r = await api('/api/sessions/' + encodeURIComponent(sid) + '/complete?fail=1', {method:'POST', body:'{}'});
+    LAST_RESULT = {proof: r.proof, verification: r.verification, results: r.results, meta: SESSION_META};
+    try{ localStorage.setItem('rp_app_last_result', JSON.stringify(LAST_RESULT)); }catch(e){}
+    saveLocalProof(LAST_RESULT.proof);
+    nav('#/result');
+  }catch(e){
+    view.innerHTML = `<div class="card"><h3>Sesja zakończona (naruszenie: ${esc(reason||'')}).</h3><p class="muted">Wynik: niezaliczony.</p><a class="btn btn-ghost" href="#/books">Katalog</a></div>`;
+  }
+}
+let procListenersOn = false;
+function ensureProctorListeners(){
+  if(procListenersOn) return; procListenersOn = true;
+  document.addEventListener('fullscreenchange', ()=>{
+    if(!proctor || !location.hash.startsWith('#/quiz/')) return;
+    if(!document.fullscreenElement){
+      proctor.exits++; updateViol();
+      if(proctor.exits >= 3){ failFinish(proctor.sid, 'wyjście z pełnego ekranu'); return; }
+      procToast('Wyjście z pełnego ekranu (' + proctor.exits + '/3). Wróć — trzecie kończy sesję.');
+      try{ document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){}
+    }
+  });
+  ['copy','cut'].forEach(ev=>document.addEventListener(ev, e=>{
+    if(!proctor || !location.hash.startsWith('#/quiz/')) return;
+    if(view.contains(e.target)){ e.preventDefault(); proctor.copies++; updateViol(); procToast('Kopiowanie zablokowane w trybie weryfikacji.'); }
+  }, true));
+  document.addEventListener('contextmenu', e=>{
+    if(!proctor || !location.hash.startsWith('#/quiz/')) return;
+    if(view.contains(e.target)){ e.preventDefault(); proctor.copies++; updateViol(); }
+  }, true);
+  document.addEventListener('keydown', e=>{
+    if(!proctor || !location.hash.startsWith('#/quiz/')) return;
+    const k = (e.key||'').toLowerCase();
+    if(e.key === 'PrintScreen' || ((e.ctrlKey || e.metaKey) && ['c','x','u','s','p'].includes(k))){
+      e.preventDefault(); proctor.copies++; updateViol();
+      procToast(e.key === 'PrintScreen' ? 'Zrzuty ekranu są wykrywane i kończą sesję.' : 'Zablokowane w trybie weryfikacji.');
+    }
+  }, true);
+  window.addEventListener('hashchange', ()=>{ if(!location.hash.startsWith('#/quiz/')) stopProctor(); });
 }
 async function startSession(b, c){
   const msg = document.getElementById('startMsg');
@@ -359,6 +513,9 @@ function currentQuestion(){
 }
 async function renderQuiz(sid){
   clearInterval(pollTimer);
+  ensureProctorListeners();
+  if(proctor) proctor.sid = sid;
+  attachProctorVisuals();
   view.innerHTML = `<p class="muted">Ładowanie sesji…</p>`;
   try{ await fetchSession(sid); }
   catch(e){ view.innerHTML = `<div class="card"><p class="muted">Błąd sesji: ${esc(e.message)}</p><a class="btn btn-ghost" href="#/books">Katalog</a></div>`; return; }
@@ -387,7 +544,7 @@ function visibilityHandler(){
 }
 function progressHTML(done, total){
   const pct = total ? Math.round(done/total*100) : 0;
-  return `<div class="q-progress"><div class="bar"><span style="width:${pct}%"></span></div><div class="n">${done}/${total}</div></div>`;
+  return `<div class="q-progress"><div class="bar"><span style="width:${pct}%"></span></div><div class="n">${done}/${total}</div><span class="pill mut" id="violPill" style="font-size:.68rem">tryb weryfikacji</span></div>`;
 }
 function paintQuiz(sid, soft){
   const st = currentQuestion();
@@ -580,6 +737,7 @@ async function submitAnswer(sid, q, ans){
   }
 }
 function paintFinish(sid, st){
+  stopProctor();
   view.innerHTML = `${progressHTML(st.done, st.total)}
     <div class="q-card" style="text-align:center">
       <p class="rp-kicker">Koniec pytań</p>
@@ -621,52 +779,76 @@ function saveLocalProof(p){
     localStorage.setItem(k, JSON.stringify(list.slice(0,50)));
   }catch(e){}
 }
-function renderResult(){
+async function renderResult(){
   const r = LAST_RESULT;
   if(!r || !r.proof){ view.innerHTML = `<p class="muted">Brak wyniku.</p><a class="btn btn-ghost" href="#/books">Katalog</a>`; return; }
   const p = r.proof;
   const ratio = (Number(p.total) > 0) ? (Number(p.score) / Number(p.total)) : 0;
   const tier = ratio >= 1 ? 'full' : (ratio >= 0.6 ? 'partial' : 'none');
-  const ok = tier === 'full';
   const seal = tier === 'full' ? '✓ Verified' : tier === 'partial' ? '◐ Częściowe zrozumienie' : '✗ Nie wykazano zrozumienia';
+  const did = tier === 'full' ? 'wykazał(a) pełne zrozumienie lektury.' : tier === 'partial' ? 'wykazał(a) częściowe zrozumienie lektury.' : 'nie wykazał(a) zrozumienia lektury.';
   const bookName = plBookTitle(p.bookId, SESSION_META.bookTitle);
   const chapterName = plChapterTitle(p.bookId, p.chapterId, SESSION_META.chapterTitle);
+  let holder = (p.walletAddress||'').slice(0,10)+'…';
+  try{
+    const u = await api('/api/users/' + encodeURIComponent(p.walletAddress)).catch(()=>null);
+    if(u && u.user && (u.user.displayName || u.user.email)) holder = u.user.displayName || u.user.email;
+  }catch(e){}
   const isRealSig = s => typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,128}$/.test(s) && !/^mock/i.test(s);
   const isWallet2 = a => typeof a === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a);
-  let explorerUrl = 'https://explorer.solana.com/?cluster=devnet', explorerLabel = 'Zobacz konto w Explorerze (Devnet) →';
-  if(isRealSig(p.txSignature)){ explorerUrl = 'https://explorer.solana.com/tx/' + encodeURIComponent(p.txSignature) + '?cluster=devnet'; explorerLabel = 'Zobacz transakcję w Explorerze →'; }
+  let explorerUrl = 'https://explorer.solana.com/?cluster=devnet', explorerLabel = 'Zobacz konto w Explorerze (Devnet) →', onChain = false;
+  if(isRealSig(p.txSignature)){ explorerUrl = 'https://explorer.solana.com/tx/' + encodeURIComponent(p.txSignature) + '?cluster=devnet'; explorerLabel = 'Zobacz transakcję w Explorerze →'; onChain = true; }
   else if(isWallet2(p.walletAddress)){ explorerUrl = 'https://explorer.solana.com/address/' + encodeURIComponent(p.walletAddress) + '?cluster=devnet'; }
+  else if(p.explorerUrl){ explorerUrl = p.explorerUrl; onChain = !!p.txSignature; }
   view.innerHTML = `
-    <div class="q-card" style="text-align:center">
-      <div class="seal">${esc(seal)}</div>
-      <h1 class="rp-h2" style="margin-top:14px">${esc(String(p.score))} / ${esc(String(p.total))}</h1>
-      <p class="muted">${esc(bookName)}${chapterName ? ' · ' + esc(chapterName) : ''}</p>
-      <p class="mono muted" style="font-size:.72rem">id: ${esc(p.bookId || '')}${p.chapterId ? ' · ' + esc(p.chapterId) : ''}</p>
-      ${p.reward ? `<p><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>` : `<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5 (Devnet, demo).</p>`}
-      <div class="card flat" style="text-align:left;margin-top:14px">
-        <p class="rp-kicker">Proof Details</p>
-        <p class="mono" style="font-size:.78rem;word-break:break-all">hash: ${esc(p.proofHash||'—')}</p>
-        <p class="mono" style="font-size:.78rem">Network: Solana Devnet · czas: ${esc(String(p.durationSec ?? ''))}s</p>
-        ${p.txSignature?`<p style="font-size:.85rem"><a href="${esc(p.explorerUrl||('https://explorer.solana.com/tx/'+p.txSignature+'?cluster=devnet'))}" target="_blank">Transakcja w explorerze →</a></p>`:`<p class="muted" style="font-size:.8rem">Transakcja: zapis devnet (demo, bez prawdziwych środków).</p>`}
-        <button class="btn btn-ghost btn-sm" id="bCopy">Kopiuj hash</button>
-      </div>
-      <div style="margin-top:12px"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">${esc(explorerLabel)}</a></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px">
-        <button class="btn btn-primary btn-sm" id="bShare">Udostępnij</button>
-        <button class="btn btn-ghost btn-sm" id="bPdf">Pobierz PDF</button>
-        <a class="btn btn-ghost btn-sm" target="_blank" id="bLinkedIn" href="#">LinkedIn</a>
-        <a class="btn btn-ghost btn-sm" target="_blank" id="bX" href="#">X</a>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px">
-        <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
-        <a class="btn btn-primary" href="#/books">Kolejna książka →</a>
-      </div>
+    <div class="cert" style="text-align:center">
+      <div class="cert-k">ReadProof Certificate · ${esc(seal)} ${onChain ? '<span class="pill ok" style="margin-left:6px">on-chain</span>' : ''}</div>
+      <h3>${esc(bookName)}</h3>
+      ${chapterName ? '<div class="cert-book">' + esc(chapterName) + '</div>' : ''}
+      <div class="cert-name">${esc(holder)}</div>
+      <p class="muted" style="margin:6px 0 0;font-size:.9rem">Niniejszym potwierdza się, że <b>${esc(holder)}</b> ${esc(did)}</p>
+      <p style="margin:6px 0 0;font-weight:800;font-size:1.4rem">${esc(String(p.score))} / ${esc(String(p.total))}</p>
+      <div class="cert-meta"><span class="mono">id: ${esc(p.bookId || '')}${p.chapterId ? ' · ' + esc(p.chapterId) : ''}</span><span>✓ ${onChain ? 'Zapisano on-chain' : 'Devnet (demo)'}</span></div>
+      <div class="cert-meta" style="margin-top:6px"><span class="mono" style="word-break:break-all">hash: ${esc(p.proofHash||'—')}</span></div>
+      <p class="mono muted" style="font-size:.72rem;margin-top:4px">czas: ${esc(String(p.durationSec ?? ''))}s · ${esc(p.verificationVersion||'readproof-v1')}</p>
+      ${p.reward ? `<p style="margin-top:6px"><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>` : `<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5 (Devnet, demo).</p>`}
+    </div>
+    <div class="no-print" style="margin-top:14px;text-align:center"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">${esc(explorerLabel)}</a></div>
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px">
+      <button class="btn btn-primary btn-sm" id="bShare">Udostępnij</button>
+      <button class="btn btn-ghost btn-sm" id="bPdf">Pobierz PDF</button>
+      <button class="btn btn-ghost btn-sm" id="bPng">Obrazek PNG</button>
+      <a class="btn btn-ghost btn-sm" target="_blank" id="bLinkedIn" href="#">LinkedIn</a>
+      <a class="btn btn-ghost btn-sm" target="_blank" id="bX" href="#">X</a>
+      <button class="btn btn-ghost btn-sm" id="bCopy">Kopiuj hash</button>
+    </div>
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px">
+      <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
+      <a class="btn btn-primary" href="#/books">Kolejna książka →</a>
     </div>`;
   document.getElementById('bCopy').addEventListener('click', ()=>{
     navigator.clipboard.writeText(p.proofHash || '').then(()=>{ document.getElementById('bCopy').textContent = 'OK'; });
   });
   const shareUrl = location.origin + '/verify/?id=' + encodeURIComponent((p.proofHash || '').slice(0,8).toUpperCase());
   const shareText = 'Certyfikat ReadProof — ' + bookName + ' ' + p.score + '/' + p.total;
+  function certPNGApp(){
+    const W=1200,H=630,c=document.createElement('canvas'); c.width=W; c.height=H;
+    const x=c.getContext('2d'); x.fillStyle='#FFFBEB'; x.fillRect(0,0,W,H);
+    x.strokeStyle='#58CC02'; x.lineWidth=10; x.strokeRect(24,24,W-48,H-48);
+    x.strokeStyle='#C5A15A'; x.lineWidth=3; x.strokeRect(48,48,W-96,H-96);
+    x.textAlign='center'; x.fillStyle='#0B0B0F';
+    x.font='800 64px Georgia,serif'; x.fillText('ReadProof',W/2,150);
+    x.font='600 30px Georgia,serif'; x.fillStyle='#5C6368'; x.fillText(seal,W/2,205);
+    x.fillStyle='#0B0B0F'; let s=72; x.font='800 '+s+'px Georgia,serif'; while(x.measureText(bookName).width>1000&&s>28){ s-=4; x.font='800 '+s+'px Georgia,serif'; } x.fillText(bookName,W/2,315);
+    x.font='400 34px Georgia,serif'; x.fillStyle='#5C6368'; x.fillText(holder,W/2,378);
+    x.font='700 46px system-ui,sans-serif'; x.fillStyle='#0B0B0F'; x.fillText(p.score+'/'+p.total,W/2,452);
+    x.font='400 26px ui-monospace,monospace'; x.fillStyle='#46A302'; x.fillText('id: '+(p.bookId||''),W/2,512);
+    x.fillStyle='#8A9398'; x.font='400 24px ui-monospace,monospace'; x.fillText('readproof.pages.dev · Solana Devnet (demo)',W/2,562);
+    return c.toDataURL('image/png');
+  }
+  document.getElementById('bPng').addEventListener('click', ()=>{
+    const a=document.createElement('a'); a.href=certPNGApp(); a.download='readproof-'+(p.proofHash||'cert').slice(0,8)+'.png'; a.click();
+  });
   document.getElementById('bShare').addEventListener('click', ()=>{
     if(navigator.share){ navigator.share({title:'ReadProof', text:shareText, url:shareUrl}).catch(()=>{}); }
     else navigator.clipboard.writeText(shareText + ' ' + shareUrl).then(()=>{ document.getElementById('bShare').textContent = 'OK'; });

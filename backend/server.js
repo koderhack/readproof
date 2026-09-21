@@ -451,6 +451,15 @@ function extractJSON(text){
 async function callOpenRouterGenerate(chapter, count=10, lang='pl'){
   if(!OPENROUTER_KEY) throw new Error('Brak OPENROUTER_API_KEY — ustaw w .env');
   const targetLang = lang==='en' ? 'ENGLISH' : 'POLISH';
+  let frag = chapterFragment(chapter);
+  if(frag.length < 1500){
+    const book = books.find(b=>b.id===chapter.bookId);
+    const sib = book && (book.chapters||[]).find(c=>c.id!==chapter.id && Math.abs((c.index||0)-(chapter.index||0))===1);
+    if(sib){
+      const frag2 = chapterFragment(sib);
+      if(frag2.length > 200){ frag = frag + '\n\n--- ' + (sib.title||sib.id) + ' ---\n' + frag2; }
+    }
+  }
   // Mocny prompt: system ma tłumaczyć/ generować w targetLang niezależnie od języka excerptu (często EN)
   const prompt = lang==='en'
   ? `Generate ${count} Reading Challenges for a public-domain book chapter — like a SCHOOL READING TEST (not too detailed).
@@ -459,11 +468,11 @@ Original excerpt language: often ENGLISH (Gutenberg). IMPORTANT: you MUST output
 Context: ${chapter.contextExcerpt}
 Summary: ${chapter.summary}
 Source fragment (REAL full book text — base questions on it, but school-test style):
-${chapterFragment(chapter)}
+${frag}
 Requirements — SCHOOL TEST style (sufficient, not picky):
 - Use DIVERSE types from: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
 - At least 1 open_question or why_question with expectedMeaning (in ENGLISH)
-- Questions should test COMPREHENSION (characters, motives, cause-effect), NOT tiny details like watch color. Good: "Why did Alice want to go through the small door?" Bad (too detailed): "What exact text was on the bottle in sentence 2?"
+- Questions should test COMPREHENSION (characters, motives, cause-effect), NOT tiny details like watch color. Ask ONLY about the STORY CONTENT (who did what, where, why in the plot). NEVER ask about the moral, message or 'what the tale teaches'. Good: "Why did Alice want to go through the small door?" Bad (too detailed): "What exact text was on the bottle in sentence 2?"
 - Level: easy-medium, for a student who read the chapter once carefully.
 - Return ONLY JSON: {"challenges": [ ... ]}
 - Question language: ENGLISH only`
@@ -473,11 +482,11 @@ Język oryginalnego fragmentu: często ANGIELSKI (Gutenberg). WAŻNE: MUSISZ wyg
 Kontekst: ${chapter.contextExcerpt}
 Streszczenie: ${chapter.summary}
 Fragment źródłowy (REALNY pełny tekst — pytania na jego podstawie, ale jak test z lektury):
-${chapterFragment(chapter)}
+${frag}
 Wymagania — styl TEST Z LEKTURY (wystarczający, nie czepialski):
 - Używaj RÓŻNYCH typów z: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
 - Co najmniej 1 open_question lub why_question z polem expectedMeaning (po POLSKU)
-- Pytania mają sprawdzać ZROZUMIENIE LEKTURY (bohaterowie, motywy, przyczyna-skutek), NIE drobne detale typu kolor zegarka czy dokładna godzina. Przykład DOBRY: "Dlaczego Alicja chciała przejść przez małe drzwi?" Przykład ZŁY (za szczegółowy): "Jaki dokładnie napis był na butelce w drugim zdaniu fragmentu?"
+- Pytania mają sprawdzać ZROZUMIENIE LEKTURY (bohaterowie, motywy, przyczyna-skutek), NIE drobne detale typu kolor zegarka czy dokładna godzina. Pytaj TYLKO o TREŚĆ fabuły (kto, co, gdzie, dlaczego w historii). NIGDY nie pytaj o morał, przesłanie ani o to, czego uczy bajka. Przykład DOBRY: "Dlaczego Alicja chciała przejść przez małe drzwi?" Przykład ZŁY (za szczegółowy): "Jaki dokładnie napis był na butelce w drugim zdaniu fragmentu?"
 - Poziom: łatwy-średni, jak dla ucznia który przeczytał rozdział uważnie raz.
 - Zwróć TYLKO JSON: {"challenges": [ ... ]}
 - Język pytań: POLSKI`;
