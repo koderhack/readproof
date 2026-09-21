@@ -25,18 +25,12 @@ const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
 const PRIVACY_COPY = "ReadProof — Proof of Comprehension, not proof of physical reading. We store ONLY: walletAddress, bookId, chapterId, session_start/end, reading_duration, proof_hash (SHA-256). NEVER stored on-chain: book content, answers, prompts. Book content stays server-only (never full book on-chain). Solana Devnet ONLY (USDC/SOL test funds, no real money). Free LLM routing only. See /api/privacy.";
 const PRIVACY_SHORT = "Privacy: wallet, book, chapter, duration, proof hash only. No content on-chain. Devnet only.";
-
-const ALLOWED_ORIGINS = ['http://frog02.mikr.us:32287','https://frog02.mikr.us:32287','http://localhost:32288','http://127.0.0.1:32288','https://koderhack.github.io','http://koderhack.github.io','https://kacpersikora.pages.dev','https://readproof.pages.dev','https://*.pages.dev'];
 const corsOptions = {
-  origin: function(origin, cb){
-    if(!origin) return cb(null,true);
-    return cb(null,true);
-  },
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Lang','X-Dev-Mode','X-Dev-Password','Accept-Language','X-User-Id','X-Apple-User'],
-  credentials: true
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
 };
-
 const app = express();
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));

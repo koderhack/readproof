@@ -1,109 +1,141 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reading Challenges · ReadProof</title>
-<meta name="description" content="Live reading challenges on the ReadProof network: participants, completions, reward pools. Real data from the API.">
-<link rel="icon" type="image/png" href="/assets/icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reading Challenges · ReadProof</title>
+  <meta name="description"
+    content="Live reading challenges on the ReadProof network: participants, completions, reward pools. Real data from the API.">
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/assets/site.css">
 </head>
+
 <body>
-<nav class="rp-nav"><div class="wrap">
-  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
-  <div class="rp-links">
-    <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
-    <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
-    <a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
-    <a href="/verify/" data-i18n="nav_verify">Verify</a>
-    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en">EN</button></span>
-    <a href="/" class="cta" data-i18n="nav_home">Home</a>
-  </div>
-</div></nav>
-
-<main class="wrap">
-  <section class="rp-section tight">
-    <p class="rp-kicker"><svg class="ic"><use href="/assets/icons.svg#i-chart"/></svg> <span data-i18n="ch_k">Live from the network</span> · <span class="mono"><span class="api-dot" id="apiDot"></span><span id="apiStatus">connecting…</span></span></p>
-    <h1 class="rp-h2" data-i18n="ch_h">Reading challenges.</h1>
-    <p class="rp-sub" data-i18n="ch_sub">Publishers create challenges around books and fund reward pools. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules. Everything below is live network data.</p>
-    <div id="chList"><p class="muted">Loading challenges…</p></div>
-  </section>
-
-  <section class="rp-section tight">
-    <div class="card">
-      <p class="rp-kicker"><svg class="ic"><use href="/assets/icons.svg#i-shield"/></svg> <span data-i18n="ch_how">How rewards work</span></p>
-      <ol class="steps">
-        <li><b data-i18n="ch_s1">Publisher selects a book</b><p data-i18n="ch_s1p">…and creates a Reading Challenge.</p></li>
-        <li><b data-i18n="ch_s2">Reward pool is funded</b><p data-i18n="ch_s2p">Fixed amount, locked by predefined rules.</p></li>
-        <li><b data-i18n="ch_s3">Readers participate</b><p data-i18n="ch_s3p">Read the book, complete chapter challenges.</p></li>
-        <li><b data-i18n="ch_s4">ReadProof verifies understanding</b><p data-i18n="ch_s4p">Only verified proofs qualify.</p></li>
-        <li><b data-i18n="ch_s5">Rewards are distributed</b><p data-i18n="ch_s5p">Automatically, by the published rules.</p></li>
-      </ol>
+  <nav class="rp-nav">
+    <div class="wrap">
+      <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+      <div class="rp-links">
+        <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
+        <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+        <a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
+        <a href="/verify/" data-i18n="nav_verify">Verify</a>
+        <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button
+            data-lang="en">EN</button></span>
+        <a href="/" class="cta" data-i18n="nav_home">Home</a>
+      </div>
     </div>
-  </section>
+  </nav>
 
-  <section class="rp-section tight rp-center">
-    <h2 class="rp-h2" data-i18n="ch_want">Want a challenge for your book?</h2>
-    <p class="rp-sub" data-i18n="ch_want_sub">Publishers create and fund challenges in the publisher panel.</p>
-    <div class="rp-actions" style="justify-content:center">
-      <a class="btn btn-primary" href="/publishers/#panel" data-i18n="pub_panel">Publisher panel</a>
-      <a class="btn btn-ghost" href="/" data-i18n="ch_back">Back home</a>
+  <main class="wrap">
+    <section class="rp-section tight">
+      <p class="rp-kicker"><svg class="ic">
+          <use href="/assets/icons.svg#i-chart" />
+        </svg> <span data-i18n="ch_k">Live from the network</span> · <span class="mono"><span class="api-dot"
+            id="apiDot"></span><span id="apiStatus">connecting…</span></span></p>
+      <h1 class="rp-h2" data-i18n="ch_h">Reading challenges.</h1>
+      <p class="rp-sub" data-i18n="ch_sub">Publishers create challenges around books and fund reward pools. Readers
+        participate, ReadProof verifies understanding, rewards go out by predefined rules. Everything below is live
+        network data.</p>
+      <div id="chList">
+        <p class="muted">Loading challenges…</p>
+      </div>
+    </section>
+
+    <section class="rp-section tight">
+      <div class="card">
+        <p class="rp-kicker"><svg class="ic">
+            <use href="/assets/icons.svg#i-shield" />
+          </svg> <span data-i18n="ch_how">How rewards work</span></p>
+        <ol class="steps">
+          <li><b data-i18n="ch_s1">Publisher selects a book</b>
+            <p data-i18n="ch_s1p">…and creates a Reading Challenge.</p>
+          </li>
+          <li><b data-i18n="ch_s2">Reward pool is funded</b>
+            <p data-i18n="ch_s2p">Fixed amount, locked by predefined rules.</p>
+          </li>
+          <li><b data-i18n="ch_s3">Readers participate</b>
+            <p data-i18n="ch_s3p">Read the book, complete chapter challenges.</p>
+          </li>
+          <li><b data-i18n="ch_s4">ReadProof verifies understanding</b>
+            <p data-i18n="ch_s4p">Only verified proofs qualify.</p>
+          </li>
+          <li><b data-i18n="ch_s5">Rewards are distributed</b>
+            <p data-i18n="ch_s5p">Automatically, by the published rules.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="rp-section tight rp-center">
+      <h2 class="rp-h2" data-i18n="ch_want">Want a challenge for your book?</h2>
+      <p class="rp-sub" data-i18n="ch_want_sub">Publishers create and fund challenges in the publisher panel.</p>
+      <div class="rp-actions" style="justify-content:center">
+        <a class="btn btn-primary" href="/publishers/#panel" data-i18n="pub_panel">Publisher panel</a>
+        <a class="btn btn-ghost" href="/" data-i18n="ch_back">Back home</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rp-footer">
+    <div class="wrap">
+      <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood
+          it.</span></div>
+      <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/verify/" data-i18n="nav_verify">Verify</a></div>
     </div>
-  </section>
-</main>
+  </footer>
 
-<footer class="rp-footer"><div class="wrap">
-  <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood it.</span></div>
-  <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/verify/" data-i18n="nav_verify">Verify</a></div>
-</div></footer>
+  <script>
+    (async function () {
+      const BASES = ['https://frog02-32287.wykr.es'];
 
-<script>
-(async function(){
-  const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  async function apiGet(path){
-    for(const b of BASES){
-      try{ const r = await fetch(b + path); if(r.ok) return await r.json(); }catch(e){}
-    }
-    throw new Error('offline');
-  }
-  const VERIFIED = ['Reading Verified', 'Comprehension Verified', 'verified'];
-  const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
-  const box = document.getElementById('chList');
-  try{
-    const [cj, proofs] = await Promise.all([
-      apiGet('/api/publisher/campaigns'),
-      apiGet('/api/proofs').catch(() => [])
-    ]);
-    document.getElementById('apiDot').classList.add('on');
-    document.getElementById('apiStatus').textContent = T('live', 'live');
-    const camps = cj.campaigns || [];
-    const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
-    if(!camps.length){ box.innerHTML = '<p class="muted">' + esc(T('ch_none', 'No challenges on the network yet.')) + '</p>'; return; }
-    box.innerHTML = '<div class="rp-grid cols-2">' + camps.map(c => {
-      const rel = list.filter(p => p.bookId === c.id || p.chapterId === c.id);
-      const ver = rel.filter(p => VERIFIED.includes(p.status));
-      const readers = new Set(rel.map(p => p.walletAddress).filter(Boolean)).size;
-      const avg = rel.length ? (rel.reduce((a,p) => a + Number(p.score||0), 0) / rel.length).toFixed(1) : '—';
-      const pool = typeof c.rewardPool === 'string' ? c.rewardPool : ((c.rewardPool ?? '?') + ' ' + (c.currency || ''));
-      return `<div class="card"><span class="pill ${c.status==='active'?'ok':'mut'}">${esc(c.status)}</span>` +
-        `<h3 style="margin-top:10px">${esc(c.title)}</h3><p class="muted" style="font-size:.88rem">${esc(c.author||'')} · <span class="mono" style="font-size:.75rem">${esc(c.id)}</span></p>` +
-        `<div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">` +
-        `<div class="stat"><div class="l">${T('ch_part', 'Participants')}</div><div class="v">${readers}</div></div>` +
-        `<div class="stat"><div class="l">${T('ch_ver', 'Verified')}</div><div class="v">${ver.length}</div></div>` +
-        `<div class="stat"><div class="l">${T('ch_pool', 'Reward pool')}</div><div class="v" style="font-size:1.2rem">${esc(pool)}</div></div>` +
-        `<div class="stat"><div class="l">${T('ch_avg', 'Avg. score')}</div><div class="v">${avg}</div></div></div>` +
-        `<div class="rp-actions" style="margin:12px 0 0"><a class="btn btn-ghost btn-sm" href="/publishers/?campaign=${esc(c.id)}">${T('ch_details', 'Details & rewards')}</a></div></div>`;
-    }).join('') + '</div>';
-  }catch(e){
-    document.getElementById('apiStatus').textContent = T('offline', 'offline');
-    box.innerHTML = '<p class="muted">Network offline — challenges load live when the API is reachable. The iOS app works with bundled books in the meantime.</p>';
-  }
-})();
-</script>
-<script src="/assets/i18n.js"></script>
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      async function apiGet(path) {
+        for (const b of BASES) {
+          try { const r = await fetch(b + path); if (r.ok) return await r.json(); } catch (e) { }
+        }
+        throw new Error('offline');
+      }
+      const VERIFIED = ['Reading Verified', 'Comprehension Verified', 'verified'];
+      const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
+      const box = document.getElementById('chList');
+      try {
+        const [cj, proofs] = await Promise.all([
+          apiGet('/api/publisher/campaigns'),
+          apiGet('/api/proofs').catch(() => [])
+        ]);
+        document.getElementById('apiDot').classList.add('on');
+        document.getElementById('apiStatus').textContent = T('live', 'live');
+        const camps = cj.campaigns || [];
+        const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
+        if (!camps.length) { box.innerHTML = '<p class="muted">' + esc(T('ch_none', 'No challenges on the network yet.')) + '</p>'; return; }
+        box.innerHTML = '<div class="rp-grid cols-2">' + camps.map(c => {
+          const rel = list.filter(p => p.bookId === c.id || p.chapterId === c.id);
+          const ver = rel.filter(p => VERIFIED.includes(p.status));
+          const readers = new Set(rel.map(p => p.walletAddress).filter(Boolean)).size;
+          const avg = rel.length ? (rel.reduce((a, p) => a + Number(p.score || 0), 0) / rel.length).toFixed(1) : '—';
+          const pool = typeof c.rewardPool === 'string' ? c.rewardPool : ((c.rewardPool ?? '?') + ' ' + (c.currency || ''));
+          return `<div class="card"><span class="pill ${c.status === 'active' ? 'ok' : 'mut'}">${esc(c.status)}</span>` +
+            `<h3 style="margin-top:10px">${esc(c.title)}</h3><p class="muted" style="font-size:.88rem">${esc(c.author || '')} · <span class="mono" style="font-size:.75rem">${esc(c.id)}</span></p>` +
+            `<div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">` +
+            `<div class="stat"><div class="l">${T('ch_part', 'Participants')}</div><div class="v">${readers}</div></div>` +
+            `<div class="stat"><div class="l">${T('ch_ver', 'Verified')}</div><div class="v">${ver.length}</div></div>` +
+            `<div class="stat"><div class="l">${T('ch_pool', 'Reward pool')}</div><div class="v" style="font-size:1.2rem">${esc(pool)}</div></div>` +
+            `<div class="stat"><div class="l">${T('ch_avg', 'Avg. score')}</div><div class="v">${avg}</div></div></div>` +
+            `<div class="rp-actions" style="margin:12px 0 0"><a class="btn btn-ghost btn-sm" href="/publishers/?campaign=${esc(c.id)}">${T('ch_details', 'Details & rewards')}</a></div></div>`;
+        }).join('') + '</div>';
+      } catch (e) {
+        document.getElementById('apiStatus').textContent = T('offline', 'offline');
+        box.innerHTML = '<p class="muted">Network offline — challenges load live when the API is reachable. The iOS app works with bundled books in the meantime.</p>';
+      }
+    })();
+  </script>
+  <script src="/assets/i18n.js"></script>
 </body>
+
 </html>

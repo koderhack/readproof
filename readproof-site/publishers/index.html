@@ -1,265 +1,366 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReadProof for Publishers — Create reading challenges around your books</title>
-<meta name="description" content="Publishers select a book, create a Reading Challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.">
-<link rel="icon" type="image/png" href="/assets/icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ReadProof for Publishers — Create reading challenges around your books</title>
+  <meta name="description"
+    content="Publishers select a book, create a Reading Challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.">
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/assets/site.css">
 </head>
+
 <body>
-<nav class="rp-nav"><div class="wrap">
-  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
-  <div class="rp-links">
-    <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
-    <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
-    <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
-    <a href="/publishers/" class="keep" data-i18n="nav_publishers">Publishers</a>
-    <a href="/verify/" data-i18n="nav_verify">Verify</a>
-    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en">EN</button></span>
-    <a href="#panel" class="cta" data-i18n="pp_panel_cta">Publisher panel</a>
-  </div>
-</div></nav>
-
-<header class="rp-hero"><div class="wrap">
-  <div>
-    <span class="rp-eyebrow" data-i18n="pp_eyebrow">For Publishers</span>
-    <h1 class="rp-h1"><span data-i18n="pp_h_a">Turn your books into</span><br><em data-i18n="pp_h_b">reading challenges.</em></h1>
-    <p class="rp-lead" data-i18n="pp_sub">Select a book, create a challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.</p>
-    <div class="rp-actions">
-      <a class="btn btn-primary" href="#panel" data-i18n="pp_open">Open publisher panel</a>
-      <a class="btn btn-ghost" href="#flow" data-i18n="pp_how">How it works</a>
-    </div>
-  </div>
-  <div class="panel">
-    <p class="rp-kicker" data-i18n="pp_reward_k">Reward pool</p>
-    <h3 style="font-size:1.6rem;margin:0 0 6px" data-i18n="pp_reward_h">Promotion powered by people who actually finished the book.</h3>
-    <p class="muted" style="font-size:.92rem" data-i18n="pp_reward_p">You fund a fixed pool per challenge. Only verified proofs qualify for rewards — no bots, no skimmed pages.</p>
-  </div>
-</div></header>
-
-<main>
-<section class="rp-section tight" id="flow"><div class="wrap">
-  <p class="rp-kicker" data-i18n="pp_flow_k">Your flow</p>
-  <h2 class="rp-h2" data-i18n="pp_flow_h">From manuscript to measurable readers.</h2>
-  <ol class="steps" style="margin-top:22px">
-    <li><b data-i18n="pp_f1">Select a book</b><p data-i18n="pp_f1p">Your title or a public-domain classic — with ISBN and cover.</p></li>
-    <li><b data-i18n="pp_f2">Create a Reading Challenge</b><p data-i18n="pp_f2p">Name, description, dates, participant limit, eligibility and reward rules.</p></li>
-    <li><b data-i18n="pp_f3">Fund the reward pool</b><p data-i18n="pp_f3p">A fixed amount per challenge. Details in the panel — settled on Solana Devnet while in demo.</p></li>
-    <li><b data-i18n="pp_f4">Readers participate</b><p data-i18n="pp_f4p">They read the real book and complete chapter challenges.</p></li>
-    <li><b data-i18n="pp_f5">ReadProof verifies understanding</b><p data-i18n="pp_f5p">Meaning-checked answers, anti-cheat on device. Only verified proofs qualify.</p></li>
-    <li><b data-i18n="pp_f6">Rewards are distributed</b><p data-i18n="pp_f6p">Automatically, according to the rules you published.</p></li>
-  </ol>
-</div></section>
-
-<section class="rp-section tight"><div class="wrap">
-  <div class="rp-grid cols-2" style="align-items:start">
-    <div class="card">
-      <p class="rp-kicker" data-i18n="pp_live_k">Live challenges</p>
-      <h3 data-i18n="pp_live_h">Running on the network right now.</h3>
-      <div id="liveCamps" style="margin-top:10px"><p class="muted">Loading live challenges from the network…</p></div>
-      <div class="rp-actions" style="margin:12px 0 0">
-        <a class="btn btn-ghost btn-sm" href="/challenge/" data-i18n="pp_all">All challenges</a>
+  <nav class="rp-nav">
+    <div class="wrap">
+      <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+      <div class="rp-links">
+        <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
+        <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+        <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
+        <a href="/publishers/" class="keep" data-i18n="nav_publishers">Publishers</a>
+        <a href="/verify/" data-i18n="nav_verify">Verify</a>
+        <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button
+            data-lang="en">EN</button></span>
+        <a href="#panel" class="cta" data-i18n="pp_panel_cta">Publisher panel</a>
       </div>
     </div>
-    <div>
-      <div class="card flat" style="margin-bottom:14px"><h3><span data-i18n="pp_c1">Real participation data</span></h3><p data-i18n="pp_c1p">Participants, completions, average score — per challenge, live from the API.</p></div>
-      <div class="card flat" style="margin-bottom:14px"><h3><span data-i18n="pp_c2">Verifiable by design</span></h3><p data-i18n="pp_c2p">Every reward maps to a proof ID anyone can check. <span class="pill info">Verified on-chain</span></p></div>
-      <div class="card flat"><h3><span data-i18n="pp_c3">Book content stays private</span></h3><p data-i18n="pp_c3p">Full text lives server-side for question generation. On-chain goes only the proof hash.</p></div>
-    </div>
-  </div>
-</div></section>
+  </nav>
 
-<section class="rp-section tight" id="panel"><div class="wrap">
-  <p class="rp-kicker">Panel wydawcy</p>
-  <h2 class="rp-h2">Twoje książki. Twoje wyzwania.</h2>
-  <p class="rp-sub" style="margin-bottom:14px">Logujesz się zwykłym kontem — portfel podajesz tylko tam, gdzie jest naprawdę potrzebny (wypłaty). <span class="mono" id="apiStatus">łączenie z API…</span> · <span class="muted">demo na Solana Devnet, bez prawdziwych środków</span></p>
-  <div class="card" id="accountCard" style="margin-bottom:18px">
-    <p class="rp-kicker">Konto wydawcy</p>
-    <div id="accountView"></div>
-  </div>
-  <div class="tabs" role="tablist" aria-label="Zakładki panelu">
-    <a class="tab" href="#secMine" style="text-decoration:none">Overview</a>
-    <a class="tab" href="#secList" style="text-decoration:none">Challenges</a>
-    <a class="tab" href="#secBooks" style="text-decoration:none">Books</a>
-    <a class="tab" href="#secDetail" style="text-decoration:none">Rewards</a>
-    <a class="tab" href="#secStats" style="text-decoration:none">Analytics</a>
-  </div>
-
-  <div class="rp-section tight" id="secStats" aria-label="Statystyki wydawcy" style="padding-top:6px">
-    <div class="rp-grid cols-2" id="myStats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"></div>
-  </div>
-
-  <div class="rp-section tight" id="secMine" style="padding-top:6px">
-    <p class="rp-kicker">Overview</p>
-    <h3 style="font-size:1.3rem;margin:0 0 4px">Moje kampanie <span class="muted mono" id="mineCount" style="font-size:.8rem"></span></h3>
-    <p class="rp-sub">Filtrowane po Twoim portfelu: <code class="inline mono" id="mineWalletHint">uzupełnij portfel w koncie powyżej</code> • źródło <code class="inline mono">GET /api/publisher/campaigns</code></p>
-    <div class="tabs" role="tablist">
-      <button class="tab" data-mfilter="all" aria-selected="true">Wszystkie moje</button>
-      <button class="tab" data-mfilter="active" aria-selected="false">Aktywne</button>
-      <button class="tab" data-mfilter="draft" aria-selected="false">Robocze</button>
-    </div>
-    <div id="mineList" class="rp-grid cols-3"><div class="card flat"><p class="muted">Uzupełnij portfel w koncie, aby zobaczyć swoje kampanie. Bez portfela widzisz poniżej ostatnie kampanie publiczne.</p></div></div>
-  </div>
-
-  <div class="rp-section tight hidden" id="secDetail" aria-label="Szczegóły kampanii" style="display:none;padding-top:6px">
-    <button class="btn btn-ghost btn-sm" id="btnBack">← Wszystkie kampanie</button>
-    <h3 style="font-size:1.3rem;margin:12px 0 0" id="dTitle">Kampania</h3>
-    <p class="muted mono" id="dId" style="font-size:.75rem"></p>
-    <div class="rp-grid cols-2" id="dStats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin:12px 0"></div>
-    <div class="card flat" style="margin-bottom:16px">
-      <p class="rp-kicker">Informacje</p>
-      <div id="dInfo" style="font-size:.9rem"></div>
-    </div>
-    <div class="card flat" style="margin-bottom:16px">
-      <p class="rp-kicker">QR i linki</p>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:8px">
-        <img id="dQr" alt="QR kampanii" style="width:180px;height:180px;border:1px solid var(--line);border-radius:12px;background:#fff">
-        <div style="font-size:.85rem;flex:1;min-width:220px">
-          <div><b>Deep link:</b> <code class="mono" id="dDeep" style="word-break:break-all"></code> <button class="btn btn-ghost btn-sm" data-copy="dDeep">Kopiuj</button></div>
-          <div style="margin-top:6px"><b>Scheme:</b> <code class="mono" id="dScheme" style="word-break:break-all"></code> <button class="btn btn-ghost btn-sm" data-copy="dScheme">Kopiuj</button></div>
-          <div style="margin-top:8px"><a id="dQrApi" class="btn btn-ghost btn-sm" target="_blank">Otwórz QR</a></div>
+  <header class="rp-hero">
+    <div class="wrap">
+      <div>
+        <span class="rp-eyebrow" data-i18n="pp_eyebrow">For Publishers</span>
+        <h1 class="rp-h1"><span data-i18n="pp_h_a">Turn your books into</span><br><em data-i18n="pp_h_b">reading
+            challenges.</em></h1>
+        <p class="rp-lead" data-i18n="pp_sub">Select a book, create a challenge, fund a reward pool. Readers
+          participate, ReadProof verifies understanding, rewards go out by predefined rules.</p>
+        <div class="rp-actions">
+          <a class="btn btn-primary" href="#panel" data-i18n="pp_open">Open publisher panel</a>
+          <a class="btn btn-ghost" href="#flow" data-i18n="pp_how">How it works</a>
         </div>
       </div>
-    </div>
-    <div class="card flat" style="margin-bottom:16px">
-      <p class="rp-kicker">Reward pool — wpłaty</p>
-      <div id="dFunds" style="font-size:.85rem;margin-top:8px">Ładowanie…</div>
-      <h4 style="font-size:.85rem;margin:14px 0 4px">Doładuj pulę</h4>
-      <div class="form-row">
-        <div class="field" style="flex:2"><label for="fWallet">Portfel (właściciel)</label><input id="fWallet" placeholder="adres Solana" class="mono" autocomplete="off"></div>
-        <div class="field" style="flex:1"><label for="fAmount">Kwota</label><input id="fAmount" type="number" min="1" placeholder="100"></div>
-        <div class="field" style="flex:0;align-self:end"><button class="btn btn-primary" id="btnFund">Funduj</button></div>
+      <div class="panel">
+        <p class="rp-kicker" data-i18n="pp_reward_k">Reward pool</p>
+        <h3 style="font-size:1.6rem;margin:0 0 6px" data-i18n="pp_reward_h">Promotion powered by people who actually
+          finished the book.</h3>
+        <p class="muted" style="font-size:.92rem" data-i18n="pp_reward_p">You fund a fixed pool per challenge. Only
+          verified proofs qualify for rewards — no bots, no skimmed pages.</p>
       </div>
-      <div id="fundMsg" style="margin-top:8px"></div>
-      <p class="muted" style="font-size:.78rem;margin-top:8px">Rozliczenia demo na Solana Devnet (bez prawdziwych środków). Pula i wpłaty pochodzą z API.</p>
     </div>
-    <div class="card flat" style="margin-bottom:16px">
-      <p class="rp-kicker">Treść książki</p>
-      <div id="dContent" style="font-size:.85rem;margin:8px 0"></div>
-      <div class="field"><label for="cText">Wgraj / nadpisz treść (plain text)</label><textarea id="cText" placeholder="Pełny tekst książki…" rows="4"></textarea></div>
-      <div style="margin-top:8px"><button class="btn btn-primary btn-sm" id="btnContent">Wyślij treść</button></div>
-      <div id="contentMsg" style="margin-top:8px"></div>
-    </div>
-    <div class="card flat">
-      <p class="rp-kicker">Dowody czytelników <span class="muted">(ostatnie z API, filtrowane po kampanii)</span></p>
-      <div id="dProofs" style="font-size:.85rem;margin-top:8px">Ładowanie…</div>
-    </div>
-  </div>
+  </header>
 
-  <div class="rp-section tight" id="secList" style="padding-top:6px">
-    <p class="rp-kicker">Challenges</p>
-    <h3 style="font-size:1.3rem;margin:0 0 4px">Ostatnie kampanie <span class="muted mono" id="campCount" style="font-size:.8rem"></span></h3>
-    <p class="rp-sub">Wszystkie kampanie w sieci — źródło: <code class="inline mono">GET /api/publisher/campaigns</code> • odświeżane przy każdym wejściu.</p>
-    <div id="campList" class="rp-grid cols-3"><p class="muted">Ładowanie…</p></div>
-  </div>
-
-  <div class="rp-section tight" id="secBooks" style="padding-top:6px">
-    <p class="rp-kicker">Books</p>
-    <h3 style="font-size:1.3rem;margin:0 0 4px">Książki <span class="muted mono" id="booksCount" style="font-size:.8rem"></span></h3>
-    <p class="rp-sub">Katalog z <code class="inline mono">GET /api/books</code> — klasyki Gutenberg + treść kampanii wydawców trafia do pytań LLM.</p>
-    <div id="booksList" class="rp-grid cols-3"><p class="muted">Ładowanie…</p></div>
-  </div>
-
-  <div class="rp-section tight" id="secNew" style="padding-top:6px">
-    <div class="card">
-      <p class="rp-kicker">Nowa kampania</p>
-      <h3 style="font-size:1.3rem;margin:0 0 4px">Gotowy, by wydać własną kampanię?</h3>
-      <p class="rp-sub" style="margin-bottom:0">Trzy kroki: rejestracja (draft) → wgraj treść → ufunduj pulę. Bez treści i funduszy kampania zostaje szkicem i sesje nie wystartują. Nagroda domyślnie 5 USDC (Devnet) za zweryfikowany dowód.</p>
-    </div>
-    <div class="card" id="registerCard" style="margin-top:16px">
-      <p class="rp-kicker">Rejestracja kampanii</p>
-      <p class="muted" style="font-size:.85rem">Krok 1 z 3: utwórz wersję roboczą (<code class="inline mono">draft</code>), potem dodaj treść i ufunduj pulę w szczegółach powyżej.</p>
-      <div class="field"><label for="nWallet">Portfel wydawcy (Solana Devnet)</label>
-        <div class="form-row"><input id="nWallet" placeholder="adres Solana" class="mono" style="flex:1" autocomplete="off"><button class="btn btn-ghost btn-sm" id="btnUseConnected" style="align-self:end">Użyj z konta</button></div>
+  <main>
+    <section class="rp-section tight" id="flow">
+      <div class="wrap">
+        <p class="rp-kicker" data-i18n="pp_flow_k">Your flow</p>
+        <h2 class="rp-h2" data-i18n="pp_flow_h">From manuscript to measurable readers.</h2>
+        <ol class="steps" style="margin-top:22px">
+          <li><b data-i18n="pp_f1">Select a book</b>
+            <p data-i18n="pp_f1p">Your title or a public-domain classic — with ISBN and cover.</p>
+          </li>
+          <li><b data-i18n="pp_f2">Create a Reading Challenge</b>
+            <p data-i18n="pp_f2p">Name, description, dates, participant limit, eligibility and reward rules.</p>
+          </li>
+          <li><b data-i18n="pp_f3">Fund the reward pool</b>
+            <p data-i18n="pp_f3p">A fixed amount per challenge. Details in the panel — settled on Solana Devnet while in
+              demo.</p>
+          </li>
+          <li><b data-i18n="pp_f4">Readers participate</b>
+            <p data-i18n="pp_f4p">They read the real book and complete chapter challenges.</p>
+          </li>
+          <li><b data-i18n="pp_f5">ReadProof verifies understanding</b>
+            <p data-i18n="pp_f5p">Meaning-checked answers, anti-cheat on device. Only verified proofs qualify.</p>
+          </li>
+          <li><b data-i18n="pp_f6">Rewards are distributed</b>
+            <p data-i18n="pp_f6p">Automatically, according to the rules you published.</p>
+          </li>
+        </ol>
       </div>
-      <div class="form-row">
-        <div class="field" style="flex:2"><label for="nTitle">Tytuł *</label><input id="nTitle" placeholder="Boska Komedia — Piekło" autocomplete="off"></div>
-        <div class="field" style="flex:1"><label for="nAuthor">Autor</label><input id="nAuthor" placeholder="Dante Alighieri" autocomplete="off"></div>
+    </section>
+
+    <section class="rp-section tight">
+      <div class="wrap">
+        <div class="rp-grid cols-2" style="align-items:start">
+          <div class="card">
+            <p class="rp-kicker" data-i18n="pp_live_k">Live challenges</p>
+            <h3 data-i18n="pp_live_h">Running on the network right now.</h3>
+            <div id="liveCamps" style="margin-top:10px">
+              <p class="muted">Loading live challenges from the network…</p>
+            </div>
+            <div class="rp-actions" style="margin:12px 0 0">
+              <a class="btn btn-ghost btn-sm" href="/challenge/" data-i18n="pp_all">All challenges</a>
+            </div>
+          </div>
+          <div>
+            <div class="card flat" style="margin-bottom:14px">
+              <h3><span data-i18n="pp_c1">Real participation data</span></h3>
+              <p data-i18n="pp_c1p">Participants, completions, average score — per challenge, live from the API.</p>
+            </div>
+            <div class="card flat" style="margin-bottom:14px">
+              <h3><span data-i18n="pp_c2">Verifiable by design</span></h3>
+              <p data-i18n="pp_c2p">Every reward maps to a proof ID anyone can check. <span class="pill info">Verified
+                  on-chain</span></p>
+            </div>
+            <div class="card flat">
+              <h3><span data-i18n="pp_c3">Book content stays private</span></h3>
+              <p data-i18n="pp_c3p">Full text lives server-side for question generation. On-chain goes only the proof
+                hash.</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="form-row">
-        <div class="field" style="flex:1"><label for="nIsbn">ISBN (10/13)</label><input id="nIsbn" placeholder="9780140448955" class="mono" autocomplete="off"></div>
-        <div class="field" style="flex:1"><label for="nReward">Nagroda / dowód</label><input id="nReward" type="number" value="5" min="1"></div>
-        <div class="field" style="flex:1"><label for="nCurrency">Waluta</label><select id="nCurrency"><option>USDC</option><option>SOL</option></select></div>
+    </section>
+
+    <section class="rp-section tight" id="panel">
+      <div class="wrap">
+        <p class="rp-kicker">Panel wydawcy</p>
+        <h2 class="rp-h2">Twoje książki. Twoje wyzwania.</h2>
+        <p class="rp-sub" style="margin-bottom:14px">Logujesz się zwykłym kontem — portfel podajesz tylko tam, gdzie
+          jest naprawdę potrzebny (wypłaty). <span class="mono" id="apiStatus">łączenie z API…</span> · <span
+            class="muted">demo na Solana Devnet, bez prawdziwych środków</span></p>
+        <div class="card" id="accountCard" style="margin-bottom:18px">
+          <p class="rp-kicker">Konto wydawcy</p>
+          <div id="accountView"></div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Zakładki panelu">
+          <a class="tab" href="#secMine" style="text-decoration:none">Overview</a>
+          <a class="tab" href="#secList" style="text-decoration:none">Challenges</a>
+          <a class="tab" href="#secBooks" style="text-decoration:none">Books</a>
+          <a class="tab" href="#secDetail" style="text-decoration:none">Rewards</a>
+          <a class="tab" href="#secStats" style="text-decoration:none">Analytics</a>
+        </div>
+
+        <div class="rp-section tight" id="secStats" aria-label="Statystyki wydawcy" style="padding-top:6px">
+          <div class="rp-grid cols-2" id="myStats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+          </div>
+        </div>
+
+        <div class="rp-section tight" id="secMine" style="padding-top:6px">
+          <p class="rp-kicker">Overview</p>
+          <h3 style="font-size:1.3rem;margin:0 0 4px">Moje kampanie <span class="muted mono" id="mineCount"
+              style="font-size:.8rem"></span></h3>
+          <p class="rp-sub">Filtrowane po Twoim portfelu: <code class="inline mono"
+              id="mineWalletHint">uzupełnij portfel w koncie powyżej</code> • źródło <code
+              class="inline mono">GET /api/publisher/campaigns</code></p>
+          <div class="tabs" role="tablist">
+            <button class="tab" data-mfilter="all" aria-selected="true">Wszystkie moje</button>
+            <button class="tab" data-mfilter="active" aria-selected="false">Aktywne</button>
+            <button class="tab" data-mfilter="draft" aria-selected="false">Robocze</button>
+          </div>
+          <div id="mineList" class="rp-grid cols-3">
+            <div class="card flat">
+              <p class="muted">Uzupełnij portfel w koncie, aby zobaczyć swoje kampanie. Bez portfela widzisz poniżej
+                ostatnie kampanie publiczne.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rp-section tight hidden" id="secDetail" aria-label="Szczegóły kampanii"
+          style="display:none;padding-top:6px">
+          <button class="btn btn-ghost btn-sm" id="btnBack">← Wszystkie kampanie</button>
+          <h3 style="font-size:1.3rem;margin:12px 0 0" id="dTitle">Kampania</h3>
+          <p class="muted mono" id="dId" style="font-size:.75rem"></p>
+          <div class="rp-grid cols-2" id="dStats"
+            style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin:12px 0"></div>
+          <div class="card flat" style="margin-bottom:16px">
+            <p class="rp-kicker">Informacje</p>
+            <div id="dInfo" style="font-size:.9rem"></div>
+          </div>
+          <div class="card flat" style="margin-bottom:16px">
+            <p class="rp-kicker">QR i linki</p>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:8px">
+              <img id="dQr" alt="QR kampanii"
+                style="width:180px;height:180px;border:1px solid var(--line);border-radius:12px;background:#fff">
+              <div style="font-size:.85rem;flex:1;min-width:220px">
+                <div><b>Deep link:</b> <code class="mono" id="dDeep" style="word-break:break-all"></code> <button
+                    class="btn btn-ghost btn-sm" data-copy="dDeep">Kopiuj</button></div>
+                <div style="margin-top:6px"><b>Scheme:</b> <code class="mono" id="dScheme"
+                    style="word-break:break-all"></code> <button class="btn btn-ghost btn-sm"
+                    data-copy="dScheme">Kopiuj</button></div>
+                <div style="margin-top:8px"><a id="dQrApi" class="btn btn-ghost btn-sm" target="_blank">Otwórz QR</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card flat" style="margin-bottom:16px">
+            <p class="rp-kicker">Reward pool — wpłaty</p>
+            <div id="dFunds" style="font-size:.85rem;margin-top:8px">Ładowanie…</div>
+            <h4 style="font-size:.85rem;margin:14px 0 4px">Doładuj pulę</h4>
+            <div class="form-row">
+              <div class="field" style="flex:2"><label for="fWallet">Portfel (właściciel)</label><input id="fWallet"
+                  placeholder="adres Solana" class="mono" autocomplete="off"></div>
+              <div class="field" style="flex:1"><label for="fAmount">Kwota</label><input id="fAmount" type="number"
+                  min="1" placeholder="100"></div>
+              <div class="field" style="flex:0;align-self:end"><button class="btn btn-primary"
+                  id="btnFund">Funduj</button></div>
+            </div>
+            <div id="fundMsg" style="margin-top:8px"></div>
+            <p class="muted" style="font-size:.78rem;margin-top:8px">Rozliczenia demo na Solana Devnet (bez prawdziwych
+              środków). Pula i wpłaty pochodzą z API.</p>
+          </div>
+          <div class="card flat" style="margin-bottom:16px">
+            <p class="rp-kicker">Treść książki</p>
+            <div id="dContent" style="font-size:.85rem;margin:8px 0"></div>
+            <div class="field"><label for="cText">Wgraj / nadpisz treść (plain text)</label><textarea id="cText"
+                placeholder="Pełny tekst książki…" rows="4"></textarea></div>
+            <div style="margin-top:8px"><button class="btn btn-primary btn-sm" id="btnContent">Wyślij treść</button>
+            </div>
+            <div id="contentMsg" style="margin-top:8px"></div>
+          </div>
+          <div class="card flat">
+            <p class="rp-kicker">Dowody czytelników <span class="muted">(ostatnie z API, filtrowane po kampanii)</span>
+            </p>
+            <div id="dProofs" style="font-size:.85rem;margin-top:8px">Ładowanie…</div>
+          </div>
+        </div>
+
+        <div class="rp-section tight" id="secList" style="padding-top:6px">
+          <p class="rp-kicker">Challenges</p>
+          <h3 style="font-size:1.3rem;margin:0 0 4px">Ostatnie kampanie <span class="muted mono" id="campCount"
+              style="font-size:.8rem"></span></h3>
+          <p class="rp-sub">Wszystkie kampanie w sieci — źródło: <code
+              class="inline mono">GET /api/publisher/campaigns</code> • odświeżane przy każdym wejściu.</p>
+          <div id="campList" class="rp-grid cols-3">
+            <p class="muted">Ładowanie…</p>
+          </div>
+        </div>
+
+        <div class="rp-section tight" id="secBooks" style="padding-top:6px">
+          <p class="rp-kicker">Books</p>
+          <h3 style="font-size:1.3rem;margin:0 0 4px">Książki <span class="muted mono" id="booksCount"
+              style="font-size:.8rem"></span></h3>
+          <p class="rp-sub">Katalog z <code class="inline mono">GET /api/books</code> — klasyki Gutenberg + treść
+            kampanii wydawców trafia do pytań LLM.</p>
+          <div id="booksList" class="rp-grid cols-3">
+            <p class="muted">Ładowanie…</p>
+          </div>
+        </div>
+
+        <div class="rp-section tight" id="secNew" style="padding-top:6px">
+          <div class="card">
+            <p class="rp-kicker">Nowa kampania</p>
+            <h3 style="font-size:1.3rem;margin:0 0 4px">Gotowy, by wydać własną kampanię?</h3>
+            <p class="rp-sub" style="margin-bottom:0">Trzy kroki: rejestracja (draft) → wgraj treść → ufunduj pulę. Bez
+              treści i funduszy kampania zostaje szkicem i sesje nie wystartują. Nagroda domyślnie 5 USDC (Devnet) za
+              zweryfikowany dowód.</p>
+          </div>
+          <div class="card" id="registerCard" style="margin-top:16px">
+            <p class="rp-kicker">Rejestracja kampanii</p>
+            <p class="muted" style="font-size:.85rem">Krok 1 z 3: utwórz wersję roboczą (<code
+                class="inline mono">draft</code>), potem dodaj treść i ufunduj pulę w szczegółach powyżej.</p>
+            <div class="field"><label for="nWallet">Portfel wydawcy (Solana Devnet)</label>
+              <div class="form-row"><input id="nWallet" placeholder="adres Solana" class="mono" style="flex:1"
+                  autocomplete="off"><button class="btn btn-ghost btn-sm" id="btnUseConnected"
+                  style="align-self:end">Użyj z konta</button></div>
+            </div>
+            <div class="form-row">
+              <div class="field" style="flex:2"><label for="nTitle">Tytuł *</label><input id="nTitle"
+                  placeholder="Boska Komedia — Piekło" autocomplete="off"></div>
+              <div class="field" style="flex:1"><label for="nAuthor">Autor</label><input id="nAuthor"
+                  placeholder="Dante Alighieri" autocomplete="off"></div>
+            </div>
+            <div class="form-row">
+              <div class="field" style="flex:1"><label for="nIsbn">ISBN (10/13)</label><input id="nIsbn"
+                  placeholder="9780140448955" class="mono" autocomplete="off"></div>
+              <div class="field" style="flex:1"><label for="nReward">Nagroda / dowód</label><input id="nReward"
+                  type="number" value="5" min="1"></div>
+              <div class="field" style="flex:1"><label for="nCurrency">Waluta</label><select id="nCurrency">
+                  <option>USDC</option>
+                  <option>SOL</option>
+                </select></div>
+            </div>
+            <div class="field"><label for="nDesc">Opis</label><textarea id="nDesc" placeholder="Krótki opis kampanii…"
+                rows="3"></textarea></div>
+            <div class="field"><label for="nCover">Okładka (URL, opcjonalnie)</label><input id="nCover"
+                placeholder="https://covers.openlibrary.org/b/isbn/9780140448955-L.jpg" autocomplete="off"></div>
+            <div style="margin-top:12px"><button class="btn btn-primary" id="btnCreate">Utwórz kampanię</button></div>
+            <div id="createMsg" style="margin-top:8px"></div>
+          </div>
+        </div>
       </div>
-      <div class="field"><label for="nDesc">Opis</label><textarea id="nDesc" placeholder="Krótki opis kampanii…" rows="3"></textarea></div>
-      <div class="field"><label for="nCover">Okładka (URL, opcjonalnie)</label><input id="nCover" placeholder="https://covers.openlibrary.org/b/isbn/9780140448955-L.jpg" autocomplete="off"></div>
-      <div style="margin-top:12px"><button class="btn btn-primary" id="btnCreate">Utwórz kampanię</button></div>
-      <div id="createMsg" style="margin-top:8px"></div>
+    </section>
+
+    <section class="rp-section tight">
+      <div class="wrap rp-center">
+        <h2 class="rp-h2" data-i18n="pp_ready">Ready to challenge your readers?</h2>
+        <p class="rp-sub" data-i18n="pp_ready_sub">Three steps in the panel: register (draft) → upload content → fund
+          the pool.</p>
+        <div class="rp-actions" style="justify-content:center">
+          <a class="btn btn-primary btn-lg" href="#panel" data-i18n="pp_open2">Open publisher panel →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rp-footer">
+    <div class="wrap">
+      <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood
+          it.</span></div>
+      <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/challenge/" data-i18n="nav_challenges">Challenges</a> ·
+        <a href="#panel" data-i18n="pp_panel_cta">Publisher panel</a></div>
     </div>
-  </div>
-</div></section>
+  </footer>
 
-<section class="rp-section tight"><div class="wrap rp-center">
-  <h2 class="rp-h2" data-i18n="pp_ready">Ready to challenge your readers?</h2>
-  <p class="rp-sub" data-i18n="pp_ready_sub">Three steps in the panel: register (draft) → upload content → fund the pool.</p>
-  <div class="rp-actions" style="justify-content:center">
-    <a class="btn btn-primary btn-lg" href="#panel" data-i18n="pp_open2">Open publisher panel →</a>
-  </div>
-</div></section>
-</main>
+  <script>
+    (async function () {
+      const BASES = ['https://frog02-32287.wykr.es'];
 
-<footer class="rp-footer"><div class="wrap">
-  <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood it.</span></div>
-  <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/challenge/" data-i18n="nav_challenges">Challenges</a> · <a href="#panel" data-i18n="pp_panel_cta">Publisher panel</a></div>
-</div></footer>
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
+      const box = document.getElementById('liveCamps');
+      try {
+        let camps = [];
+        for (const b of BASES) {
+          try { const r = await fetch(b + '/api/publisher/campaigns'); if (r.ok) { const j = await r.json(); camps = j.campaigns || []; break; } } catch (e) { }
+        }
+        if (!camps.length) { box.innerHTML = '<p class="muted">' + esc(T('no_camps', 'No live challenges right now.')) + '</p>'; return; }
+        box.innerHTML = camps.slice(0, 3).map(c =>
+          `<div class="camp-row"><span><strong>${esc(c.title)}</strong><br><span class="muted" style="font-size:.8rem">${esc(c.author || '')} · ${esc(typeof c.rewardPool === 'string' ? c.rewardPool : (c.rewardPool + ' ' + (c.currency || '')))}</span></span><span class="pill ${c.status === 'active' ? 'ok' : 'mut'}">${esc(c.status)}</span></div>`
+        ).join('');
+      } catch (e) { box.innerHTML = '<p class="muted">Network offline — challenges load live when the API is reachable.</p>'; }
+    })();
+  </script>
+  <script>
+    /* ── panel wydawcy: zwykłe konto + te same żywe endpointy co dotąd ── */
+    const API = 'http://frog02.mikr.us:32287'; // backend mówi tylko HTTP na :32287 — tak jak live
+    const $ = id => document.getElementById(id);
+    const esc2 = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const VERIFIED2 = ['Reading Verified', 'Comprehension Verified', 'verified'];
+    let ALL2 = [], MINE2 = [], mineFilter2 = 'all';
 
-<script>
-(async function(){
-  const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
-  const box = document.getElementById('liveCamps');
-  try{
-    let camps = [];
-    for(const b of BASES){
-      try{ const r = await fetch(b + '/api/publisher/campaigns'); if(r.ok){ const j = await r.json(); camps = j.campaigns || []; break; } }catch(e){}
+    function getProfile() { return { name: (localStorage.getItem('rp_pub_name') || '').trim(), email: (localStorage.getItem('rp_pub_email') || '').trim() }; }
+    function getWallet2() { return (localStorage.getItem('readproof_publisher_wallet') || '').trim(); }
+    function setWallet2(w) {
+      if (w) localStorage.setItem('readproof_publisher_wallet', w); else localStorage.removeItem('readproof_publisher_wallet');
+      paintAccount();
     }
-    if(!camps.length){ box.innerHTML = '<p class="muted">' + esc(T('no_camps', 'No live challenges right now.')) + '</p>'; return; }
-    box.innerHTML = camps.slice(0,3).map(c =>
-      `<div class="camp-row"><span><strong>${esc(c.title)}</strong><br><span class="muted" style="font-size:.8rem">${esc(c.author||'')} · ${esc(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}</span></span><span class="pill ${c.status==='active'?'ok':'mut'}">${esc(c.status)}</span></div>`
-    ).join('');
-  }catch(e){ box.innerHTML = '<p class="muted">Network offline — challenges load live when the API is reachable.</p>'; }
-})();
-</script>
-<script>
-/* ── panel wydawcy: zwykłe konto + te same żywe endpointy co dotąd ── */
-const API = 'http://frog02.mikr.us:32287'; // backend mówi tylko HTTP na :32287 — tak jak live
-const $ = id => document.getElementById(id);
-const esc2 = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VERIFIED2 = ['Reading Verified','Comprehension Verified','verified'];
-let ALL2 = [], MINE2 = [], mineFilter2 = 'all';
-
-function getProfile(){ return { name: (localStorage.getItem('rp_pub_name')||'').trim(), email: (localStorage.getItem('rp_pub_email')||'').trim() }; }
-function getWallet2(){ return (localStorage.getItem('readproof_publisher_wallet')||'').trim(); }
-function setWallet2(w){
-  if(w) localStorage.setItem('readproof_publisher_wallet', w); else localStorage.removeItem('readproof_publisher_wallet');
-  paintAccount();
-}
-function paintAccount(){
-  const p = getProfile(), w = getWallet2();
-  const box = $('accountView');
-  if(p.name || p.email){
-    box.innerHTML = `<p style="margin:0 0 4px"><strong>${esc2(p.name || p.email)}</strong>${p.email && p.name ? `<br><span class="muted" style="font-size:.85rem">${esc2(p.email)}</span>` : ''}</p>`
-      + `<p class="mono muted" style="font-size:.75rem;margin:0 0 10px">portfel: ${w ? esc2(w.slice(0,6)+'…'+w.slice(-4)) : 'nie podano (potrzebny do wypłat)'}</p>`
-      + `<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="btnEditAccount">Edytuj konto</button><button class="btn btn-ghost btn-sm" id="btnLogout">Wyloguj</button></div>`;
-    $('btnEditAccount').addEventListener('click', showAccountForm);
-    $('btnLogout').addEventListener('click', ()=>{ localStorage.removeItem('rp_pub_name'); localStorage.removeItem('rp_pub_email'); setWallet2(''); renderMine2(); renderStats2(); });
-  } else {
-    showAccountForm();
-    return;
-  }
-  $('mineWalletHint').textContent = w || 'uzupełnij portfel w koncie powyżej';
-  if(w && !$('nWallet').value) $('nWallet').value = w;
-  if(w && !$('fWallet').value) $('fWallet').value = w;
-}
-function showAccountForm(){
-  const p = getProfile(), w = getWallet2();
-  $('accountView').innerHTML = `
+    function paintAccount() {
+      const p = getProfile(), w = getWallet2();
+      const box = $('accountView');
+      if (p.name || p.email) {
+        box.innerHTML = `<p style="margin:0 0 4px"><strong>${esc2(p.name || p.email)}</strong>${p.email && p.name ? `<br><span class="muted" style="font-size:.85rem">${esc2(p.email)}</span>` : ''}</p>`
+          + `<p class="mono muted" style="font-size:.75rem;margin:0 0 10px">portfel: ${w ? esc2(w.slice(0, 6) + '…' + w.slice(-4)) : 'nie podano (potrzebny do wypłat)'}</p>`
+          + `<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="btnEditAccount">Edytuj konto</button><button class="btn btn-ghost btn-sm" id="btnLogout">Wyloguj</button></div>`;
+        $('btnEditAccount').addEventListener('click', showAccountForm);
+        $('btnLogout').addEventListener('click', () => { localStorage.removeItem('rp_pub_name'); localStorage.removeItem('rp_pub_email'); setWallet2(''); renderMine2(); renderStats2(); });
+      } else {
+        showAccountForm();
+        return;
+      }
+      $('mineWalletHint').textContent = w || 'uzupełnij portfel w koncie powyżej';
+      if (w && !$('nWallet').value) $('nWallet').value = w;
+      if (w && !$('fWallet').value) $('fWallet').value = w;
+    }
+    function showAccountForm() {
+      const p = getProfile(), w = getWallet2();
+      $('accountView').innerHTML = `
     <div class="field"><label for="aName">Imię / nazwa</label><input id="aName" value="${esc2(p.name)}" placeholder="Wydawnictwo Korniszon" autocomplete="off"></div>
     <div class="field"><label for="aEmail">Email</label><input id="aEmail" type="email" value="${esc2(p.email)}" placeholder="kontakt@wydawnictwo.pl" autocomplete="off"></div>
     <div class="field"><label for="aWallet">Portfel Solana (tylko do wypłat i filtrowania kampanii)</label><input id="aWallet" class="mono" value="${esc2(w)}" placeholder="adres Solana" autocomplete="off"></div>
@@ -268,188 +369,189 @@ function showAccountForm(){
       <button class="btn btn-ghost btn-sm" id="btnGuest">Wejdź jako zwykły użytkownik</button>
       <button class="btn btn-ghost btn-sm" id="btnPhantom">Użyj adresu z Phantom</button>
     </div>`;
-  $('btnGuest').addEventListener('click', ()=>{
-    localStorage.setItem('rp_pub_name', 'Gość');
-    localStorage.removeItem('rp_pub_email');
-    setWallet2(''); renderMine2(); renderStats2();
-  });
-  $('btnSaveAccount').addEventListener('click', ()=>{
-    localStorage.setItem('rp_pub_name', $('aName').value.trim());
-    localStorage.setItem('rp_pub_email', $('aEmail').value.trim());
-    setWallet2($('aWallet').value.trim()); renderMine2(); renderStats2();
-  });
-  $('btnPhantom').addEventListener('click', async ()=>{
-    try{
-      const sol = window.solana;
-      if(!sol || !sol.isPhantom){ window.open('https://phantom.app/','_blank'); return; }
-      const r = await sol.connect();
-      $('aWallet').value = r.publicKey.toString();
-    }catch(e){ alert('Phantom: ' + (e.message||e)); }
-  });
-}
+      $('btnGuest').addEventListener('click', () => {
+        localStorage.setItem('rp_pub_name', 'Gość');
+        localStorage.removeItem('rp_pub_email');
+        setWallet2(''); renderMine2(); renderStats2();
+      });
+      $('btnSaveAccount').addEventListener('click', () => {
+        localStorage.setItem('rp_pub_name', $('aName').value.trim());
+        localStorage.setItem('rp_pub_email', $('aEmail').value.trim());
+        setWallet2($('aWallet').value.trim()); renderMine2(); renderStats2();
+      });
+      $('btnPhantom').addEventListener('click', async () => {
+        try {
+          const sol = window.solana;
+          if (!sol || !sol.isPhantom) { window.open('https://phantom.app/', '_blank'); return; }
+          const r = await sol.connect();
+          $('aWallet').value = r.publicKey.toString();
+        } catch (e) { alert('Phantom: ' + (e.message || e)); }
+      });
+    }
 
-async function api2(path, opts){
-  const r = await fetch(API + path, {headers:{'Content-Type':'application/json','X-Lang':'pl'}, ...opts});
-  const j = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
-  return j;
-}
-function cardHTML2(c){
-  return `<div class="card flat">
-    <p class="rp-kicker"><span class="pill ${c.status==='active'?'ok':'mut'}">${esc2(c.status)}</span> • <span class="mono">${esc2(c.id)}</span></p>
-    ${c.coverUrl?`<img src="${esc2(c.coverUrl)}" alt="Okładka" loading="lazy" style="width:100%;border-radius:10px;margin:8px 0" onerror="this.remove()">`:''}
+    async function api2(path, opts) {
+      const r = await fetch(API + path, { headers: { 'Content-Type': 'application/json', 'X-Lang': 'pl' }, ...opts });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      return j;
+    }
+    function cardHTML2(c) {
+      return `<div class="card flat">
+    <p class="rp-kicker"><span class="pill ${c.status === 'active' ? 'ok' : 'mut'}">${esc2(c.status)}</span> • <span class="mono">${esc2(c.id)}</span></p>
+    ${c.coverUrl ? `<img src="${esc2(c.coverUrl)}" alt="Okładka" loading="lazy" style="width:100%;border-radius:10px;margin:8px 0" onerror="this.remove()">` : ''}
     <h3 style="margin:6px 0 2px">${esc2(c.title)}</h3>
-    <div class="muted" style="font-size:.85rem">${esc2(c.author||'')} • <span class="mono">${esc2(c.isbn||'—')}</span></div>
-    <div style="margin-top:8px;font-size:.85rem">Pula: <strong>${esc2(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}</strong> • ${esc2(String(c.rewardPerProof))} / dowód</div>
+    <div class="muted" style="font-size:.85rem">${esc2(c.author || '')} • <span class="mono">${esc2(c.isbn || '—')}</span></div>
+    <div style="margin-top:8px;font-size:.85rem">Pula: <strong>${esc2(typeof c.rewardPool === 'string' ? c.rewardPool : (c.rewardPool + ' ' + (c.currency || '')))}</strong> • ${esc2(String(c.rewardPerProof))} / dowód</div>
     <div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-open="${esc2(c.id)}">Szczegóły i statystyki</button></div>
   </div>`;
-}
-function bindOpen2(scope){
-  scope.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openDetail2(b.dataset.open)));
-}
-function renderMine2(){
-  const w = getWallet2();
-  MINE2 = w ? ALL2.filter(c => (c.publisherWallet||'') === w) : [];
-  const list = mineFilter2==='all' ? MINE2 : MINE2.filter(c=>c.status===mineFilter2);
-  $('mineCount').textContent = w ? `(${list.length}/${MINE2.length})` : '';
-  $('mineList').innerHTML = !w
-    ? '<div class="card flat"><p class="muted">Uzupełnij portfel w koncie, aby zobaczyć swoje kampanie. Bez portfela widzisz poniżej ostatnie kampanie publiczne.</p></div>'
-    : (list.map(cardHTML2).join('') || '<div class="card flat"><p class="muted">Brak kampanii dla tego portfela — zarejestruj pierwszą poniżej.</p></div>');
-  bindOpen2($('mineList'));
-}
-document.querySelectorAll('[data-mfilter]').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('[data-mfilter]').forEach(x=>x.setAttribute('aria-selected','false'));
-  b.setAttribute('aria-selected','true'); mineFilter2=b.dataset.mfilter; renderMine2();
-}));
-async function renderStats2(){
-  const w = getWallet2();
-  const mine = w ? ALL2.filter(c=>(c.publisherWallet||'')===w) : [];
-  let proofs = [];
-  try{ proofs = await api2('/api/proofs'); if(!Array.isArray(proofs)) proofs = []; }catch{}
-  const mineIds = new Set(mine.map(c=>c.id));
-  const mineProofs = proofs.filter(p => mineIds.has(p.bookId) || mineIds.has(p.chapterId));
-  const ver = mineProofs.filter(p => VERIFIED2.includes(p.status));
-  const readers = new Set(mineProofs.map(p => p.walletAddress).filter(Boolean)).size;
-  const pool = mine.reduce((a,c)=>a+Number(String(c.rewardPool).split(' ')[0]||c.rewardPool||0),0);
-  const cells = [
-    ['Moje kampanie', String(mine.length)],
-    ['Pula (moja)', `${pool}`],
-    ['Dowody (moje)', String(mineProofs.length)],
-    ['Zweryfikowane', String(ver.length)],
-    ['Czytelnicy', String(readers)],
-    ['W sieci', String(ALL2.length)]
-  ];
-  $('myStats').innerHTML = cells.map(([l,v]) => `<div class="card flat" style="text-align:left"><div class="muted" style="font-size:.75rem">${l}</div><div style="font-family:var(--font-display);font-size:1.6rem;font-weight:800">${esc2(v)}</div></div>`).join('');
-}
-document.querySelectorAll('#secDetail [data-copy]').forEach(b => b.addEventListener('click', () => {
-  const t = $(b.dataset.copy).textContent;
-  navigator.clipboard.writeText(t).then(()=>{ const o=b.innerHTML; b.textContent='OK'; setTimeout(()=>{b.innerHTML=o;},800); });
-}));
-$('btnBack').addEventListener('click', () => {
-  history.replaceState(null,'',location.pathname);
-  $('secDetail').style.display = 'none';
-});
-$('btnUseConnected').addEventListener('click', ()=>{ const w=getWallet2(); if(w){ $('nWallet').value=w; } });
+    }
+    function bindOpen2(scope) {
+      scope.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openDetail2(b.dataset.open)));
+    }
+    function renderMine2() {
+      const w = getWallet2();
+      MINE2 = w ? ALL2.filter(c => (c.publisherWallet || '') === w) : [];
+      const list = mineFilter2 === 'all' ? MINE2 : MINE2.filter(c => c.status === mineFilter2);
+      $('mineCount').textContent = w ? `(${list.length}/${MINE2.length})` : '';
+      $('mineList').innerHTML = !w
+        ? '<div class="card flat"><p class="muted">Uzupełnij portfel w koncie, aby zobaczyć swoje kampanie. Bez portfela widzisz poniżej ostatnie kampanie publiczne.</p></div>'
+        : (list.map(cardHTML2).join('') || '<div class="card flat"><p class="muted">Brak kampanii dla tego portfela — zarejestruj pierwszą poniżej.</p></div>');
+      bindOpen2($('mineList'));
+    }
+    document.querySelectorAll('[data-mfilter]').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('[data-mfilter]').forEach(x => x.setAttribute('aria-selected', 'false'));
+      b.setAttribute('aria-selected', 'true'); mineFilter2 = b.dataset.mfilter; renderMine2();
+    }));
+    async function renderStats2() {
+      const w = getWallet2();
+      const mine = w ? ALL2.filter(c => (c.publisherWallet || '') === w) : [];
+      let proofs = [];
+      try { proofs = await api2('/api/proofs'); if (!Array.isArray(proofs)) proofs = []; } catch { }
+      const mineIds = new Set(mine.map(c => c.id));
+      const mineProofs = proofs.filter(p => mineIds.has(p.bookId) || mineIds.has(p.chapterId));
+      const ver = mineProofs.filter(p => VERIFIED2.includes(p.status));
+      const readers = new Set(mineProofs.map(p => p.walletAddress).filter(Boolean)).size;
+      const pool = mine.reduce((a, c) => a + Number(String(c.rewardPool).split(' ')[0] || c.rewardPool || 0), 0);
+      const cells = [
+        ['Moje kampanie', String(mine.length)],
+        ['Pula (moja)', `${pool}`],
+        ['Dowody (moje)', String(mineProofs.length)],
+        ['Zweryfikowane', String(ver.length)],
+        ['Czytelnicy', String(readers)],
+        ['W sieci', String(ALL2.length)]
+      ];
+      $('myStats').innerHTML = cells.map(([l, v]) => `<div class="card flat" style="text-align:left"><div class="muted" style="font-size:.75rem">${l}</div><div style="font-family:var(--font-display);font-size:1.6rem;font-weight:800">${esc2(v)}</div></div>`).join('');
+    }
+    document.querySelectorAll('#secDetail [data-copy]').forEach(b => b.addEventListener('click', () => {
+      const t = $(b.dataset.copy).textContent;
+      navigator.clipboard.writeText(t).then(() => { const o = b.innerHTML; b.textContent = 'OK'; setTimeout(() => { b.innerHTML = o; }, 800); });
+    }));
+    $('btnBack').addEventListener('click', () => {
+      history.replaceState(null, '', location.pathname);
+      $('secDetail').style.display = 'none';
+    });
+    $('btnUseConnected').addEventListener('click', () => { const w = getWallet2(); if (w) { $('nWallet').value = w; } });
 
-async function initPanel2(){
-  paintAccount();
-  try { await fetch(API + '/health').then(r=>r.json()); $('apiStatus').textContent = 'API: online'; }
-  catch(e){ $('apiStatus').textContent = 'API: offline'; }
-  try {
-    const j = await api2('/api/publisher/campaigns');
-    ALL2 = j.campaigns || [];
-    $('campCount').textContent = `(${j.count ?? ALL2.length})`;
-    $('campList').innerHTML = ALL2.map(cardHTML2).join('') || '<p class="muted">Brak kampanii.</p>';
-    bindOpen2($('campList'));
-  } catch(e){ $('campList').innerHTML = `<div class="card flat"><p class="muted">Nie udało się pobrać kampanii: ${esc2(e.message)}</p></div>`; }
-  renderMine2(); renderStats2();
-  try{
-    const books = await api2('/api/books');
-    $('booksCount').textContent = `(${books.length})`;
-    $('booksList').innerHTML = books.map(b=>`<div class="card flat">
-      ${b.coverUrl?`<img src="${esc2(b.coverUrl)}" alt="Okładka" loading="lazy" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;margin-bottom:8px" onerror="this.remove()">`:''}
-      <p class="rp-kicker">${esc2(b.author||'')} • ${esc2(String(b.totalChapters ?? (b.chapters||[]).length))} rozdz.</p>
+    async function initPanel2() {
+      paintAccount();
+      try { await fetch(API + '/health').then(r => r.json()); $('apiStatus').textContent = 'API: online'; }
+      catch (e) { $('apiStatus').textContent = 'API: offline'; }
+      try {
+        const j = await api2('/api/publisher/campaigns');
+        ALL2 = j.campaigns || [];
+        $('campCount').textContent = `(${j.count ?? ALL2.length})`;
+        $('campList').innerHTML = ALL2.map(cardHTML2).join('') || '<p class="muted">Brak kampanii.</p>';
+        bindOpen2($('campList'));
+      } catch (e) { $('campList').innerHTML = `<div class="card flat"><p class="muted">Nie udało się pobrać kampanii: ${esc2(e.message)}</p></div>`; }
+      renderMine2(); renderStats2();
+      try {
+        const books = await api2('/api/books');
+        $('booksCount').textContent = `(${books.length})`;
+        $('booksList').innerHTML = books.map(b => `<div class="card flat">
+      ${b.coverUrl ? `<img src="${esc2(b.coverUrl)}" alt="Okładka" loading="lazy" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;margin-bottom:8px" onerror="this.remove()">` : ''}
+      <p class="rp-kicker">${esc2(b.author || '')} • ${esc2(String(b.totalChapters ?? (b.chapters || []).length))} rozdz.</p>
       <h3 style="font-size:1.1rem;margin:6px 0 4px">${esc2(b.title)}</h3>
-      <p class="muted" style="font-size:.85rem">${esc2((b.description||'').slice(0,140))}…</p>
-      <div style="margin-top:8px"><span class="pill ok">${esc2(b.rewardPerChapter||'5 USDC')}</span> <span class="mono muted" style="font-size:.7rem">${esc2(b.id)}</span></div>
+      <p class="muted" style="font-size:.85rem">${esc2((b.description || '').slice(0, 140))}…</p>
+      <div style="margin-top:8px"><span class="pill ok">${esc2(b.rewardPerChapter || '5 USDC')}</span> <span class="mono muted" style="font-size:.7rem">${esc2(b.id)}</span></div>
     </div>`).join('');
-  }catch(e){ $('booksList').innerHTML = '<div class="card flat"><p class="muted">Książki chwilowo offline — backend: frog02.mikr.us:32287</p></div>'; }
-  const q = new URLSearchParams(location.search).get('campaign');
-  if(q) openDetail2(q);
-}
+      } catch (e) { $('booksList').innerHTML = '<div class="card flat"><p class="muted">Książki chwilowo offline — backend: frog02.mikr.us:32287</p></div>'; }
+      const q = new URLSearchParams(location.search).get('campaign');
+      if (q) openDetail2(q);
+    }
 
-async function openDetail2(id){
-  $('secDetail').style.display = '';
-  history.replaceState(null,'','?campaign=' + encodeURIComponent(id));
-  $('secDetail').scrollIntoView({behavior:'smooth'});
-  $('dTitle').textContent = 'Ładowanie…'; $('dId').textContent = id;
-  try {
-    const [det, proofsAll] = await Promise.all([
-      api2('/api/publisher/campaigns/' + encodeURIComponent(id)),
-      api2('/api/proofs').catch(()=>[])
-    ]);
-    const c = det.campaign;
-    $('dTitle').textContent = c.title;
-    $('dId').textContent = `${c.id} • ${c.author||''} • ISBN ${c.isbn||'—'} • status: ${c.status}`;
-    const proofs = Array.isArray(proofsAll) ? proofsAll.filter(p => p.bookId === c.id || p.chapterId === c.id) : [];
-    const ver = proofs.filter(p => VERIFIED2.includes(p.status));
-    const readers = new Set(proofs.map(p => p.walletAddress).filter(Boolean)).size;
-    const avg = proofs.length ? (proofs.reduce((a,p)=>a+Number(p.score||0),0) / proofs.length).toFixed(1) : '—';
-    const paid = (ver.length * Number(c.rewardPerProof || 0));
-    $('dStats').innerHTML = [
-      ['Pula', `${esc2(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}`],
-      ['Wpłacono łącznie', `${det.campaign.totalFunded ?? c.totalFunded ?? '?'} ${esc2(c.currency||'')}`],
-      ['Dowody (kampania)', `${proofs.length}`],
-      ['Zweryfikowane', `${ver.length}`],
-      ['Wypłacono ~', `${paid} ${esc2(c.currency||'')}`],
-      ['Czytelnicy', `${readers}`],
-      ['Śr. wynik', `${avg}`],
-      ['Nagroda / dowód', `${esc2(String(c.rewardPerProof))} ${esc2(c.currency||'')}`]
-    ].map(([l,v]) => `<div class="card flat"><div class="muted" style="font-size:.75rem">${l}</div><div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800">${v}</div></div>`).join('');
-    $('dInfo').innerHTML = `
-      <div><b>Opis:</b> ${esc2(c.description||'—')}</div>
-      <div><b>Portfel:</b> <span class="mono">${esc2(c.publisherWallet||'')}</span></div>
-      <div><b>Treść:</b> ${c.bookContentHash ? `tak — ${esc2(String(c.contentLength))} znaków, hash <span class="mono">${esc2(String(c.bookContentHash).slice(0,16))}…</span>` : '<b>BRAK</b> — wgraj poniżej, inaczej sesje nie wystartują'} • <b>Okładka:</b> ${c.coverUrl ? `<a href="${esc2(c.coverUrl)}" target="_blank">podgląd</a>` : '—'}</div>
-      <div class="muted">Utworzono: ${esc2(c.createdAt||'')} • Aktualizacja: ${esc2(c.updatedAt||'')}</div>`;
-    const funds = c.funds || [];
-    $('dFunds').innerHTML = funds.length ? `<div class="tbl-wrap"><table class="tbl"><tr><th>Kwota</th><th>Tx</th><th>Data</th></tr>${funds.map(f=>`<tr><td>${esc2(String(f.amount))} ${esc2(f.currency||'')}</td><td class="mono">${esc2((f.txSignature||'').slice(0,20))}…</td><td>${esc2(f.createdAt||'')}</td></tr>`).join('')}</table></div>` : '<span class="muted">Brak wpłat — pula pusta, sesje nie wystartują.</span>';
-    const qr = await api2('/api/publisher/campaigns/' + encodeURIComponent(id) + '/qr').catch(()=>null);
-    if(qr){ $('dQr').src = qr.qrPngUrl; $('dDeep').textContent = qr.url; $('dScheme').textContent = qr.scheme; $('dQrApi').href = qr.qrPngUrl; }
-    $('dProofs').innerHTML = proofs.length ? `<div class="tbl-wrap"><table class="tbl"><tr><th>Czytelnik</th><th>Wynik</th><th>Status</th><th>Hash</th><th>Data</th></tr>${proofs.map(p=>`<tr><td class="mono">${esc2((p.walletAddress||'').slice(0,10))}…</td><td>${esc2(String(p.score))}/${esc2(String(p.total))}</td><td>${esc2(p.status)}</td><td class="mono">${esc2(p.proofHash||'')}</td><td>${esc2(p.timestamp||'')}</td></tr>`).join('')}</table></div>` : '<span class="muted">Brak dowodów dla tej kampanii.</span>';
-    $('dContent').innerHTML = c.bookContentHash ? `Wgrana: ${esc2(String(c.contentLength))} znaków.` : 'Brak treści.';
-    $('btnFund').onclick = async () => {
+    async function openDetail2(id) {
+      $('secDetail').style.display = '';
+      history.replaceState(null, '', '?campaign=' + encodeURIComponent(id));
+      $('secDetail').scrollIntoView({ behavior: 'smooth' });
+      $('dTitle').textContent = 'Ładowanie…'; $('dId').textContent = id;
       try {
-        const j = await api2('/api/publisher/campaigns/' + encodeURIComponent(id) + '/fund', {method:'POST', body: JSON.stringify({publisherWallet: $('fWallet').value.trim(), amount: Number($('fAmount').value)})});
-        $('fundMsg').innerHTML = `<p class="muted">Wpłacono. Nowa pula: ${esc2(String(j.campaign?.rewardPool ?? j.rewardPool ?? ''))}. Odświeżam…</p>`;
-        setTimeout(()=>openDetail2(id), 1200);
-      } catch(e){ $('fundMsg').innerHTML = `<p class="muted">Błąd: ${esc2(e.message)}</p>`; }
-    };
-    $('btnContent').onclick = async () => {
+        const [det, proofsAll] = await Promise.all([
+          api2('/api/publisher/campaigns/' + encodeURIComponent(id)),
+          api2('/api/proofs').catch(() => [])
+        ]);
+        const c = det.campaign;
+        $('dTitle').textContent = c.title;
+        $('dId').textContent = `${c.id} • ${c.author || ''} • ISBN ${c.isbn || '—'} • status: ${c.status}`;
+        const proofs = Array.isArray(proofsAll) ? proofsAll.filter(p => p.bookId === c.id || p.chapterId === c.id) : [];
+        const ver = proofs.filter(p => VERIFIED2.includes(p.status));
+        const readers = new Set(proofs.map(p => p.walletAddress).filter(Boolean)).size;
+        const avg = proofs.length ? (proofs.reduce((a, p) => a + Number(p.score || 0), 0) / proofs.length).toFixed(1) : '—';
+        const paid = (ver.length * Number(c.rewardPerProof || 0));
+        $('dStats').innerHTML = [
+          ['Pula', `${esc2(typeof c.rewardPool === 'string' ? c.rewardPool : (c.rewardPool + ' ' + (c.currency || '')))}`],
+          ['Wpłacono łącznie', `${det.campaign.totalFunded ?? c.totalFunded ?? '?'} ${esc2(c.currency || '')}`],
+          ['Dowody (kampania)', `${proofs.length}`],
+          ['Zweryfikowane', `${ver.length}`],
+          ['Wypłacono ~', `${paid} ${esc2(c.currency || '')}`],
+          ['Czytelnicy', `${readers}`],
+          ['Śr. wynik', `${avg}`],
+          ['Nagroda / dowód', `${esc2(String(c.rewardPerProof))} ${esc2(c.currency || '')}`]
+        ].map(([l, v]) => `<div class="card flat"><div class="muted" style="font-size:.75rem">${l}</div><div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800">${v}</div></div>`).join('');
+        $('dInfo').innerHTML = `
+      <div><b>Opis:</b> ${esc2(c.description || '—')}</div>
+      <div><b>Portfel:</b> <span class="mono">${esc2(c.publisherWallet || '')}</span></div>
+      <div><b>Treść:</b> ${c.bookContentHash ? `tak — ${esc2(String(c.contentLength))} znaków, hash <span class="mono">${esc2(String(c.bookContentHash).slice(0, 16))}…</span>` : '<b>BRAK</b> — wgraj poniżej, inaczej sesje nie wystartują'} • <b>Okładka:</b> ${c.coverUrl ? `<a href="${esc2(c.coverUrl)}" target="_blank">podgląd</a>` : '—'}</div>
+      <div class="muted">Utworzono: ${esc2(c.createdAt || '')} • Aktualizacja: ${esc2(c.updatedAt || '')}</div>`;
+        const funds = c.funds || [];
+        $('dFunds').innerHTML = funds.length ? `<div class="tbl-wrap"><table class="tbl"><tr><th>Kwota</th><th>Tx</th><th>Data</th></tr>${funds.map(f => `<tr><td>${esc2(String(f.amount))} ${esc2(f.currency || '')}</td><td class="mono">${esc2((f.txSignature || '').slice(0, 20))}…</td><td>${esc2(f.createdAt || '')}</td></tr>`).join('')}</table></div>` : '<span class="muted">Brak wpłat — pula pusta, sesje nie wystartują.</span>';
+        const qr = await api2('/api/publisher/campaigns/' + encodeURIComponent(id) + '/qr').catch(() => null);
+        if (qr) { $('dQr').src = qr.qrPngUrl; $('dDeep').textContent = qr.url; $('dScheme').textContent = qr.scheme; $('dQrApi').href = qr.qrPngUrl; }
+        $('dProofs').innerHTML = proofs.length ? `<div class="tbl-wrap"><table class="tbl"><tr><th>Czytelnik</th><th>Wynik</th><th>Status</th><th>Hash</th><th>Data</th></tr>${proofs.map(p => `<tr><td class="mono">${esc2((p.walletAddress || '').slice(0, 10))}…</td><td>${esc2(String(p.score))}/${esc2(String(p.total))}</td><td>${esc2(p.status)}</td><td class="mono">${esc2(p.proofHash || '')}</td><td>${esc2(p.timestamp || '')}</td></tr>`).join('')}</table></div>` : '<span class="muted">Brak dowodów dla tej kampanii.</span>';
+        $('dContent').innerHTML = c.bookContentHash ? `Wgrana: ${esc2(String(c.contentLength))} znaków.` : 'Brak treści.';
+        $('btnFund').onclick = async () => {
+          try {
+            const j = await api2('/api/publisher/campaigns/' + encodeURIComponent(id) + '/fund', { method: 'POST', body: JSON.stringify({ publisherWallet: $('fWallet').value.trim(), amount: Number($('fAmount').value) }) });
+            $('fundMsg').innerHTML = `<p class="muted">Wpłacono. Nowa pula: ${esc2(String(j.campaign?.rewardPool ?? j.rewardPool ?? ''))}. Odświeżam…</p>`;
+            setTimeout(() => openDetail2(id), 1200);
+          } catch (e) { $('fundMsg').innerHTML = `<p class="muted">Błąd: ${esc2(e.message)}</p>`; }
+        };
+        $('btnContent').onclick = async () => {
+          try {
+            const j = await api2('/api/publisher/campaigns/' + encodeURIComponent(id) + '/content', { method: 'POST', body: JSON.stringify({ content: $('cText').value }) });
+            $('contentMsg').innerHTML = `<p class="muted">Zapisano treść (${esc2(String(j.contentLength ?? ''))} znaków, hash ${esc2(String(j.bookContentHash || '').slice(0, 12))}…). Odświeżam…</p>`;
+            setTimeout(() => openDetail2(id), 1200);
+          } catch (e) { $('contentMsg').innerHTML = `<p class="muted">Błąd: ${esc2(e.message)}</p>`; }
+        };
+      } catch (e) {
+        $('dTitle').textContent = 'Błąd';
+        $('dStats').innerHTML = `<p class="muted">Nie udało się pobrać kampanii: ${esc2(e.message)}</p>`;
+      }
+    }
+
+    $('btnCreate').addEventListener('click', async () => {
       try {
-        const j = await api2('/api/publisher/campaigns/' + encodeURIComponent(id) + '/content', {method:'POST', body: JSON.stringify({content: $('cText').value})});
-        $('contentMsg').innerHTML = `<p class="muted">Zapisano treść (${esc2(String(j.contentLength ?? ''))} znaków, hash ${esc2(String(j.bookContentHash||'').slice(0,12))}…). Odświeżam…</p>`;
-        setTimeout(()=>openDetail2(id), 1200);
-      } catch(e){ $('contentMsg').innerHTML = `<p class="muted">Błąd: ${esc2(e.message)}</p>`; }
-    };
-  } catch(e){
-    $('dTitle').textContent = 'Błąd';
-    $('dStats').innerHTML = `<p class="muted">Nie udało się pobrać kampanii: ${esc2(e.message)}</p>`;
-  }
-}
+        const body = { publisherWallet: $('nWallet').value.trim(), title: $('nTitle').value.trim(), author: $('nAuthor').value.trim(), isbn: $('nIsbn').value.trim(), description: $('nDesc').value.trim(), rewardPerProof: Number($('nReward').value) || 5, currency: $('nCurrency').value, coverUrl: $('nCover').value.trim() || undefined };
+        const j = await api2('/api/publisher/campaigns', { method: 'POST', body: JSON.stringify(body) });
+        if (body.publisherWallet) setWallet2(body.publisherWallet);
+        $('createMsg').innerHTML = `<p class="muted">Utworzono <b>${esc2(j.campaign.id)}</b> (draft). Dodaj treść i ufunduj pulę. <button class="btn btn-primary btn-sm" onclick="location.search='?campaign=${esc2(j.campaign.id)}'">Otwórz szczegóły</button></p>`;
+        const rej = await api2('/api/publisher/campaigns'); ALL2 = rej.campaigns || []; $('campCount').textContent = `(${ALL2.length})`;
+        $('campList').innerHTML = ALL2.map(cardHTML2).join(''); bindOpen2($('campList')); renderMine2(); renderStats2();
+      } catch (e) { $('createMsg').innerHTML = `<p class="muted">Błąd: ${esc2(e.message)}</p>`; }
+    });
 
-$('btnCreate').addEventListener('click', async () => {
-  try {
-    const body = {publisherWallet: $('nWallet').value.trim(), title: $('nTitle').value.trim(), author: $('nAuthor').value.trim(), isbn: $('nIsbn').value.trim(), description: $('nDesc').value.trim(), rewardPerProof: Number($('nReward').value)||5, currency: $('nCurrency').value, coverUrl: $('nCover').value.trim() || undefined};
-    const j = await api2('/api/publisher/campaigns', {method:'POST', body: JSON.stringify(body)});
-    if(body.publisherWallet) setWallet2(body.publisherWallet);
-    $('createMsg').innerHTML = `<p class="muted">Utworzono <b>${esc2(j.campaign.id)}</b> (draft). Dodaj treść i ufunduj pulę. <button class="btn btn-primary btn-sm" onclick="location.search='?campaign=${esc2(j.campaign.id)}'">Otwórz szczegóły</button></p>`;
-    const rej = await api2('/api/publisher/campaigns'); ALL2 = rej.campaigns||[]; $('campCount').textContent=`(${ALL2.length})`;
-    $('campList').innerHTML = ALL2.map(cardHTML2).join(''); bindOpen2($('campList')); renderMine2(); renderStats2();
-  } catch(e){ $('createMsg').innerHTML = `<p class="muted">Błąd: ${esc2(e.message)}</p>`; }
-});
-
-initPanel2();
-</script>
-<script src="/assets/i18n.js"></script>
+    initPanel2();
+  </script>
+  <script src="/assets/i18n.js"></script>
 </body>
+
 </html>

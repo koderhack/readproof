@@ -1,303 +1,420 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReadProof — Read a real book. Prove you understood it.</title>
-<meta name="description" content="ReadProof helps students, readers and teachers verify real understanding of books — not just whether someone says they read them.">
-<link rel="icon" type="image/png" href="/assets/icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ReadProof — Read a real book. Prove you understood it.</title>
+  <meta name="description"
+    content="ReadProof helps students, readers and teachers verify real understanding of books — not just whether someone says they read them.">
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/assets/site.css">
 </head>
+
 <body>
 
-<nav class="rp-nav"><div class="wrap">
-  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
-  <div class="rp-links">
-    <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
-    <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
-    <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
-<a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
-    <a href="/verify/" data-i18n="nav_verify">Verify</a>
-    <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button data-lang="en">EN</button></span>
-    <a href="#start" class="cta" data-i18n="nav_start">Get started</a>
-  </div>
-</div></nav>
-
-<header class="rp-hero"><div class="wrap">
-  <div>
-    <span class="rp-eyebrow" data-i18n="eyebrow">Reading · Understanding · Proof</span>
-    <h1 class="rp-h1"><span data-i18n="hero_a">Read a real book.</span><br><em data-i18n="hero_b">Prove you understood it.</em></h1>
-    <p class="rp-lead" data-i18n="hero_sub">ReadProof helps students, readers and teachers verify real understanding of books — not just whether someone says they read them.</p>
-    <div class="rp-actions" id="start">
-      <a class="btn btn-primary" href="/students/" data-i18n="cta_students">For Students</a>
-      <a class="btn btn-gold" href="/teachers/" data-i18n="cta_teachers">For Teachers</a>
-      <a class="btn btn-ghost" href="/readers/" data-i18n="tag_readers">For Readers</a>
-    </div>
-    <div class="rp-proofline">
-      <span><b>✓</b> <span data-i18n="pl_books">Real books, real chapters</span></span>
-      <span><b>✓</b> <span data-i18n="pl_challenges">Comprehension challenges</span></span>
-      <span><b>✓</b> <span data-i18n="pl_certs">Verifiable certificates</span></span>
-    </div>
-  </div>
-  <div class="panel">
-    <div class="hero-split"><div class="panel">
-      <p class="rp-kicker"><svg class="ic"><use href="/assets/icons.svg#i-seal"/></svg> <span data-i18n="how_title">How it works</span></p>
-      <ol class="steps" style="margin-top:16px">
-        <li><b data-i18n="st_choose">Choose a book</b><p data-i18n="st_choose_p">Pick a real book from the catalog or your class assignment.</p></li>
-        <li><b data-i18n="st_read">Read it</b><p data-i18n="st_read_p">Read the physical book. The app never replaces reading.</p></li>
-        <li><b data-i18n="st_challenge">Take the challenge</b><p data-i18n="st_challenge_p">Answer 5 comprehension questions per chapter.</p></li>
-        <li><b data-i18n="st_proof">Get your proof</b><p data-i18n="st_proof_p">A ReadProof Certificate of demonstrated understanding.</p></li>
-      </ol>
-    </div></div>
-  </div>
-</div></header>
-
-<main>
-<!-- ═══ AUDIENCE ═══ -->
-<section class="rp-section tight"><div class="wrap rp-center">
-  <p class="rp-kicker" data-i18n="who_k">Who is it for</p>
-  <h2 class="rp-h2" data-i18n="who_h">ReadProof for everyone who reads.</h2>
-  <p class="rp-sub" data-i18n="who_sub">One platform, three ways to use it. Reading is easy to claim. Understanding is harder to prove.</p>
-</div>
-<div class="wrap"><div class="rp-grid cols-3" style="margin-top:26px">
-  <article class="card role-card student">
-    <div class="role-band"></div>
-    <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Student illustration"><use href="/assets/roles.svg#rp-student"/></svg>
-    <span class="role-tag" data-i18n="tag_students">For Students</span>
-    <h3 data-i18n="s_h">Learn your books. Prove what you know.</h3>
-    <ul class="check-list">
-      <li data-i18n="s_1">Literature practice &amp; chapter challenges</li>
-      <li data-i18n="s_2">Matura preparation</li>
-      <li data-i18n="s_3">Exam preparation &amp; personal progress</li>
-      <li data-i18n="s_4">Verifiable ReadProof Certificates</li>
-    </ul>
-    <a class="btn btn-primary btn-sm" href="/students/"><span data-i18n="cta_students">For Students</span> →</a>
-  </article>
-  <article class="card role-card reader">
-    <div class="role-band"></div>
-    <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Reader illustration"><use href="/assets/roles.svg#rp-reader"/></svg>
-    <span class="role-tag" data-i18n="tag_readers">For Readers</span>
-    <h3 data-i18n="r_h">Read. Understand. Prove it.</h3>
-    <ul class="check-list">
-      <li data-i18n="r_1">Reading challenges &amp; comprehension checks</li>
-      <li data-i18n="r_2">Personal reading history</li>
-      <li data-i18n="r_3">Proof of understanding for every book</li>
-      <li data-i18n="r_4">Track progress across your library</li>
-    </ul>
-    <a class="btn btn-dark btn-sm" href="/readers/"><span data-i18n="tag_readers">For Readers</span> →</a>
-  </article>
-  <article class="card role-card teacher">
-    <div class="role-band"></div>
-    <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Teacher illustration"><use href="/assets/roles.svg#rp-teacher"/></svg>
-    <span class="role-tag" data-i18n="tag_teachers">For Teachers</span>
-    <h3 data-i18n="t_h">See who actually understands the reading.</h3>
-    <ul class="check-list">
-      <li data-i18n="t_1">Create classes &amp; assign books</li>
-      <li data-i18n="t_2">Monitor progress &amp; review results</li>
-      <li data-i18n="t_3">Spot students who need help</li>
-      <li data-i18n="t_4">Generate certificates</li>
-    </ul>
-    <a class="btn btn-gold btn-sm" href="/teachers/"><span data-i18n="cta_teachers">For Teachers</span> →</a>
-  </article>
-</div></div></section>
-
-<!-- ═══ HOW ═══ -->
-<section class="rp-section" id="how"><div class="wrap">
-  <p class="rp-kicker" data-i18n="ex_k">Inside a challenge</p>
-  <h2 class="rp-h2"><span data-i18n="ex_h_a">Reading is easy to claim.</span><br><span data-i18n="ex_h_b">Understanding is harder to prove.</span></h2>
-  <p class="rp-sub" data-i18n="ex_sub">Each chapter ends with 5 short questions about <strong>meaning</strong> — characters, motives, cause and effect. Never trivia like “what color was the watch”. Here’s the idea:</p>
-  <div class="rp-grid cols-2" style="align-items:start;margin-top:26px">
-    <div class="card">
-      <p class="rp-kicker"><svg class="ic"><use href="/assets/icons.svg#i-quote"/></svg> <span data-i18n="ex_q_k">Example · Alice in Wonderland, Ch. 1</span></p>
-      <h3 style="font-size:1.2rem" data-i18n="ex_q">Why does Alice follow the White Rabbit?</h3>
-      <ul class="qa">
-        <li class="hit"><span class="k">A</span><span data-i18n="ex_a">Curiosity — a talking rabbit in a waistcoat is too strange to ignore</span></li>
-        <li><span class="k">B</span><span data-i18n="ex_b">She wants to steal his pocket watch</span></li>
-        <li><span class="k">C</span><span data-i18n="ex_c">Her sister tells her to go after it</span></li>
-        <li><span class="k">D</span><span data-i18n="ex_d">She is late for tea and hopes he knows the way</span></li>
-      </ul>
-      <div class="proof-mini" data-i18n="ex_note">Correct — and the app explains <em>why</em>, so a miss becomes a lesson, not just a score.</div>
-    </div>
-    <div>
-      <div class="card flat" style="margin-bottom:14px"><h3><svg class="ic"><use href="/assets/icons.svg#i-book"/></svg><span data-i18n="f1_h">Comprehension, not memory</span></h3><p data-i18n="f1_p">Questions check whether you understood the story — not whether you memorized details.</p></div>
-      <div class="card flat" style="margin-bottom:14px"><h3><svg class="ic"><use href="/assets/icons.svg#i-pencil"/></svg><span data-i18n="f2_h">5 questions per chapter</span></h3><p data-i18n="f2_p">Mixed types: choices, who-said-it, ordering, open answers judged for meaning.</p></div>
-      <div class="card flat"><h3><svg class="ic"><use href="/assets/icons.svg#i-cert"/></svg><span data-i18n="f3_h">Pass it, prove it</span></h3><p><span data-i18n="f3_p">Your score becomes a verifiable certificate — one link, checkable by anyone.</span></p></div>
-    </div>
-  </div>
-</div></section>
-
-<!-- ═══ CERTIFICATE ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="rp-grid cols-2" style="align-items:center">
-    <div>
-      <p class="rp-kicker"><svg class="ic"><use href="/assets/icons.svg#i-cert"/></svg> <span data-i18n="cert_k">Certificates</span></p>
-      <h2 class="rp-h2" data-i18n="cert_h">A certificate of demonstrated understanding.</h2>
-      <p class="rp-sub" data-i18n="cert_sub">Finish a challenge and receive a ReadProof Certificate with your score and a verifiable proof ID. Anyone — a teacher, a school, an employer — can check it with one link.</p>
-      <div class="rp-actions">
-        <a class="btn btn-primary" href="/students/#certificate" data-i18n="cert_how">See how it works</a>
-        <a class="btn btn-ghost" href="/verify/" data-i18n="cert_verify">Verify a certificate</a>
+  <nav class="rp-nav">
+    <div class="wrap">
+      <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+      <div class="rp-links">
+        <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
+        <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+        <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
+        <a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
+        <a href="/verify/" data-i18n="nav_verify">Verify</a>
+        <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button
+            data-lang="en">EN</button></span>
+        <a href="#start" class="cta" data-i18n="nav_start">Get started</a>
       </div>
     </div>
-    <div id="liveProof"><div class="cert"><p class="muted">Loading the latest verified proof from the network…</p></div></div>
-  </div>
-</div></section>
+  </nav>
 
-<!-- ═══ CATALOG ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <p class="rp-kicker" data-i18n="lib_k">Library</p>
-  <h2 class="rp-h2" data-i18n="lib_h">Start with the classics.</h2>
-  <p class="rp-sub" data-i18n="lib_sub">Public-domain books from Project Gutenberg plus reading challenges from publishers. Live catalog below — served by the ReadProof API.</p>
-  <div class="book-grid" id="booksGrid"><p class="muted">Loading catalog…</p></div>
-</div></section>
-
-<!-- ═══ TEACHERS STRIP ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="card flat" style="background:var(--gold-soft);border-color:#E3CE9C">
-    <div class="rp-grid cols-2" style="align-items:center">
+  <header class="rp-hero">
+    <div class="wrap">
       <div>
-        <p class="rp-kicker" data-i18n="sch_k">For schools</p>
-        <h2 class="rp-h2" style="font-size:1.7rem" data-i18n="sch_h">Turn reading assignments into measurable understanding.</h2>
-        <p class="rp-sub" style="margin-bottom:18px" data-i18n="sch_sub">Create a class, assign a book, see results — including who needs help. Simple dashboard, no setup calls. Network numbers below are live.</p>
-        <div class="rp-actions" style="margin:0">
-          <a class="btn btn-dark" href="/teachers/" data-i18n="sch_teachers">For Teachers</a>
-          <a class="btn btn-ghost" href="/teacher/" data-i18n="sch_demo">Open demo dashboard</a>
+        <span class="rp-eyebrow" data-i18n="eyebrow">Reading · Understanding · Proof</span>
+        <h1 class="rp-h1"><span data-i18n="hero_a">Read a real book.</span><br><em data-i18n="hero_b">Prove you
+            understood it.</em></h1>
+        <p class="rp-lead" data-i18n="hero_sub">ReadProof helps students, readers and teachers verify real understanding
+          of books — not just whether someone says they read them.</p>
+        <div class="rp-actions" id="start">
+          <a class="btn btn-primary" href="/students/" data-i18n="cta_students">For Students</a>
+          <a class="btn btn-gold" href="/teachers/" data-i18n="cta_teachers">For Teachers</a>
+          <a class="btn btn-ghost" href="/readers/" data-i18n="tag_readers">For Readers</a>
+        </div>
+        <div class="rp-proofline">
+          <span><b>✓</b> <span data-i18n="pl_books">Real books, real chapters</span></span>
+          <span><b>✓</b> <span data-i18n="pl_challenges">Comprehension challenges</span></span>
+          <span><b>✓</b> <span data-i18n="pl_certs">Verifiable certificates</span></span>
         </div>
       </div>
-      <div class="stat-grid" style="grid-template-columns:1fr 1fr" id="platformStats">
-        <div class="stat"><div class="l">Books on network</div><div class="v">…</div></div>
-        <div class="stat"><div class="l">Active challenges</div><div class="v">…</div></div>
-        <div class="stat"><div class="l">Proofs recorded</div><div class="v">…</div></div>
-        <div class="stat"><div class="l">Verified</div><div class="v">…</div></div>
-      </div>
-    </div>
-  </div>
-</div></section>
-
-<!-- ═══ PUBLISHERS STRIP ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="rp-grid cols-2" style="align-items:center">
-    <div>
-        <p class="rp-kicker" data-i18n="pub_k">For publishers</p>
-        <h2 class="rp-h2" data-i18n="pub_h">Create reading challenges around your books.</h2>
-        <p class="rp-sub" data-i18n="pub_sub">Select a book, create a challenge, fund a reward pool. Readers participate, ReadProof verifies understanding, rewards go out by predefined rules.</p>
-        <div class="rp-actions" style="margin:0">
-          <a class="btn btn-primary" href="/publishers/#panel" data-i18n="pub_panel">Publisher panel</a>
-          <a class="btn btn-ghost" href="/challenge/" data-i18n="pub_all">All challenges</a>
+      <div class="panel">
+        <div class="hero-split">
+          <div class="panel">
+            <p class="rp-kicker"><svg class="ic">
+                <use href="/assets/icons.svg#i-seal" />
+              </svg> <span data-i18n="how_title">How it works</span></p>
+            <ol class="steps" style="margin-top:16px">
+              <li><b data-i18n="st_choose">Choose a book</b>
+                <p data-i18n="st_choose_p">Pick a real book from the catalog or your class assignment.</p>
+              </li>
+              <li><b data-i18n="st_read">Read it</b>
+                <p data-i18n="st_read_p">Read the physical book. The app never replaces reading.</p>
+              </li>
+              <li><b data-i18n="st_challenge">Take the challenge</b>
+                <p data-i18n="st_challenge_p">Answer 5 comprehension questions per chapter.</p>
+              </li>
+              <li><b data-i18n="st_proof">Get your proof</b>
+                <p data-i18n="st_proof_p">A ReadProof Certificate of demonstrated understanding.</p>
+              </li>
+            </ol>
+          </div>
         </div>
-    </div>
-    <div class="card">
-      <p class="rp-kicker"><svg class="ic"><use href="/assets/icons.svg#i-chart"/></svg> Live challenges</p>
-      <h3 id="campTitle">Reading challenges</h3>
-      <div id="liveCamps" style="margin-top:10px"><p class="muted">Loading live challenges from the network…</p></div>
-      <div class="rp-actions" style="margin:12px 0 0">
-        <a class="btn btn-ghost btn-sm" href="/challenge/">All challenges</a>
       </div>
     </div>
-  </div>
-</div></section>
+  </header>
 
-<!-- ═══ TECH (blockchain in background) ═══ -->
-<section class="rp-section tight"><div class="wrap">
-  <div class="tech-band">
-    <p class="rp-kicker" style="color:#E9CE8F" data-i18n="tech_k">Under the hood</p>
-    <h3 data-i18n="tech_h">Proof you can trust, infrastructure you never notice.</h3>
-    <p data-i18n="tech_sub">Every verified result is recorded as a tamper-evident proof. You read, take challenges and earn certificates — verification just works in the background.</p>
-    <ul class="tech-checks">
-      <li data-i18n="tech_1">✓ Challenge completed &amp; understanding verified</li>
-      <li><span data-i18n="tech_2">✓ Proof recorded — checkable by ID in</span> <a href="/verify/" style="color:#E9CE8F" data-i18n="tech_3">Proof Details</a></li>
-      <li><span class="pill" style="background:rgba(255,255,255,.1);color:#E9CE8F">Verified on-chain</span> <code>Network: Solana Devnet · Proof ID · Transaction</code></li>
-    </ul>
-    <p style="font-size:.82rem" data-i18n="tech_note">Demo environment: test network, no real funds. Book texts and answers are never stored on-chain — only the proof hash.</p>
-  </div>
-</div></section>
+  <main>
+    <!-- ═══ AUDIENCE ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap rp-center">
+        <p class="rp-kicker" data-i18n="who_k">Who is it for</p>
+        <h2 class="rp-h2" data-i18n="who_h">ReadProof for everyone who reads.</h2>
+        <p class="rp-sub" data-i18n="who_sub">One platform, three ways to use it. Reading is easy to claim.
+          Understanding is harder to prove.</p>
+      </div>
+      <div class="wrap">
+        <div class="rp-grid cols-3" style="margin-top:26px">
+          <article class="card role-card student">
+            <div class="role-band"></div>
+            <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Student illustration">
+              <use href="/assets/roles.svg#rp-student" />
+            </svg>
+            <span class="role-tag" data-i18n="tag_students">For Students</span>
+            <h3 data-i18n="s_h">Learn your books. Prove what you know.</h3>
+            <ul class="check-list">
+              <li data-i18n="s_1">Literature practice &amp; chapter challenges</li>
+              <li data-i18n="s_2">Matura preparation</li>
+              <li data-i18n="s_3">Exam preparation &amp; personal progress</li>
+              <li data-i18n="s_4">Verifiable ReadProof Certificates</li>
+            </ul>
+            <a class="btn btn-primary btn-sm" href="/students/"><span data-i18n="cta_students">For Students</span> →</a>
+          </article>
+          <article class="card role-card reader">
+            <div class="role-band"></div>
+            <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Reader illustration">
+              <use href="/assets/roles.svg#rp-reader" />
+            </svg>
+            <span class="role-tag" data-i18n="tag_readers">For Readers</span>
+            <h3 data-i18n="r_h">Read. Understand. Prove it.</h3>
+            <ul class="check-list">
+              <li data-i18n="r_1">Reading challenges &amp; comprehension checks</li>
+              <li data-i18n="r_2">Personal reading history</li>
+              <li data-i18n="r_3">Proof of understanding for every book</li>
+              <li data-i18n="r_4">Track progress across your library</li>
+            </ul>
+            <a class="btn btn-dark btn-sm" href="/readers/"><span data-i18n="tag_readers">For Readers</span> →</a>
+          </article>
+          <article class="card role-card teacher">
+            <div class="role-band"></div>
+            <svg class="role-figure" viewBox="0 0 320 200" role="img" aria-label="Teacher illustration">
+              <use href="/assets/roles.svg#rp-teacher" />
+            </svg>
+            <span class="role-tag" data-i18n="tag_teachers">For Teachers</span>
+            <h3 data-i18n="t_h">See who actually understands the reading.</h3>
+            <ul class="check-list">
+              <li data-i18n="t_1">Create classes &amp; assign books</li>
+              <li data-i18n="t_2">Monitor progress &amp; review results</li>
+              <li data-i18n="t_3">Spot students who need help</li>
+              <li data-i18n="t_4">Generate certificates</li>
+            </ul>
+            <a class="btn btn-gold btn-sm" href="/teachers/"><span data-i18n="cta_teachers">For Teachers</span> →</a>
+          </article>
+        </div>
+      </div>
+    </section>
 
-<!-- ═══ APP ═══ -->
-<section class="rp-section tight"><div class="wrap rp-center">
-  <p class="rp-kicker" data-i18n="app_k">iOS app</p>
-  <h2 class="rp-h2" data-i18n="app_h">Take ReadProof anywhere.</h2>
-  <p class="rp-sub" data-i18n="app_sub">Native iOS app with roles for students, readers and teachers. Pick your role once — the whole interface adapts.</p>
-  <div class="rp-actions" style="justify-content:center">
-      <a class="btn btn-dark" href="/app/" data-i18n="pr_app_cta">Open app</a>
-  </div>
-</div></section>
-</main>
+    <!-- ═══ HOW ═══ -->
+    <section class="rp-section" id="how">
+      <div class="wrap">
+        <p class="rp-kicker" data-i18n="ex_k">Inside a challenge</p>
+        <h2 class="rp-h2"><span data-i18n="ex_h_a">Reading is easy to claim.</span><br><span
+            data-i18n="ex_h_b">Understanding is harder to prove.</span></h2>
+        <p class="rp-sub" data-i18n="ex_sub">Each chapter ends with 5 short questions about <strong>meaning</strong> —
+          characters, motives, cause and effect. Never trivia like “what color was the watch”. Here’s the idea:</p>
+        <div class="rp-grid cols-2" style="align-items:start;margin-top:26px">
+          <div class="card">
+            <p class="rp-kicker"><svg class="ic">
+                <use href="/assets/icons.svg#i-quote" />
+              </svg> <span data-i18n="ex_q_k">Example · Alice in Wonderland, Ch. 1</span></p>
+            <h3 style="font-size:1.2rem" data-i18n="ex_q">Why does Alice follow the White Rabbit?</h3>
+            <ul class="qa">
+              <li class="hit"><span class="k">A</span><span data-i18n="ex_a">Curiosity — a talking rabbit in a waistcoat
+                  is too strange to ignore</span></li>
+              <li><span class="k">B</span><span data-i18n="ex_b">She wants to steal his pocket watch</span></li>
+              <li><span class="k">C</span><span data-i18n="ex_c">Her sister tells her to go after it</span></li>
+              <li><span class="k">D</span><span data-i18n="ex_d">She is late for tea and hopes he knows the way</span>
+              </li>
+            </ul>
+            <div class="proof-mini" data-i18n="ex_note">Correct — and the app explains <em>why</em>, so a miss becomes a
+              lesson, not just a score.</div>
+          </div>
+          <div>
+            <div class="card flat" style="margin-bottom:14px">
+              <h3><svg class="ic">
+                  <use href="/assets/icons.svg#i-book" />
+                </svg><span data-i18n="f1_h">Comprehension, not memory</span></h3>
+              <p data-i18n="f1_p">Questions check whether you understood the story — not whether you memorized details.
+              </p>
+            </div>
+            <div class="card flat" style="margin-bottom:14px">
+              <h3><svg class="ic">
+                  <use href="/assets/icons.svg#i-pencil" />
+                </svg><span data-i18n="f2_h">5 questions per chapter</span></h3>
+              <p data-i18n="f2_p">Mixed types: choices, who-said-it, ordering, open answers judged for meaning.</p>
+            </div>
+            <div class="card flat">
+              <h3><svg class="ic">
+                  <use href="/assets/icons.svg#i-cert" />
+                </svg><span data-i18n="f3_h">Pass it, prove it</span></h3>
+              <p><span data-i18n="f3_p">Your score becomes a verifiable certificate — one link, checkable by
+                  anyone.</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<footer class="rp-footer"><div class="wrap">
-  <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood it.</span><br><span class="mono" style="font-size:.72rem"><span class="api-dot" id="apiDot"></span><span id="apiStatus">Connecting to network…</span></span></div>
-  <div>
-    <a href="/students/" data-i18n="nav_students">Students</a> · <a href="/teachers/" data-i18n="nav_teachers">Teachers</a> · <a href="/publisher/" data-i18n="nav_publishers">Publishers</a> · <a href="/verify/" data-i18n="nav_verify">Verify</a>
-  </div>
-</div></footer>
+    <!-- ═══ CERTIFICATE ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap">
+        <div class="rp-grid cols-2" style="align-items:center">
+          <div>
+            <p class="rp-kicker"><svg class="ic">
+                <use href="/assets/icons.svg#i-cert" />
+              </svg> <span data-i18n="cert_k">Certificates</span></p>
+            <h2 class="rp-h2" data-i18n="cert_h">A certificate of demonstrated understanding.</h2>
+            <p class="rp-sub" data-i18n="cert_sub">Finish a challenge and receive a ReadProof Certificate with your
+              score and a verifiable proof ID. Anyone — a teacher, a school, an employer — can check it with one link.
+            </p>
+            <div class="rp-actions">
+              <a class="btn btn-primary" href="/students/#certificate" data-i18n="cert_how">See how it works</a>
+              <a class="btn btn-ghost" href="/verify/" data-i18n="cert_verify">Verify a certificate</a>
+            </div>
+          </div>
+          <div id="liveProof">
+            <div class="cert">
+              <p class="muted">Loading the latest verified proof from the network…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<script>
-(async function(){
-  const BASES = ['https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  async function apiGet(path){
-    for(const b of BASES){
-      try{ const r = await fetch(b + path); if(r.ok) return await r.json(); }catch(e){}
-    }
-    throw new Error('API offline');
-  }
-  const VERIFIED = ['Reading Verified', 'Comprehension Verified', 'verified'];
-  const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
-  function setStatus(on, text){
-    const d = document.getElementById('apiDot'), t = document.getElementById('apiStatus');
-    if(d) d.classList.toggle('on', on);
-    if(t) t.textContent = text;
-  }
-  try{
-    const books = await apiGet('/api/books');
-    setStatus(true, T('net_live', 'Network: live'));
-    document.getElementById('booksGrid').innerHTML = books.slice(0,4).map(b =>
-      `<div class="book-card">${b.coverUrl ? `<img src="${b.coverUrl}" alt="" loading="lazy" onerror="this.remove()">` : ''}<h4>${esc(b.title)}</h4><div class="a">${esc(b.author||'')} · ${b.totalChapters||((b.chapters||[]).length)} chapters</div><span class="pill ok">${esc(b.rewardPerChapter||'Challenge')}</span></div>`
-    ).join('');
-    window.__rpBooks = books;
-  }catch(e){
-    setStatus(false, T('net_offline', 'Network: offline — showing cached info'));
-    document.getElementById('booksGrid').innerHTML = '<p class="muted">' + esc(T('cat_offline', 'Catalog temporarily offline — the app works with bundled books.')) + '</p>';
-  }
-  let camps = [], proofs = [];
-  try{ const j = await apiGet('/api/publisher/campaigns'); camps = j.campaigns || []; }catch(e){}
-  try{ const p = await apiGet('/api/proofs'); proofs = Array.isArray(p) ? p : (p.proofs || []); }catch(e){}
-  const ver = proofs.filter(p => VERIFIED.includes(p.status));
-  const ps = document.getElementById('platformStats');
-  if(ps){
-    const active = camps.filter(c => c.status === 'active').length;
-    ps.innerHTML =
-      `<div class="stat"><div class="l">${T('ps_books', 'Books on network')}</div><div class="v">${(window.__rpBooks||[]).length || '—'}</div></div>` +
-      `<div class="stat"><div class="l">${T('ps_challenges', 'Active challenges')}</div><div class="v">${camps.length ? active + ' / ' + camps.length : '—'}</div></div>` +
-      `<div class="stat"><div class="l">${T('ps_proofs', 'Proofs recorded')}</div><div class="v">${proofs.length || '—'}</div></div>` +
-      `<div class="stat"><div class="l">${T('ps_verified', 'Verified')}</div><div class="v">${ver.length || '—'}</div></div>`;
-  }
-  const lc = document.getElementById('liveCamps');
-  if(lc){
-    if(!camps.length){ lc.innerHTML = '<p class="muted">' + esc(T('no_camps', 'No live challenges right now.')) + '</p>'; }
-    else{
-      document.getElementById('campTitle').textContent = T('camps_count', camps.length + ' live reading challenges').replace('{n}', camps.length);
-      lc.innerHTML = camps.slice(0,3).map(c =>
-        `<div class="camp-row"><span><strong>${esc(c.title)}</strong><br><span class="muted" style="font-size:.8rem">${esc(c.author||'')} · ${esc(typeof c.rewardPool==='string'?c.rewardPool:(c.rewardPool+' '+(c.currency||'')))}</span></span><span class="pill ${c.status==='active'?'ok':'mut'}">${esc(c.status)}</span></div>`
-      ).join('');
-    }
-  }
-  const lp = document.getElementById('liveProof');
-  if(lp){
-    const latest = ver.slice().sort((a,b) => String(b.timestamp||'').localeCompare(String(a.timestamp||'')))[0];
-    if(!latest){ lp.innerHTML = '<div class="cert"><div class="cert-k">ReadProof Certificate</div><p class="muted">' + esc(T('no_proofs', 'No verified proofs yet.')) + '</p><div class="rp-actions" style="justify-content:center;margin:12px 0 0"><a class="btn btn-ghost btn-sm" href="/verify/">' + esc(T('cert_verify', 'Verify a certificate')) + '</a></div></div>'; }
-    else{
-      const d = (latest.timestamp||'').slice(0,10);
-      lp.innerHTML = `<div class="cert"><div class="cert-k">ReadProof Certificate · ✓ Verified</div>` +
-        `<h3>${esc(latest.bookId)}</h3><div class="cert-book">${esc(latest.chapterId||'')}</div>` +
-        `<p class="muted" style="margin:6px 0 0;font-size:.9rem">${esc(T('lp_line', 'Demonstrated understanding · Score:'))} ${esc(String(latest.score))}/${esc(String(latest.total))}</p>` +
-        `<div class="cert-meta"><span class="mono">${esc((latest.proofHash||'').slice(0,12))}</span><span>${esc(d)}</span><span>✓ ${esc(T('lp_verified', 'Verified proof'))}</span></div>` +
-        `<div class="rp-actions" style="justify-content:center;margin:14px 0 0"><a class="btn btn-ghost btn-sm" href="/verify/">${esc(T('check_proof', 'Check this proof'))}</a></div></div>`;
-    }
-  }
-})();
-</script>
-<script src="/assets/i18n.js"></script>
+    <!-- ═══ CATALOG ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap">
+        <p class="rp-kicker" data-i18n="lib_k">Library</p>
+        <h2 class="rp-h2" data-i18n="lib_h">Start with the classics.</h2>
+        <p class="rp-sub" data-i18n="lib_sub">Public-domain books from Project Gutenberg plus reading challenges from
+          publishers. Live catalog below — served by the ReadProof API.</p>
+        <div class="book-grid" id="booksGrid">
+          <p class="muted">Loading catalog…</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TEACHERS STRIP ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap">
+        <div class="card flat" style="background:var(--gold-soft);border-color:#E3CE9C">
+          <div class="rp-grid cols-2" style="align-items:center">
+            <div>
+              <p class="rp-kicker" data-i18n="sch_k">For schools</p>
+              <h2 class="rp-h2" style="font-size:1.7rem" data-i18n="sch_h">Turn reading assignments into measurable
+                understanding.</h2>
+              <p class="rp-sub" style="margin-bottom:18px" data-i18n="sch_sub">Create a class, assign a book, see
+                results — including who needs help. Simple dashboard, no setup calls. Network numbers below are live.
+              </p>
+              <div class="rp-actions" style="margin:0">
+                <a class="btn btn-dark" href="/teachers/" data-i18n="sch_teachers">For Teachers</a>
+                <a class="btn btn-ghost" href="/teacher/" data-i18n="sch_demo">Open demo dashboard</a>
+              </div>
+            </div>
+            <div class="stat-grid" style="grid-template-columns:1fr 1fr" id="platformStats">
+              <div class="stat">
+                <div class="l">Books on network</div>
+                <div class="v">…</div>
+              </div>
+              <div class="stat">
+                <div class="l">Active challenges</div>
+                <div class="v">…</div>
+              </div>
+              <div class="stat">
+                <div class="l">Proofs recorded</div>
+                <div class="v">…</div>
+              </div>
+              <div class="stat">
+                <div class="l">Verified</div>
+                <div class="v">…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ PUBLISHERS STRIP ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap">
+        <div class="rp-grid cols-2" style="align-items:center">
+          <div>
+            <p class="rp-kicker" data-i18n="pub_k">For publishers</p>
+            <h2 class="rp-h2" data-i18n="pub_h">Create reading challenges around your books.</h2>
+            <p class="rp-sub" data-i18n="pub_sub">Select a book, create a challenge, fund a reward pool. Readers
+              participate, ReadProof verifies understanding, rewards go out by predefined rules.</p>
+            <div class="rp-actions" style="margin:0">
+              <a class="btn btn-primary" href="/publishers/#panel" data-i18n="pub_panel">Publisher panel</a>
+              <a class="btn btn-ghost" href="/challenge/" data-i18n="pub_all">All challenges</a>
+            </div>
+          </div>
+          <div class="card">
+            <p class="rp-kicker"><svg class="ic">
+                <use href="/assets/icons.svg#i-chart" />
+              </svg> Live challenges</p>
+            <h3 id="campTitle">Reading challenges</h3>
+            <div id="liveCamps" style="margin-top:10px">
+              <p class="muted">Loading live challenges from the network…</p>
+            </div>
+            <div class="rp-actions" style="margin:12px 0 0">
+              <a class="btn btn-ghost btn-sm" href="/challenge/">All challenges</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TECH (blockchain in background) ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap">
+        <div class="tech-band">
+          <p class="rp-kicker" style="color:#E9CE8F" data-i18n="tech_k">Under the hood</p>
+          <h3 data-i18n="tech_h">Proof you can trust, infrastructure you never notice.</h3>
+          <p data-i18n="tech_sub">Every verified result is recorded as a tamper-evident proof. You read, take challenges
+            and earn certificates — verification just works in the background.</p>
+          <ul class="tech-checks">
+            <li data-i18n="tech_1">✓ Challenge completed &amp; understanding verified</li>
+            <li><span data-i18n="tech_2">✓ Proof recorded — checkable by ID in</span> <a href="/verify/"
+                style="color:#E9CE8F" data-i18n="tech_3">Proof Details</a></li>
+            <li><span class="pill" style="background:rgba(255,255,255,.1);color:#E9CE8F">Verified on-chain</span>
+              <code>Network: Solana Devnet · Proof ID · Transaction</code></li>
+          </ul>
+          <p style="font-size:.82rem" data-i18n="tech_note">Demo environment: test network, no real funds. Book texts
+            and answers are never stored on-chain — only the proof hash.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ APP ═══ -->
+    <section class="rp-section tight">
+      <div class="wrap rp-center">
+        <p class="rp-kicker" data-i18n="app_k">iOS app</p>
+        <h2 class="rp-h2" data-i18n="app_h">Take ReadProof anywhere.</h2>
+        <p class="rp-sub" data-i18n="app_sub">Native iOS app with roles for students, readers and teachers. Pick your
+          role once — the whole interface adapts.</p>
+        <div class="rp-actions" style="justify-content:center">
+          <a class="btn btn-dark" href="/app/" data-i18n="pr_app_cta">Open app</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rp-footer">
+    <div class="wrap">
+      <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood
+          it.</span><br><span class="mono" style="font-size:.72rem"><span class="api-dot" id="apiDot"></span><span
+            id="apiStatus">Connecting to network…</span></span></div>
+      <div>
+        <a href="/students/" data-i18n="nav_students">Students</a> · <a href="/teachers/"
+          data-i18n="nav_teachers">Teachers</a> · <a href="/publisher/" data-i18n="nav_publishers">Publishers</a> · <a
+          href="/verify/" data-i18n="nav_verify">Verify</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (async function () {
+      const BASES = ['https://frog02-32287.wykr.es'];
+
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      async function apiGet(path) {
+        for (const b of BASES) {
+          try { const r = await fetch(b + path); if (r.ok) return await r.json(); } catch (e) { }
+        }
+        throw new Error('API offline');
+      }
+      const VERIFIED = ['Reading Verified', 'Comprehension Verified', 'verified'];
+      const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
+      function setStatus(on, text) {
+        const d = document.getElementById('apiDot'), t = document.getElementById('apiStatus');
+        if (d) d.classList.toggle('on', on);
+        if (t) t.textContent = text;
+      }
+      try {
+        const books = await apiGet('/api/books');
+        setStatus(true, T('net_live', 'Network: live'));
+        document.getElementById('booksGrid').innerHTML = books.slice(0, 4).map(b =>
+          `<div class="book-card">${b.coverUrl ? `<img src="${b.coverUrl}" alt="" loading="lazy" onerror="this.remove()">` : ''}<h4>${esc(b.title)}</h4><div class="a">${esc(b.author || '')} · ${b.totalChapters || ((b.chapters || []).length)} chapters</div><span class="pill ok">${esc(b.rewardPerChapter || 'Challenge')}</span></div>`
+        ).join('');
+        window.__rpBooks = books;
+      } catch (e) {
+        setStatus(false, T('net_offline', 'Network: offline — showing cached info'));
+        document.getElementById('booksGrid').innerHTML = '<p class="muted">' + esc(T('cat_offline', 'Catalog temporarily offline — the app works with bundled books.')) + '</p>';
+      }
+      let camps = [], proofs = [];
+      try { const j = await apiGet('/api/publisher/campaigns'); camps = j.campaigns || []; } catch (e) { }
+      try { const p = await apiGet('/api/proofs'); proofs = Array.isArray(p) ? p : (p.proofs || []); } catch (e) { }
+      const ver = proofs.filter(p => VERIFIED.includes(p.status));
+      const ps = document.getElementById('platformStats');
+      if (ps) {
+        const active = camps.filter(c => c.status === 'active').length;
+        ps.innerHTML =
+          `<div class="stat"><div class="l">${T('ps_books', 'Books on network')}</div><div class="v">${(window.__rpBooks || []).length || '—'}</div></div>` +
+          `<div class="stat"><div class="l">${T('ps_challenges', 'Active challenges')}</div><div class="v">${camps.length ? active + ' / ' + camps.length : '—'}</div></div>` +
+          `<div class="stat"><div class="l">${T('ps_proofs', 'Proofs recorded')}</div><div class="v">${proofs.length || '—'}</div></div>` +
+          `<div class="stat"><div class="l">${T('ps_verified', 'Verified')}</div><div class="v">${ver.length || '—'}</div></div>`;
+      }
+      const lc = document.getElementById('liveCamps');
+      if (lc) {
+        if (!camps.length) { lc.innerHTML = '<p class="muted">' + esc(T('no_camps', 'No live challenges right now.')) + '</p>'; }
+        else {
+          document.getElementById('campTitle').textContent = T('camps_count', camps.length + ' live reading challenges').replace('{n}', camps.length);
+          lc.innerHTML = camps.slice(0, 3).map(c =>
+            `<div class="camp-row"><span><strong>${esc(c.title)}</strong><br><span class="muted" style="font-size:.8rem">${esc(c.author || '')} · ${esc(typeof c.rewardPool === 'string' ? c.rewardPool : (c.rewardPool + ' ' + (c.currency || '')))}</span></span><span class="pill ${c.status === 'active' ? 'ok' : 'mut'}">${esc(c.status)}</span></div>`
+          ).join('');
+        }
+      }
+      const lp = document.getElementById('liveProof');
+      if (lp) {
+        const latest = ver.slice().sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))[0];
+        if (!latest) { lp.innerHTML = '<div class="cert"><div class="cert-k">ReadProof Certificate</div><p class="muted">' + esc(T('no_proofs', 'No verified proofs yet.')) + '</p><div class="rp-actions" style="justify-content:center;margin:12px 0 0"><a class="btn btn-ghost btn-sm" href="/verify/">' + esc(T('cert_verify', 'Verify a certificate')) + '</a></div></div>'; }
+        else {
+          const d = (latest.timestamp || '').slice(0, 10);
+          lp.innerHTML = `<div class="cert"><div class="cert-k">ReadProof Certificate · ✓ Verified</div>` +
+            `<h3>${esc(latest.bookId)}</h3><div class="cert-book">${esc(latest.chapterId || '')}</div>` +
+            `<p class="muted" style="margin:6px 0 0;font-size:.9rem">${esc(T('lp_line', 'Demonstrated understanding · Score:'))} ${esc(String(latest.score))}/${esc(String(latest.total))}</p>` +
+            `<div class="cert-meta"><span class="mono">${esc((latest.proofHash || '').slice(0, 12))}</span><span>${esc(d)}</span><span>✓ ${esc(T('lp_verified', 'Verified proof'))}</span></div>` +
+            `<div class="rp-actions" style="justify-content:center;margin:14px 0 0"><a class="btn btn-ghost btn-sm" href="/verify/">${esc(T('check_proof', 'Check this proof'))}</a></div></div>`;
+        }
+      }
+    })();
+  </script>
+  <script src="/assets/i18n.js"></script>
 </body>
+
 </html>
