@@ -314,7 +314,16 @@ async function renderQuiz(sid){
   paintQuiz(sid);
   pollTimer = setInterval(async ()=>{
     if(!location.hash.includes('#/quiz/')){ clearInterval(pollTimer); return; }
-    try{ await fetchSession(sid); paintQuiz(sid, true); }catch(e){}
+    try{
+      await fetchSession(sid);
+      // nie nadpisuj tego, co użytkownik właśnie pisze (focus w polu)
+      const ae = document.activeElement;
+      if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && view.contains(ae)) return;
+      // w pozostałych przypadkach zachowaj szkic (checkboxy, selecty, kolejność, tekst)
+      const draft = snapshotDraft();
+      paintQuiz(sid, true);
+      restoreDraft(draft);
+    }catch(e){}
   }, 5000);
   document.addEventListener('visibilitychange', visibilityHandler);
 }
@@ -352,6 +361,33 @@ function paintQuiz(sid, soft){
   paintQuestion(sid, st.q, st.done, st.total);
 }
 function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+
+/* szkic użytkownika — żeby odświeżanie sesji nigdy nie kasowało wpisywania */
+function snapshotDraft(){
+  const d = {checks: [], selects: {}, order: null, aText: ''};
+  const t = document.getElementById('aText');
+  if(t && t.value) d.aText = t.value;
+  d.checks = Array.from(view.querySelectorAll('.ans-check input:checked')).map(x=>x.value);
+  view.querySelectorAll('.match-row select').forEach(s=>{ if(s.value !== '') d.selects[s.dataset.l] = s.value; });
+  const ol = document.getElementById('ordList');
+  if(ol) d.order = Array.from(ol.children).map(r=>r.dataset.i);
+  return d;
+}
+function restoreDraft(d){
+  if(!d) return;
+  const t = document.getElementById('aText');
+  if(t && d.aText && !t.value) t.value = d.aText;
+  (d.checks||[]).forEach(v=>{ const c = view.querySelector('.ans-check input[value="' + v + '"]'); if(c) c.checked = true; });
+  Object.entries(d.selects||{}).forEach(([l,v])=>{ const s = view.querySelector('.match-row select[data-l="' + l + '"]'); if(s) s.value = v; });
+  if(d.order && d.order.length){
+    const ol = document.getElementById('ordList');
+    if(ol){
+      const map = {};
+      Array.from(ol.children).forEach(r=>{ map[r.dataset.i] = r; });
+      d.order.forEach(i=>{ if(map[i]) ol.appendChild(map[i]); });
+    }
+  }
+}
 
 const TYPE_LABEL = {multiple_choice:'Wybór', true_false:'Prawda / fałsz', multiple_select:'Wybierz wszystkie', open_question:'Otwarte', why_question:'Dlaczego', ordering:'Uporządkuj', who_said:'Kto to powiedział', match:'Dopasuj', what_next:'Co dalej', find_error:'Znajdź błąd'};
 function paintQuestion(sid, q, done, total){
