@@ -2,23 +2,617 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReadProof App — Coming soon</title>
-<meta name="description" content="ReadProof App — coming soon.">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ReadProof — czytaj, udowodnij, zgarnij</title>
+<meta name="description" content="Webowa aplikacja ReadProof: wybierz książkę i rozdział, przejdź quiz ze zrozumienia, zdobądź zweryfikowany dowód.">
 <link rel="icon" type="image/png" href="/assets/icon.png">
 <link rel="apple-touch-icon" href="/assets/icon.png">
 <meta name="theme-color" content="#58CC02">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
+<style>
+/* ── ReadProof App ── */
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-body);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:72px}
+.app-top{position:sticky;top:0;z-index:30;background:rgba(253,252,247,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.app-top .wrap{display:flex;align-items:center;gap:10px;min-height:56px}
+.rp-brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ink);text-decoration:none}
+.rp-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(150deg,var(--green),var(--green-dark));color:#fff;display:grid;place-items:center;font-size:14px;font-weight:800}
+.pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.06em;padding:4px 10px;border-radius:999px;font-weight:600}
+.pill.info{background:var(--blue-soft,#E8EFFC);color:var(--blue)}
+.pill.ok{background:var(--green-soft);color:var(--green)}
+.pill.mut{background:var(--line-soft);color:var(--muted)}
+.wallet-pill{font-family:var(--font-mono);font-size:.7rem;border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.view{max-width:640px;margin:0 auto;padding:20px 16px 88px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px}
+.card-warm{background:var(--card-warm,#FBF7EC);border:1px solid var(--line-soft);border-radius:20px;padding:20px}
+.muted{color:var(--muted);font-size:.88rem}
+.rp-kicker{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;margin:0 0 8px}
+.rp-h1,.rp-h2{font-family:var(--font-display);font-weight:800;line-height:1.15;margin:0 0 8px}
+.rp-sub{color:var(--ink-soft);font-size:.95rem}
+
+/* ── bottom nav ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(253,252,247,.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 env(safe-area-inset-bottom,6px)}
+.bottom-nav a{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:var(--muted);font-size:.65rem;font-weight:600;padding:6px 14px;transition:color .15s}
+.bottom-nav a:hover,.bottom-nav a.active{color:var(--green)}
+.bottom-nav .nav-icon{width:26px;height:26px;display:grid;place-items:center;font-size:1.15rem}
+
+/* ── book rows ── */
+.book-row{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.book-row img{width:52px;height:72px;object-fit:cover;border-radius:8px;background:var(--paper)}
+.book-row .t{flex:1;min-width:0}
+.book-row .t b{display:block;font-family:var(--font-display);font-size:1.02rem;line-height:1.25}
+.book-row .t span{font-size:.8rem;color:var(--muted)}
+
+/* ── quiz ── */
+.q-progress{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
+.q-progress .bar{flex:1;height:10px;border-radius:999px;background:var(--line-soft);overflow:hidden}
+.q-progress .bar > span{display:block;height:100%;width:0;background:var(--green);border-radius:999px;transition:width .35s}
+.q-progress .n{font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+.q-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px 18px;box-shadow:0 14px 40px rgba(20,25,15,.08);animation:qin .25s ease}
+@keyframes qin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.q-type{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.q-text{font-family:var(--font-display);font-size:clamp(1.2rem,4.5vw,1.55rem);line-height:1.25;margin:10px 0 4px}
+.q-ctx{font-size:.92rem;color:var(--muted);margin:0 0 16px}
+.ans{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.ans-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:13px 15px;border-radius:16px;border:2px solid var(--line);background:#fff;font:inherit;font-weight:600;font-size:1rem;color:var(--ink);cursor:pointer;text-align:left;transition:transform .08s, border-color .12s}
+.ans-btn .k{flex:0 0 auto;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--paper);font-family:var(--font-mono);font-size:.82rem;color:var(--muted)}
+.ans-btn.hit{border-color:var(--green);background:var(--green-soft)}
+.ans-btn.hit .k{background:var(--green);color:#fff}
+.ans-btn.miss{border-color:#D66;background:#FDECEC}
+.ans-btn:disabled{cursor:default;opacity:.85}
+.ans-check{display:flex;align-items:center;gap:10px;min-height:52px;padding:12px 14px;border:2px solid var(--line);border-radius:14px;background:#fff;cursor:pointer}
+.ans-check input{width:20px;height:20px;accent-color:var(--green)}
+.ord-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:#fff;margin-bottom:8px;font-weight:600}
+.ord-row .t{flex:1}
+.ord-row button{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:1.05rem;cursor:pointer}
+.match-row{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:#fff;margin-bottom:8px}
+.match-row select{font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-height:46px}
+.big-input{width:100%;font:inherit;padding:14px;border:2px solid var(--line);border-radius:14px;min-height:54px;background:#fff}
+textarea.big-input{min-height:110px;resize:vertical}
+.feedback{margin-top:14px;border-radius:14px;padding:13px 15px;font-weight:600}
+.feedback.ok{background:var(--green-soft);color:var(--green-dark)}
+.feedback.bad{background:#FDECEC;color:#8f1d1d}
+.lock-wrap{text-align:center;padding:34px 10px}
+.lock-num{font-family:var(--font-mono);font-size:2.4rem;font-weight:600}
+.seal{border:3px double var(--green);border-radius:14px;color:var(--green-dark);font-family:var(--font-display);font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:12px 18px;display:inline-block;transform:rotate(-3deg);background:rgba(232,255,214,.6)}
+
+/* ── tabs (Lektury sub-tabs) ── */
+.sub-tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;-webkit-overflow-scrolling:touch}
+.sub-tabs button{flex:none;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;font:inherit;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s}
+.sub-tabs button.active{background:var(--green);color:#fff;border-color:var(--green)}
+.sub-tabs button:hover:not(.active){background:var(--paper)}
+
+/* ── lektury filter ── */
+.filter-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filter-row input{flex:1;min-width:120px;font:inherit;padding:12px 14px;border:2px solid var(--line);border-radius:14px;background:#fff;font-size:.92rem}
+.search-btn{padding:12px 18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:.92rem;cursor:pointer}
+
+/* ── certificate ── */
+.cert{text-align:center;padding:30px 20px;background:var(--card);border:2px solid var(--line);border-radius:24px}
+.cert-k{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:700;margin-bottom:8px}
+.cert-book{font-family:var(--font-display);font-size:1.6rem;font-weight:800;margin:6px 0}
+.cert-name{font-size:1.1rem;color:var(--ink-soft);margin-top:10px}
+.cert-meta{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);margin-top:6px;word-break:break-all}
+
+/* ── result ── */
+.cert{text-align:center}
+.cert-k{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:700;margin-bottom:8px}
+.cert-book{font-family:var(--font-display);font-size:1.6rem;font-weight:800;margin:6px 0}
+.cert-name{font-size:1.1rem;color:var(--ink-soft);margin-top:10px}
+.cert-meta{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);margin-top:6px;word-break:break-all}
+
+/* ── reward card ── */
+.reward-card{background:linear-gradient(135deg,var(--green-soft),var(--gold-soft));border:1px solid var(--green);border-radius:20px;padding:20px;text-align:center}
+.reward-card .amount{font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--green-dark)}
+
+/* ── responsive ── */
+@media(max-width:640px){.view{padding:14px 12px 88px}.card{padding:18px}}
+@media print{.bottom-nav,.app-top,.btn,.no-print{display:none!important}body{background:#fff}@page{size:A4 landscape;margin:0}body *{visibility:hidden}.q-card,.q-card *{visibility:visible}.q-card{position:absolute;left:0;top:0;width:100%;min-height:100vh;box-shadow:none;animation:none;border-radius:0}}
+
+/* ── buttons (shared) ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:14px;font:inherit;font-weight:600;font-size:.92rem;cursor:pointer;text-decoration:none;border:2px solid transparent;transition:all .12s}
+.btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-primary:hover{background:var(--green-dark)}
+.btn-ghost{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn-ghost:hover{background:var(--paper)}
+.btn-sm{padding:8px 14px;font-size:.82rem;border-radius:10px}
+.btn-lg{padding:16px 24px;font-size:1.05rem}
+.btn:disabled{opacity:.5;cursor:default}
+</style>
 </head>
 <body>
-<nav class="rp-nav"><div class="wrap"><a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a></div></nav>
-<main class="wrap" style="min-height:62vh;display:grid;place-items:center;padding:48px 0">
-  <div style="text-align:center;max-width:560px">
-    <p class="rp-kicker">ReadProof App</p>
-    <h1 class="rp-h2" style="font-size:clamp(2rem,6vw,3rem)">Coming soon.</h1>
-    <p class="rp-sub" style="margin:12px auto 0">Aplikacja wróci wkrótce.</p>
+
+<header class="app-top"><div class="wrap">
+  <a class="rp-brand" href="#/" style="text-decoration:none"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <span class="pill info">App</span>
+  <span style="flex:1"></span>
+  <span class="wallet-pill" id="walletPill">niezalogowany</span>
+</div></header>
+
+<main class="view" id="view"></main>
+
+<!-- ═══ bottom nav ═══ -->
+<nav class="bottom-nav" id="bottomNav">
+  <a href="#/" data-tab="katalog" class="active"><span class="nav-icon">📖</span><span>Katalog</span></a>
+  <a href="#/lektury" data-tab="lektury"><span class="nav-icon">📚</span><span>Lektury</span></a>
+  <a href="#/nagrody" data-tab="nagrody"><span class="nav-icon">🏆</span><span>Nagrody</span></a>
+</nav>
+
+<script>
+(function(){
+'use strict';
+
+/* ═══ konfiguracja / API ═══ */
+const BASES = ['https://frog02-32287.wykr.es', 'https://frog02.mikr.us:32287', 'http://frog02.mikr.us:32287'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path, opts){
+  let lastErr = null;
+  for(const b of BASES){
+    try{
+      const r = await fetch(b + path, {headers:{'Content-Type':'application/json','X-Lang':'pl'}, ...opts});
+      const j = await r.json().catch(()=>({}));
+      if(!r.ok){ const e = new Error(j.error || ('HTTP ' + r.status)); e.status = r.status; e.body = j; throw e; }
+      return j;
+    }catch(e){ lastErr = e; if(e.status) throw e; }
+  }
+  throw lastErr || new Error('API offline');
+}
+
+/* ═══ konto: portfel Solana / Gość ═══ */
+function isValidSolanaAddress(a){ return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(a||'').trim()); }
+function guestWallet(){
+  let g = null;
+  try{ g = localStorage.getItem('rp_app_guest'); }catch(e){}
+  if(!g){
+    const abc = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let s = 'G';
+    const rnd = (crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(43)) : Array.from({length:43},()=>Math.floor(Math.random()*abc.length)));
+    for(let i=0;i<43;i++) s += abc[rnd[i] % abc.length];
+    g = s;
+    try{ localStorage.setItem('rp_app_guest', g); }catch(e){}
+  }
+  return g;
+}
+function getWallet(){ try{ return (localStorage.getItem('rp_app_wallet')||'').trim(); }catch(e){ return ''; } }
+function setWallet(w){ try{ w ? localStorage.setItem('rp_app_wallet', w) : localStorage.removeItem('rp_app_wallet'); }catch(e){} paintWallet(); }
+function paintWallet(){
+  const w = getWallet(), el = document.getElementById('walletPill');
+  if(el) el.textContent = w ? ('● ' + w.slice(0,4) + '…' + w.slice(-4)) : 'niezalogowany';
+}
+const SECRET_KEYS = ['correctAnswer','correctAnswers','correctOrder','errorIndex','expectedMeaning','correctText'];
+function stripSecrets(ch){ const c = Object.assign({}, ch); SECRET_KEYS.forEach(k => delete c[k]); return c; }
+
+/* ═══ stan ═══ */
+const view = document.getElementById('view');
+let BOOKS = [];
+let SESSION = null;
+let SESSION_META = {};
+let LAST_RESULT = null;
+try{ LAST_RESULT = JSON.parse(localStorage.getItem('rp_app_last_result') || 'null'); }catch(e){}
+
+function nav(hash){ location.hash = hash; }
+function updateNav(){
+  const h = (location.hash||'').replace('#','');
+  document.querySelectorAll('#bottomNav a').forEach(a => {
+    const tab = a.dataset.tab;
+    let active = false;
+    if(tab==='katalog' && (h===''||h==='/')) active = true;
+    if(tab==='lektury' && h.startsWith('lektury')) active = true;
+    if(tab==='nagrody' && h.startsWith('nagrody')) active = true;
+    a.classList.toggle('active', active);
+  });
+}
+window.addEventListener('hashchange', () => { updateNav(); route(); });
+
+/* ═══ router ═══ */
+function route(){
+  const h = (location.hash||'').replace('#','');
+  const seg = h.split('/').filter(Boolean);
+  if(seg.length === 0 || seg[0]==='' || seg[0]==='katalog') return renderKatalog();
+  if(seg[0]==='lektury') return renderLektury(seg[1], seg[2]);
+  if(seg[0]==='nagrody') return renderNagrody();
+  if(seg[0]==='book' && seg[1]) return renderBook(seg[1]);
+  if(seg[0]==='chapter' && seg[1] && seg[2]) return renderChapter(seg[1], decodeURIComponent(seg[2]));
+  if(seg[0]==='quiz' && seg[1]) return renderQuiz(seg[1]);
+  if(seg[0]==='result') return renderResult();
+  if(seg[0]==='proofs') return renderProofs();
+  if(seg[0]==='publisher') return renderPublisher();
+  return renderKatalog();
+}
+
+/* ═══ LOGOWANIE ═══ */
+function renderLogin(){
+  const w = getWallet();
+  view.innerHTML = `
+    <p class="rp-kicker">Konto</p>
+    <h1 class="rp-h1" style="font-size:2rem">Zacznij czytać.</h1>
+    <p class="rp-sub">Zaloguj portfelem Solana albo wejdź jako Gość. Portfel jest wymagany do startu sesji.</p>
+    <div class="card" style="margin-top:14px">
+      <p class="rp-kicker">Logowanie</p>
+      <div id="privyUserRoot"><p class="muted">Logowanie Privy…</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-ghost" id="bGuest">Wejdź jako Gość</button>
+        <button class="btn btn-ghost" id="bPhantom">Phantom</button>
+      </div>
+      <p class="muted" style="font-size:.78rem;margin-top:8px" id="wMsg">${w ? 'Zalogowano: '+esc(w.slice(0,4)+'…'+w.slice(-4)) : 'Zaloguj się przez Privy lub wejdź jako Gość.'}</p>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <p class="rp-kicker">Dane do certyfikatu</p>
+      <div class="field"><label for="uFirst">Imię</label><input id="uFirst" class="big-input" placeholder="Jan" value="${esc((()=>{try{return localStorage.getItem('rp_first')||''}catch(e){return ''}})())}" autocomplete="given-name"></div>
+      <div class="field"><label for="uLast">Nazwisko</label><input id="uLast" class="big-input" placeholder="Kowalski" value="${esc((()=>{try{return localStorage.getItem('rp_last')||''}catch(e){return ''}})())}" autocomplete="family-name"></div>
+      <button class="btn btn-ghost" id="bSaveName">Zapisz</button>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-lg" id="bGo" ${w ? '' : 'disabled style="opacity:.5"'}>Wybierz książkę →</button>
+      <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
+    </div>
+    <p class="muted" style="font-size:.82rem;margin-top:12px">Wydawca? <a href="#/publisher">Panel wydawcy →</a></p>`;
+  document.getElementById('bPhantom').addEventListener('click', async ()=>{
+    try{ const sol = window.solana; if(!sol||!sol.isPhantom){window.open('https://phantom.app/','_blank');return;} const r = await sol.connect(); setWallet(r.publicKey.toString()); renderLogin(); }catch(e){ const m=document.getElementById('wMsg'); if(m)m.textContent='Phantom: '+(e.message||e); }
+  });
+  document.getElementById('bGuest').addEventListener('click', ()=>{ setWallet(guestWallet()); renderLogin(); });
+  const fn = document.getElementById('uFirst'), ln = document.getElementById('uLast'), bn = document.getElementById('bSaveName');
+  if(fn&&ln&&bn) bn.addEventListener('click', ()=>{
+    try{ localStorage.setItem('rp_first', fn.value.trim()); localStorage.setItem('rp_last', ln.value.trim()); const full=(fn.value.trim()+' '+ln.value.trim()).trim(); if(full) localStorage.setItem('rp_display_name', full); if(getWallet()&&full) api('/api/users',{method:'POST',body:JSON.stringify({walletAddress:getWallet(),displayName:full})}).catch(()=>{}); bn.textContent='Zapisano ✓'; setTimeout(()=>bn.textContent='Zapisz',1500); }catch(e){}
+  });
+  document.getElementById('bGo').addEventListener('click', ()=>nav('#/'));
+  if(!getWallet()) mountPrivyUser();
+}
+let privyMountedUser = false;
+async function mountPrivyUser(){
+  if(privyMountedUser) return; privyMountedUser = true;
+  const box = document.getElementById('privyUserRoot'); if(!box) return;
+  const t = (p, ms) => Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))]);
+  try{
+    const [{default:React},{createRoot},privy] = await Promise.all([
+      t(import('https://esm.sh/react@18.3.1'), 25000),
+      t(import('https://esm.sh/react-dom@18.3.1/client'), 25000),
+      t(import('https://esm.sh/@privy-io/react-auth@3.16.0?deps=react@18.3.1,react-dom@18.3.1'), 60000)
+    ]);
+    const e = React.createElement;
+    function Inner(){
+      const {ready, authenticated, user, login} = privy.usePrivy();
+      React.useEffect(()=>{ const addr = user && (user.wallet.address || (user.solanaWallet && user.solanaWallet.address)); if(authenticated&&addr){setWallet(addr); renderLogin();} },[authenticated, user]);
+      if(!ready) return e('span',{className:'muted'},'Inicjalizacja…');
+      if(authenticated) return e('span',{className:'muted'},'Zalogowano — otwieranie…');
+      return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj emailem');
+    }
+    function App(){ return e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{loginMethods:['email'],embeddedWallets:{createOnLogin:'users-without-wallets'}},e(Inner)); }
+    createRoot(box).render(e(App));
+  }catch(err){ privyMountedUser=false; if(box) box.innerHTML = `<p class="muted">Logowanie emailem niedostępne (${esc(err.message||err)}). Użyj portfela lub Gościa poniżej.</p>`; }
+}
+
+/* ═══ KATALOG ═══ */
+async function renderKatalog(){
+  view.innerHTML = `<p class="rp-kicker">Katalog</p><h1 class="rp-h2" style="font-size:1.7rem">Wybierz książkę.</h1><div id="bl"><p class="muted">Ładowanie…</p></div>`;
+  try{
+    const books = await api('/api/books');
+    BOOKS = Array.isArray(books) ? books : [];
+    let html = BOOKS.map(b=>`
+      <div class="book-row">
+        ${b.coverUrl?`<img src="${esc(b.coverUrl)}" alt="" loading="lazy" onerror="this.remove()">`:''}
+        <div class="t"><b>${esc(b.title)}</b><span>${esc(b.author||'')} · ${(b.chapters||[]).length||b.totalChapters||'?'} rozdz.</span></div>
+        <a class="btn btn-primary btn-sm" href="#/book/${esc(b.id)}">Wybierz</a>
+      </div>`).join('');
+    document.getElementById('bl').innerHTML = html || '<p class="muted">Brak książek.</p>';
+  }catch(e){
+    document.getElementById('bl').innerHTML = `<div class="card"><p class="muted">Katalog offline: ${esc(e.message)}. <button class="btn btn-ghost btn-sm" id="bRetry">Odśwież</button></div>`;
+    document.getElementById('bRetry').addEventListener('click', renderKatalog);
+  }
+}
+function findBook(id){ return BOOKS.find(b=>String(b.id)===String(id)); }
+function renderBook(id){
+  const b = findBook(id);
+  if(!b){ view.innerHTML = `<p class="muted">Nie znaleziono.</p><a class="btn btn-ghost" href="#/">Katalog</a>`; return; }
+  const chapters = b.chapters || [];
+  view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Katalog</a>
+    <h1 class="rp-h2" style="font-size:1.6rem;margin-top:12px">${esc(b.title)}</h1>
+    <p class="muted">${esc(b.author||'')}</p>
+    ${b.coverUrl?`<img src="${esc(b.coverUrl)}" alt="" style="width:100px;border-radius:10px" onerror="this.remove()">`:''}
+    <p style="font-size:.92rem;margin:8px 0">${esc(b.description||'').slice(0,200)}</p>
+    <p class="rp-kicker" style="margin-top:16px">Rozdziały (${chapters.length})</p>
+    ${chapters.map((c,i)=>`<div class="book-row"><div class="t"><b>${i+1}. ${esc(c.title||c.id)}</b><span>${esc((c.summary||'').slice(0,80))}</span></div><a class="btn btn-primary btn-sm" href="#/chapter/${esc(b.id)}/${esc(c.id)}">Czytaj</a></div>`).join('') || '<p class="muted">Brak rozdziałów.'}`;
+}
+function renderChapter(bookId, chapterId){
+  const b = findBook(bookId);
+  const c = b && (b.chapters||[]).find(x=>String(x.id)===String(chapterId));
+  if(!b || !c){ view.innerHTML = `<p class="muted">Nie znaleziono rozdziału.</p><a class="btn btn-ghost" href="#/">Katalog</a>`; return; }
+  const w = getWallet();
+  view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/book/${esc(b.id)}">← ${esc(b.title)}</a>
+    <div class="q-card" style="margin-top:12px">
+      <p class="rp-kicker">${esc(b.title)}</p>
+      <h1 class="rp-h2" style="font-size:1.5rem">${esc(c.title||c.id)}</h1>
+      <p class="muted" style="font-size:.88rem;margin:6px 0">${esc((c.contextExcerpt||c.summary||'').slice(0,250))}</p>
+      <p><span class="pill info">5 pytań</span> <span class="pill ok">nagroda: ${esc(c.reward||b.rewardPerChapter||'5 USDC')}</span></p>
+      ${w ? `<button class="btn btn-primary btn-lg" id="bStart" style="width:100%;margin-top:12px">Start →</button>` : `<p class="muted">Najpierw zaloguj się.</p><a class="btn btn-primary" href="#/">Konto →</a>`}
+    </div>`;
+  const btn = document.getElementById('bStart');
+  if(btn) btn.addEventListener('click', ()=>startGuarded(b, c));
+}
+
+/* ═══ proctoring (uproszczony) ═══ */
+let proctor = null;
+function stopProctor(){ if(proctor&&proctor.stream) proctor.stream.getTracks().forEach(t=>t.stop()); proctor=null; ['camPrev','wmTag','procToast','camBlock'].forEach(id=>{ const el=document.getElementById(id); if(el) el.remove(); }); }
+async function startGuarded(b, c){
+  const msg = document.getElementById('startMsg');
+  if(navigator.webdriver){ msg.textContent = 'Wykryto tryb automatyzacji.'; return; }
+  let stream = null;
+  try{ stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false}); }
+  catch(e){
+    if(msg) msg.innerHTML = 'Kamera niedostępna. <button class="btn btn-ghost btn-sm" id="bNoCam">Kontynuuj bez kamery</button>';
+    const el = document.getElementById('bNoCam');
+    if(el) el.addEventListener('click', async ()=>{ proctor={stream:null,exits:0,copies:0,tabs:0,sid:null}; await startSession(b,c); });
+    return;
+  }
+  proctor = {stream, exits:0, copies:0, tabs:0, sid:null};
+  await startSession(b, c);
+}
+async function startSession(b, c){
+  const msg = document.getElementById('startMsg');
+  try{
+    if(msg) msg.textContent = 'Startowanie sesji…';
+    const r = await api('/api/sessions/start', {method:'POST', body: JSON.stringify({walletAddress: getWallet(), bookId: b.id, chapterId: c.id})});
+    SESSION_META = {bookTitle: b.title, chapterTitle: c.title || c.id};
+    nav('#/quiz/' + (r.id || r.sessionId));
+  }catch(e){
+    if(msg) msg.textContent = e.status===409 ? 'Ten rozdział masz już zweryfikowany. Historia: #/nagrody/proofs' : ('Błąd startu: ' + e.message);
+  }
+}
+
+/* ═══ QUIZ ═══ */
+let pollTimer = null;
+async function fetchSession(sid){
+  const s = await api('/api/sessions/' + encodeURIComponent(sid));
+  s.challenges = (s.challenges||[]).map(stripSecrets);
+  SESSION = s; return s;
+}
+function answeredIds(){ const a=(SESSION&&SESSION.answers)||{}; return new Set(Object.keys(a)); }
+function currentQuestion(){
+  const done = answeredIds();
+  const remaining = (SESSION.challenges||[]).filter(c=>!done.has(c.id));
+  if(remaining.length) return {q: remaining[0], done: done.size, total: SESSION.challenges.length};
+  return {finished: true, done: done.size, total: SESSION.challenges.length};
+}
+async function renderQuiz(sid){
+  clearInterval(pollTimer); ensureProctorListeners();
+  view.innerHTML = `<p class="muted">Ładowanie sesji…</p>`;
+  try{ await fetchSession(sid); }catch(e){ view.innerHTML = `<div class="card"><p class="muted">Błąd sesji: ${esc(e.message)}</p><a class="btn btn-ghost" href="#/">Katalog</a></div>`; return; }
+  paintQuiz(sid);
+  pollTimer = setInterval(async ()=>{
+    if(!location.hash.includes('#/quiz/')){ clearInterval(pollTimer); return; }
+    try{ await fetchSession(sid); const ae = document.activeElement;
+      if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && view.contains(ae)) return;
+      const draft = snapshotDraft(); paintQuiz(sid, true); restoreDraft(draft);
+    }catch(e){}
+  }, 5000);
+}
+function progressHTML(done, total){
+  const pct = total ? Math.round(done/total*100) : 0;
+  return `<div class="q-progress"><div class="bar"><span style="width:${pct}%"></span></div><div class="n">${done}/${total}</div></div>`;
+}
+function snapshotDraft(){
+  const d = {checks:[], selects:{}, order:null, aText:''};
+  const t = document.getElementById('aText');
+  if(t && t.value) d.aText = t.value;
+  d.checks = Array.from(view.querySelectorAll('.ans-check input:checked')).map(x=>x.value);
+  view.querySelectorAll('.match-row select').forEach(s=>{ if(s.value!=='') d.selects[s.dataset.l] = s.value; });
+  const ol = document.getElementById('ordList');
+  if(ol) d.order = Array.from(ol.children).map(r=>r.dataset.i);
+  return d;
+}
+function restoreDraft(d){
+  if(!d) return;
+  const t = document.getElementById('aText'); if(t && d.aText && !t.value) t.value = d.aText;
+  (d.checks||[]).forEach(v=>{ const c = view.querySelector('.ans-check input[value="'+v+'"]'); if(c) c.checked = true; });
+  Object.entries(d.selects||{}).forEach(([l,v])=>{ const s = view.querySelector('.match-row select[data-l="'+l+'"]'); if(s) s.value = v; });
+  if(d.order && d.order.length){
+    const ol = document.getElementById('ordList'); if(!ol) return;
+    const map = {}; Array.from(ol.children).forEach(r=>{ map[r.dataset.i]=r; });
+    d.order.forEach(i=>{ if(map[i]) ol.appendChild(map[i]); });
+  }
+}
+const TYPE_LABEL = {multiple_choice:'Wybór', true_false:'Prawda / fałsz', multiple_select:'Wybierz wszystkie', open_question:'Otwarte', why_question:'Dlaczego', ordering:'Uporządkuj', who_said:'Kto to powiedział', match:'Dopasuj', what_next:'Co dalej', find_error:'Znajdź błąd'};
+function paintQuiz(sid, soft){
+  const st = currentQuestion(); if(st.finished){ paintFinish(sid, st); return; } paintQuestion(sid, st.q, st.done, st.total); }
+function paintQuestion(sid, q, done, total){
+  const letters = ['A','B','C','D','E','F']; let body = '';
+  if(q.type==='multiple_choice'||q.type==='what_next'||q.type==='true_false')
+    body = `<div class="ans">`+(q.options||[]).map((o,i)=>`<button class="ans-btn" data-i="${i}"><span class="k">${letters[i]||i+1}</span><span>${esc(o)}</span></button>`).join('')+`</div>`;
+  else if(q.type==='multiple_select')
+    body = `<div class="ans">`+(q.options||[]).map((o,i)=>`<label class="ans-check"><input type="checkbox" value="${i}"><span>${esc(o)}</span></label>`).join('')+`</div><button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%;margin-top:14px">Sprawdź</button>`;
+  else if(q.type==='find_error'){ const rows=q.statements||q.options||[]; body=`<div class="ans">`+rows.map((o,i)=>`<button class="ans-btn" data-i="${i}"><span class="k">${i+1}</span><span>${esc(o)}</span></button>`).join('')+`</div>`; }
+  else if(q.type==='ordering'||q.type==='ranking'){
+    const ordItems = q.items||q.options||q.statements||[];
+    if(!ordItems.length) body = `<p class="muted">Brak elementów do uporządkowania.</p>`;
+    else body = `<div id="ordList">`+ordItems.map((o,i)=>`<div class="ord-row" data-i="${i}"><span class="t">${esc(o)}</span><button data-mv="-1" aria-label="W górę">↑</button><button data-mv="1" aria-label="W dół">↓</button></div>`).join('')+`</div><button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%;margin-top:14px">Sprawdź kolejność</button>`;
+  } else if(q.type==='who_said'){ const quote=(q.pairs&&q.pairs[0])?q.pairs[0].left:''; body=`${quote?`<p class="q-ctx" style="font-style:italic">„${esc(quote)}"</p>`:''}<div class="field"><label for="aText">Kto to powiedział?</label><input id="aText" class="big-input" autocomplete="off" placeholder="…"></div><button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%">Sprawdź</button>`; }
+  else if(q.type==='match'){ const rights=(q.pairs||[]).map((p,i)=>({t:p.right,i})).sort(()=>Math.random()-.5); body=(q.pairs||[]).map((p,i)=>`<div class="match-row"><span class="l">${esc(p.left)}</span><select data-l="${i}"><option value="">— wybierz —</option>${rights.map(r=>`<option value="${r.i}">${esc(r.t)}</option>`).join('')}</select></div>`).join('')+`<button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%;margin-top:14px">Sprawdź</button>`; }
+  else if(q.type==='open_question'||q.type==='why_question')
+    body = `<div class="field"><label for="aText">Twoja odpowiedź (min. 3 znaki)</label><textarea id="aText" class="big-input" placeholder="Własnymi słowami…"></textarea></div><button class="btn btn-primary btn-lg" id="bSubmit" style="width:100%">Sprawdź</button>`;
+  else body = `<p class="muted">Nieznany typ: ${esc(q.type)}</p>`;
+  const qTitle = (q.question && String(q.question).trim()) ? q.question : (q.type==='ordering'||q.type==='ranking' ? 'Uporządkuj w kolejności chronologicznej:' : 'Odpowiedz:');
+  view.innerHTML = `${progressHTML(done,total)}<div class="q-card"><p class="q-type">${esc(TYPE_LABEL[q.type]||q.type)}</p><h2 class="q-text">${esc(qTitle)}</h2>${body}<div id="fb"></div></div>`;
+  view.querySelectorAll('.ans-btn[data-i]').forEach(b=>b.addEventListener('click', ()=>{ if(b.disabled)return; view.querySelectorAll('.ans-btn').forEach(x=>x.disabled=true); submitAnswer(sid,q,Number(b.dataset.i)); }));
+  view.querySelectorAll('.ord-row').forEach(row=>{
+    row.style.touchAction='none'; row.style.cursor='grab';
+    row.addEventListener('pointerdown', e=>{ if(e.target.closest('button'))return; e.preventDefault(); const list=document.getElementById('ordList'); const startY=e.clientY; row.setPointerCapture(e.pointerId); row.style.position='relative'; row.style.zIndex='5';
+      const move=ev=>{ row.style.transform=`translateY(${ev.clientY-startY}px)`; const el=document.elementFromPoint(ev.clientX,ev.clientY); const over=el&&el.closest?el.closest('.ord-row'):null; if(over&&over!==row){const r=Array.from(list.children); if(r.indexOf(over)>r.indexOf(row)) list.insertBefore(row,over.nextSibling); else list.insertBefore(row,over);} };
+      const up=()=>{ row.style.transform=''; row.style.zIndex=''; row.removeEventListener('pointermove',move); row.removeEventListener('pointerup',up); row.removeEventListener('pointercancel',up); };
+      row.addEventListener('pointermove',move); row.addEventListener('pointerup',up); row.addEventListener('pointercancel',up);
+    });
+  });
+  view.querySelectorAll('.ord-row button').forEach(b=>b.addEventListener('click', ()=>{ const row=b.closest('.ord-row'),list=document.getElementById('ordList'); const rows=Array.from(list.children); const i=rows.indexOf(row),j=i+Number(b.dataset.mv); if(j<0||j>=rows.length) return; list.insertBefore(row,Number(b.dataset.mv)<0?rows[j]:rows[j].nextSibling); }));
+  const sub=document.getElementById('bSubmit'); if(sub) sub.addEventListener('click', ()=>{
+    let ans=null;
+    if(q.type==='multiple_select'){ ans=Array.from(view.querySelectorAll('.ans-check input:checked')).map(x=>Number(x.value)); if(!ans.length){flash('Zaznaj co najmniej jedną odpowiedź.');return;} }
+    else if(q.type==='ordering'||q.type==='ranking') ans=Array.from(document.getElementById('ordList').children).map(r=>Number(r.dataset.i));
+    else if(q.type==='match'){ ans={}; view.querySelectorAll('.match-row select').forEach(s=>{if(s.value!=='') ans[s.dataset.l]=Number(s.value);}); if(Object.keys(ans).length!==(q.pairs||[]).length){flash('Dopasuj wszystkie pary.');return;} }
+    else{ const t=document.getElementById('aText'); ans=(t.value||'').trim(); if(!ans.length){flash('Wpisz odpowiedź.');return;} if((q.type==='open_question'||q.type==='why_question')&&ans.length<3){flash('Za krótka odpowiedź.');return;} }
+    sub.disabled=true; submitAnswer(sid,q,ans);
+  });
+}
+function flash(msg){ const f=document.getElementById('fb'); if(f) f.innerHTML=`<div class="feedback bad">${esc(msg)}</div>`; }
+async function submitAnswer(sid, q, ans){
+  const f=document.getElementById('fb'); if(f) f.innerHTML=`<p class="muted">Sprawdzanie…</p>`;
+  try{ const r=await api('/api/sessions/'+encodeURIComponent(sid)+'/answer',{method:'POST',body:JSON.stringify({challengeId:q.id,answer:ans})}); await fetchSession(sid);
+    f.innerHTML=`<div class="feedback ${r.correct?'ok':'bad'}">${r.correct?'Dobrze ✓':'Nie tym razem'}${r.correctText?`<span class="sub">${esc(r.correctText)}</span>`:''}${r.aiDetected?`<span class="sub">Wykryto wklejenie — odpowiedź niezaliczona.</span>`:''}</div><button class="btn btn-primary btn-lg" id="bNext" style="width:100%;margin-top:12px">Dalej →</button>`;
+    document.getElementById('bNext').addEventListener('click', ()=>paintQuiz(sid));
+  }catch(e){ if(e.status===423||e.status===409){await fetchSession(sid);paintQuiz(sid);return;} f.innerHTML=`<div class="feedback bad">Błąd: ${esc(e.message)}</div>`; const sub=document.getElementById('bSubmit'); if(sub) sub.disabled=false; }
+}
+function paintFinish(sid, st){
+  stopProctor();
+  view.innerHTML = `${progressHTML(st.done,st.total)}<div class="q-card" style="text-align:center"><p class="rp-kicker">Koniec pytań</p><h2 class="rp-h2">Sprawdź wynik.</h2><p class="rp-sub">Wynik policzy serwer na podstawie Twoich odpowiedzi.</p><button class="btn btn-primary btn-lg" id="bDone" style="width:100%">Zakończ i sprawdź wynik</button><p class="muted" style="font-size:.78rem;margin:10px 0 0" id="doneMsg"></p></div>`;
+  document.getElementById('bDone').addEventListener('click', async ()=>{
+    document.getElementById('doneMsg').textContent='Liczenie wyniku…';
+    try{ const r=await api('/api/sessions/'+encodeURIComponent(sid)+'/complete',{method:'POST',body:'{}'}); LAST_RESULT={proof:r.proof,verification:r.verification,results:r.results,meta:SESSION_META}; try{localStorage.setItem('rp_app_last_result',JSON.stringify(LAST_RESULT));}catch(e){} saveLocalProof(LAST_RESULT.proof); nav('#/result'); }catch(e){ document.getElementById('doneMsg').textContent='Błąd: '+e.message; }
+  });
+}
+
+/* ═══ RESULT ═══ */
+const BOOK_TITLES_PL = {alice:'Alicja w Krainie Czarów', sherlock:'Sherlock Holmes', treasure:'Wyspa Skarbów', tomsawyer:'Tomek Sawyer', around:'W 80 dni dookoła świata', grimm:'Bajki Braci Grimm', andersen:'Baśnie Andersena', oz:'Czarnoksiężnik z Oz', peterrabbit:'Piotruś Królik', pinocchio:'Pinokio', threepigs:'Trzy świnki'};
+function plBookTitle(id, fb){ return BOOK_TITLES_PL[id] || fb || String(id||''); }
+function plChapterTitle(bookId, chapterId, fb){ const b=BOOKS.find(x=>String(x.id)===String(bookId)); const c=b&&(b.chapters||[]).find(x=>String(x.id)===String(chapterId)); return (c&&(c.title||c.id))||fb||String(chapterId||''); }
+function saveLocalProof(p){ if(!p) return; try{ const k='rp_app_proofs'; const list=JSON.parse(localStorage.getItem(k)||'[]'); if(!list.some(x=>x.proofHash===p.proofHash)) list.unshift({proofHash:p.proofHash,bookId:p.bookId,chapterId:p.chapterId,score:p.score,total:p.total,status:p.status,timestamp:p.timestamp}); localStorage.setItem(k,JSON.stringify(list.slice(0,50))); }catch(e){} }
+async function renderResult(){
+  const r = LAST_RESULT; if(!r||!r.proof){ view.innerHTML=`<p class="muted">Brak wyniku.</p><a class="btn btn-ghost" href="#/">Katalog</a>`; return; }
+  const p=r.proof; const ratio=Number(p.total)>0?(Number(p.score)/Number(p.total)):0; const tier=ratio>=1?'full':(ratio>=0.6?'partial':'none');
+  const seal = tier==='full'?'✓ Verified':tier==='partial'?'◐ Częściowe zrozumienie':'✗ Nie wykazano zrozumienia';
+  const did = tier==='full'?'wykazał(a) pełne zrozumienie lektury.':tier==='partial'?'wykazał(a) częściowe zrozumienie lektury.':'nie wykazał(a) zrozumienia lektury.';
+  let holder = ''; try{holder=localStorage.getItem('rp_display_name')||'';}catch(e){}
+  if(!holder){ try{holder=(localStorage.getItem('rp_first')||'')+' '+(localStorage.getItem('rp_last')||''); holder=holder.trim(); }catch(e){} }
+  if(!holder){ holder=(p.walletAddress||'').slice(0,10)+'…'; try{const u=await api('/api/users/'+encodeURIComponent(p.walletAddress)).catch(()=>null); if(u&&u.user&&(u.user.displayName||u.user.email)) holder=u.user.displayName||u.user.email;}catch(e){} }
+  const bookName = plBookTitle(p.bookId); const chapterName = plChapterTitle(p.bookId, p.chapterId);
+  view.innerHTML = `<div class="cert" style="text-align:center">
+    <div class="cert-k">ReadProof Certificate · ${esc(seal)}</div><h3>${esc(bookName)}</h3>
+    ${chapterName?`<div class="cert-book">${esc(chapterName)}</div>`:''}
+    <div class="cert-name">${esc(holder)}</div><p class="muted" style="margin:6px 0">Niniejszym potwierdza się, że <b>${esc(holder)}</b> ${esc(did)}</p>
+    <p style="margin:6px 0;font-weight:800;font-size:1.4rem">${esc(String(p.score))} / ${esc(String(p.total))}</p>
+    <div class="cert-meta">id: ${esc(p.bookId||'')}${p.chapterId?' · '+esc(p.chapterId):''}</div>
+    <div class="cert-meta" style="margin-top:6px">hash: ${esc(p.proofHash||'—')}</div>
+    ${p.reward?`<p style="margin-top:6px"><span class="pill ok">nagroda: ${esc(typeof p.reward==='string'?p.reward:(p.reward+' USDC'))}</span></p>`:`<p class="muted" style="font-size:.82rem">Nagroda tylko za 5/5.</p>`}
   </div>
-</main>
-<footer class="rp-footer"><div class="wrap"><div><span class="fbrand">ReadProof</span><br>Coming soon</div></div></footer>
+  <div style="margin-top:14px;text-align:center;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+    <a class="btn btn-ghost" href="#/proofs">Moje dowody</a>
+    <a class="btn btn-primary" href="#/">Kolejna książka →</a>
+  </div>`;
+}
+
+/* ═══ PROOFS ═══ */
+async function renderProofs(){
+  const w = getWallet(); view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Katalog</a><h1 class="rp-h2" style="font-size:1.6rem;margin-top:12px">Moje dowody.</h1><div id="pl"><p class="muted">Ładowanie…</p></div>`;
+  let list = [];
+  if(w){ try{ const j = await api('/api/proofs?wallet='+encodeURIComponent(w)); list = Array.isArray(j)?j:(j.proofs||[]); }catch(e){} }
+  let local = []; try{ local = JSON.parse(localStorage.getItem('rp_app_proofs')||'[]'); }catch(e){}
+  const seen = new Set(list.map(p=>p.proofHash)); local.forEach(p=>{ if(p.proofHash&&!seen.has(p.proofHash)) list.push(p); });
+  document.getElementById('pl').innerHTML = list.length ? list.slice(0,30).map(p=>`<div class="hist-row"><span class="pill ${['Reading Verified','Comprehension Verified','verified'].includes(p.status)?'ok':'mut'}">${esc(String(p.score))}/${esc(String(p.total))}</span><span style="flex:1"><b>${esc(p.bookId||'')}</b><br><span class="muted" style="font-size:.78rem">${esc(p.chapterId||'')} · ${esc((p.timestamp||'').slice(0,10))}</span></span><a class="btn btn-ghost btn-sm" href="#/result">Sprawdź</a></div>`).join('') : '<p class="muted">Brak dowodów. Ukończ pierwszy quiz.</p>';
+}
+
+/* ═══ LEKTURY ═══ */
+async function renderLektury(subTab, cat){
+  view.innerHTML = `<p class="rp-kicker">Lektury</p><h1 class="rp-h2" style="font-size:1.7rem">Lektury szkolne.</h1>
+    <div class="sub-tabs" id="subTabs">
+      <button class="${subTab==='moje'?'active':''}" data-sub="moje">Moje lektury</button>
+      <button class="${subTab==='klasyki'?'active':''}" data-sub="klasyki">Klasyki</button>
+      <button class="${subTab==='przygotowe'?'active':''}" data-sub="przygotowe">Przygotowe</button>
+      <button class="${subTab==='wszystkie'?'active':''}" data-sub="wszystkie">Wszystkie</button>
+    </div>
+    <div class="filter-row"><input id="lekSearch" type="search" placeholder="Szukaj książki…" onkeydown="if(event.key==='Enter')searchBooks()"> <button class="search-btn" onclick="searchBooks()">🔍</button></div>
+    <div id="lekList"><p class="muted">Ładowanie…</p></div>`;
+  // sub-tab clicks
+  document.querySelectorAll('#subTabs button').forEach(btn=>{ btn.addEventListener('click', ()=>{ renderLektury(btn.dataset.sub, null); }); });
+  // load books
+  try{
+    const books = await api('/api/books');
+    BOOKS = Array.isArray(books)?books:[];
+    let filtered = BOOKS;
+    if(subTab==='moje') filtered = filtered.filter(b=>localStorage.getItem('rp_app_wallet')); // placeholder
+    if(subTab==='klasyki') filtered = filtered.filter(b=>['alice','sherlock','tomsawyer','around','grimm','andersen','oz','treasure','pinocchio','threepigs'].includes(b.id));
+    if(subTab==='przygotowe') filtered = filtered.filter(b=>!['grimm','andersen'].includes(b.id));
+    const q = document.getElementById('lekSearch'); if(q) filtered = filtered.filter(b=>b.title.toLowerCase().includes(q.value.toLowerCase())||(b.author||'').toLowerCase().includes(q.value.toLowerCase()));
+    document.getElementById('lekList').innerHTML = filtered.length ? filtered.map(b=>`<div class="book-row"><div class="t"><b>${esc(b.title)}</b><span>${esc(b.author||'')}</span></div><a class="btn btn-primary btn-sm" href="#/book/${esc(b.id)}">Rozpocznij</a></div>`).join('') : '<p class="muted">Brak wyników.</p>';
+  }catch(e){ document.getElementById('lekList').innerHTML=`<p class="muted">Błąd: ${esc(e.message)}</p>`; }
+}
+function searchBooks(){ renderLektury(document.querySelector('#subTabs button.active')?.dataset.sub||'wszystkie', null); }
+
+/* ═══ NAGRODY ═══ */
+async function renderNagrody(){
+  const w = getWallet(); view.innerHTML = `<p class="rp-kicker">Nagrody</p><h1 class="rp-h2" style="font-size:1.7rem">Twoje nagrody i dowody.</h1>
+    <div class="card" style="margin-top:10px">
+      <p class="rp-kicker">Portfel</p>
+      ${w ? `<p style="font-family:var(--font-mono);font-size:.92rem">${esc(w.slice(0,6))}…${esc(w.slice(-4))}</p><button class="btn btn-ghost btn-sm" id="bWalletOut" style="margin-top:6px">Wyloguj</button>` : `<p class="muted">Zaloguj się, aby widzieć portfel i nagrody.</p><a class="btn btn-primary" href="#/">Konto →</a>`}
+    </div>
+    <div id="nagrodyContent" style="margin-top:16px"><p class="muted">Ładowanie…</p></div>`;
+  if(w) document.getElementById('bWalletOut').addEventListener('click', ()=>{ setWallet(''); renderNagrody(); });
+  // load proofs
+  try{
+    const j = await api('/api/proofs?wallet='+encodeURIComponent(w));
+    const list = Array.isArray(j)?j:(j.proofs||[]);
+    const container = document.getElementById('nagrodyContent');
+    if(list.length){
+      let totalScore=0;
+      container.innerHTML = `<p class="rp-kicker">Zdobyte dowody (${list.length})</p>` + list.slice(0,20).map(p=>`<div class="book-row"><div class="t"><b>${esc(p.bookId||'')}</b> — <span class="muted">${esc(p.chapterId||'')}</span><br><span class="pill ok">${esc(String(p.score))}/${esc(String(p.total))} · ${esc((p.timestamp||'').slice(0,10))}</span></div><span style="font-family:var(--font-mono);font-size:.72rem;color:var(--green)">${p.status||'verified'}</span></div>`).join('') + `<div class="reward-card" style="margin-top:14px"><div class="muted">Łączna nagroda</div><div class="amount">${list.length} × 5 USDC</div></div>`;
+    } else {
+      container.innerHTML = `<div class="card-warm" style="text-align:center;padding:30px"><p class="muted">Brak dowodów. Ukończ pierwszy quiz!</p><a class="btn btn-primary btn-sm" href="#/" style="margin-top:12px">Katalog</a></div>`;
+    }
+  }catch(e){ document.getElementById('nagrodyContent').innerHTML=`<p class="muted">Błąd: ${esc(e.message)}</p>`; }
+}
+
+/* ═══ publisher ═══ */
+const PRIVY_DEFAULT_APP_ID = 'cmu9win8e01oo0ckzvcz6j0qg';
+function getPubWallet(){ try{ return (localStorage.getItem('readproof_publisher_wallet')||'').trim(); }catch(e){ return ''; } }
+function setPubWallet(w){ try{ w?localStorage.setItem('readproof_publisher_wallet',w):localStorage.removeItem('readproof_publisher_wallet'); }catch(e){} }
+async function renderPublisher(){
+  const w = getPubWallet(); view.innerHTML = `<a class="btn btn-ghost btn-sm" href="#/">← Katalog</a><p class="rp-kicker" style="margin-top:12px">Wydawca</p><h1 class="rp-h2" style="font-size:1.6rem">Panel wydawcy.</h1>`;
+  if(!w){ view.innerHTML += `<p class="muted">Zaloguj się kontem wydawcy.</p><div id="privyRoot"><p class="muted">Ładowanie…</p></div><div class="card" style="margin-top:10px"><div class="field"><input id="pManual" class="mono big-input" style="font-size:.85rem" placeholder="adres Solana"></div><button class="btn btn-ghost" id="bManual">Użyj adresu</button></div>`;
+    document.getElementById('bManual').addEventListener('click', ()=>{ const v=document.getElementById('pManual').value.trim(); if(!isValidSolanaAddress(v)){alert('Nie wygląda na adres Solana.');return;} setPubWallet(v); renderPublisher(); });
+    mountPrivyApp(); return;
+  }
+  view.innerHTML += `<p style="font-family:var(--font-mono);font-size:.85rem">${esc(w.slice(0,6))}…${esc(w.slice(-4))}</p><button class="btn btn-ghost btn-sm" id="bPubOut" style="margin-left:8px">Wyloguj</button><div id="pStats" style="margin-top:12px"><p class="muted">Ładowanie…</p></div>`;
+  document.getElementById('bPubOut').addEventListener('click', ()=>{ setPubWallet(''); renderPublisher(); });
+  try{ const cj=await api('/api/publisher/campaigns').catch(()=>({campaigns:[]})); const mine=(cj&&cj.campaigns||[]).filter(c=>(c.publisherWallet||'')===w); document.getElementById('pStats').innerHTML = `<p class="muted">Kampanie: ${mine.length}</p>`; }catch(e){ document.getElementById('pStats').innerHTML=`<p class="muted">Błąd: ${esc(e.message)}</p>`; }
+}
+let privyMountedApp = false;
+async function mountPrivyApp(){
+  if(privyMountedApp) return; privyMountedApp = true;
+  const box = document.getElementById('privyRoot'); if(!box) return;
+  const t = (p, ms) => Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))]);
+  try{
+    const [{default:React},{createRoot},privy,privySol] = await Promise.all([
+      t(import('https://esm.sh/react@18.3.1'), 25000), t(import('https://esm.sh/react-dom@18.3.1/client'), 25000),
+      t(import('https://esm.sh/@privy-io/react-auth@3.16.0?deps=react@18.3.1,react-dom@18.3.1'), 60000),
+      t(import('https://esm.sh/@privy-io/react-auth@3.16.0/solana?deps=react@18.3.1,react-dom@18.3.1'), 60000)
+    ]);
+    const e = React.createElement;
+    function Inner(){
+      const {ready, authenticated, user, login} = privy.usePrivy();
+      React.useEffect(()=>{ const w0=(privySol.useWallets?privySol.useWallets().wallets:[])[0]; const addr=(w0&&w0.address)||(user&&user.wallet&&(user.wallet.address||(user.solanaWallet&&user.solanaWallet.address))); if(authenticated&&addr){setPubWallet(addr); renderPublisher();} },[authenticated]);
+      if(!ready) return e('span',{className:'muted'},'Inicjalizacja…');
+      if(authenticated) return e('span',{className:'muted'},'Zalogowano…');
+      return e('button',{className:'btn btn-primary btn-lg',style:{width:'100%'},onClick:()=>login()},'Zaloguj Privy');
+    }
+    createRoot(box).render(e(privy.PrivyProvider,{appId:PRIVY_DEFAULT_APP_ID,config:{appearance:{walletChainType:'solana-only',showWalletLoginFirst:true},loginMethods:['wallet','email'],embeddedWallets:{createOnLogin:'users-without-wallets'}},e(Inner)));
+  }catch(err){ privyMountedApp=false; if(box) box.innerHTML=`<p class="muted">Privy nie załadowało się.</p>`; }
+}
+
+/* ═══ proctoring listeners ═══ */
+let procListenersOn = false;
+function ensureProctorListeners(){
+  if(procListenersOn) return; procListenersOn = true;
+  document.addEventListener('fullscreenchange', ()=>{ if(!proctor||!location.hash.startsWith('#/quiz/')) return; if(!document.fullscreenElement){ proctor.exits++; if(proctor.exits>=3){ failFinish(proctor.sid,'wyjście z pełnego ekranu'); return; } procToast('Wyjście z pełnego ekranu ('+proctor.exits+'/3). Wróć.'); try{document.documentElement.requestFullscreen().catch(()=>{});}catch(e){} } });
+  ['copy','cut'].forEach(ev=>document.addEventListener(ev, e=>{ if(!proctor||!location.hash.startsWith('#/quiz/'))return; if(view.contains(e.target)){e.preventDefault();proctor.copies++;procToast('Kopiowanie zablokowane.');} },true));
+  document.addEventListener('keydown', e=>{ if(!proctor||!location.hash.startsWith('#/quiz/'))return; const k=(e.key||'').toLowerCase(); if(k==='printscreen'||((e.ctrlKey||e.metaKey)&&['c','x','u','s','p'].includes(k))){e.preventDefault();proctor.copies++;procToast('Zablokowane.');} },true));
+}
+function procToast(msg){ let t=document.getElementById('procToast'); if(!t){t=document.createElement('div');t.id='procToast';t.style.cssText='position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9999;background:#3A2E00;color:#FFE9B0;padding:10px 16px;border-radius:12px;font-size:.85rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:92vw;text-align:center';document.body.appendChild(t);} t.textContent=msg; clearTimeout(t._h); t._h=setTimeout(()=>{if(document.getElementById('procToast'))document.getElementById('procToast').remove();},4000); }
+function failFinish(sid, reason){ stopProctor(); try{api('/api/sessions/'+encodeURIComponent(sid)+'/complete?fail=1',{method:'POST',body:'{}'}).then(r=>{LAST_RESULT={proof:r.proof,verification:r.verification,results:r.results,meta:SESSION_META};try{localStorage.setItem('rp_app_last_result',JSON.stringify(LAST_RESULT));}catch(e){}saveLocalProof(LAST_RESULT.proof);nav('#/result');}).catch(()=>{view.innerHTML=`<div class="card"><h3>Sesja zakończona (naruszenie).</h3><a class="btn btn-ghost" href="#/">Katalog</a></div>`;});}catch(e){} }
+
+/* ═══ init ═══ */
+paintWallet();
+updateNav();
+route();
+})();
+</script>
 </body>
 </html>
