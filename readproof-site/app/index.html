@@ -152,7 +152,7 @@ textarea.big-input{min-height:110px;resize:vertical}
 
 /* ═══ konfiguracja / API ═══ */
 const BASES = ['https://readproof-api-proxy.koder1.workers.dev'];
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[c]));
+function esc(s){ s=String(s??''); return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'\''); }
 async function api(path, opts){
   let lastErr = null;
   for(const b of BASES){
@@ -163,8 +163,6 @@ async function api(path, opts){
       return j;
     }catch(e){ lastErr = e; if(e.status) throw e; }
   }
-  throw lastErr || new Error('API offline');
-}
   throw lastErr || new Error('API offline');
 }
 
