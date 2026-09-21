@@ -476,7 +476,6 @@ function paintQuestion(sid, q, done, total){
     <div class="q-card">
       <p class="q-type">${esc(TYPE_LABEL[q.type] || q.type)}</p>
       <h2 class="q-text">${esc(q.question)}</h2>
-      ${q.context?`<p class="q-ctx">${esc(q.context)}</p>`:''}
       ${body}
       <div id="fb"></div>
     </div>`;
