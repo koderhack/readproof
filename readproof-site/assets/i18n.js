@@ -204,6 +204,8 @@
     tier_partial: "Częściowe zrozumienie", tier_none: "Nie wykazano zrozumienia",
     tier_ps: "◐ Częściowe", tier_ns: "✗ Brak zrozumienia",
     vf_explorer: "Zobacz w Solana Explorer →",
+    vf_explorer_tx: "Zobacz transakcję w Explorerze →",
+    vf_explorer_acct: "Zobacz konto w Explorerze (Devnet) →",
     vf_share: "Udostępnij", vf_pdf: "Pobierz PDF",
     no_camps: "Brak wyzwań na żywo — wydawcy tworzą je w panelu wydawcy.",
     no_proofs: "Brak zweryfikowanych dowodów w sieci — ukończ wyzwanie w aplikacji, a Twój dowód pojawi się tutaj.",

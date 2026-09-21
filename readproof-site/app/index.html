@@ -631,7 +631,11 @@ function renderResult(){
   const seal = tier === 'full' ? '✓ Verified' : tier === 'partial' ? '◐ Częściowe zrozumienie' : '✗ Nie wykazano zrozumienia';
   const bookName = plBookTitle(p.bookId, SESSION_META.bookTitle);
   const chapterName = plChapterTitle(p.bookId, p.chapterId, SESSION_META.chapterTitle);
-  const explorerUrl = p.txSignature ? ('https://explorer.solana.com/tx/' + encodeURIComponent(p.txSignature) + '?cluster=devnet') : 'https://explorer.solana.com/?cluster=devnet';
+  const isRealSig = s => typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,128}$/.test(s) && !/^mock/i.test(s);
+  const isWallet2 = a => typeof a === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a);
+  let explorerUrl = 'https://explorer.solana.com/?cluster=devnet', explorerLabel = 'Zobacz konto w Explorerze (Devnet) →';
+  if(isRealSig(p.txSignature)){ explorerUrl = 'https://explorer.solana.com/tx/' + encodeURIComponent(p.txSignature) + '?cluster=devnet'; explorerLabel = 'Zobacz transakcję w Explorerze →'; }
+  else if(isWallet2(p.walletAddress)){ explorerUrl = 'https://explorer.solana.com/address/' + encodeURIComponent(p.walletAddress) + '?cluster=devnet'; }
   view.innerHTML = `
     <div class="q-card" style="text-align:center">
       <div class="seal">${esc(seal)}</div>
@@ -646,7 +650,7 @@ function renderResult(){
         ${p.txSignature?`<p style="font-size:.85rem"><a href="${esc(p.explorerUrl||('https://explorer.solana.com/tx/'+p.txSignature+'?cluster=devnet'))}" target="_blank">Transakcja w explorerze →</a></p>`:`<p class="muted" style="font-size:.8rem">Transakcja: zapis devnet (demo, bez prawdziwych środków).</p>`}
         <button class="btn btn-ghost btn-sm" id="bCopy">Kopiuj hash</button>
       </div>
-      <div style="margin-top:12px"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">Zobacz w Solana Explorer →</a></div>
+      <div style="margin-top:12px"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">${esc(explorerLabel)}</a></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px">
         <button class="btn btn-primary btn-sm" id="bShare">Udostępnij</button>
         <button class="btn btn-ghost btn-sm" id="bPdf">Pobierz PDF</button>
