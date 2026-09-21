@@ -4,6 +4,7 @@ struct BookDetailView: View {
     let book: Book
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var store: ChallengeStore
+    @EnvironmentObject var loc: LocalizationService
 
     var body: some View {
         ScrollView {
@@ -22,7 +23,7 @@ struct BookDetailView: View {
     var header: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 14) {
-                Text(book.coverEmoji).font(.system(size: 44)).frame(width: 86, height: 110).background(RPColor.cream).clipShape(RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(RPColor.line))
+                RemoteCoverView(book: book, width: 86, height: 110)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(book.title).font(.system(size: 18, weight: .bold, design: .serif)).foregroundStyle(RPColor.ink)
                     Text(book.author).font(.system(size: 12, design: .serif)).foregroundStyle(RPColor.muted2)
@@ -30,24 +31,24 @@ struct BookDetailView: View {
                 }
             }
             Text(book.description).font(.system(size: 12, design: .serif)).foregroundStyle(RPColor.muted2).lineSpacing(2)
-            Label("Czytasz fizyczną książkę — tu tylko weryfikujemy zrozumienie (Comprehension Verified).", systemImage: "eye").font(.system(size: 10, design: .serif)).foregroundStyle(RPColor.muted)
+            Label(loc.t("Czytasz fizyczną książkę — tu tylko weryfikujemy zrozumienie (Comprehension Verified).", "You read the physical book — this app only verifies comprehension (Comprehension Verified)."), systemImage: "eye").font(.system(size: 10, design: .serif)).foregroundStyle(RPColor.muted)
         }.padding(14).parchmentCard()
     }
 
     var source: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Pełny tekst z domeny publicznej", systemImage: "books.vertical").font(.system(size: 11, weight: .bold, design: .serif)).foregroundStyle(RPColor.ink)
+            Label(loc.t("Pełny tekst z domeny publicznej", "Full public-domain text"), systemImage: "books.vertical").font(.system(size: 11, weight: .bold, design: .serif)).foregroundStyle(RPColor.ink)
             HStack(spacing: 8) {
                 MonoPill(text: book.license ?? "Public domain", fg: RPColor.burgundy)
                 if let url = book.sourceUrl { Link(destination: URL(string: url)!) { MonoPill(text: "Gutenberg", fg: RPColor.success) } }
             }
-            Text("Tekst służy wyłącznie do generowania pytań przez LLM na backendzie — nie jest udostępniany w całości w apce (fizyczna książka).").font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
+            Text(loc.t("Tekst służy wyłącznie do generowania pytań przez LLM na backendzie — nie jest udostępniany w całości w apce (fizyczna książka).", "The text is used only to generate questions on the backend — it is not shown in full in the app (physical book).")).font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
         }.padding(12).parchmentCard(dashed: true)
     }
 
     var chapters: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Rozdziały • Reading Challenge = 5 zadań").font(.system(size: 12, weight: .bold, design: .serif)).foregroundStyle(RPColor.ink)
+            Text(loc.t("Rozdziały • Reading Challenge = 5 zadań", "Chapters • Reading Challenge = 5 tasks")).font(.system(size: 12, weight: .bold, design: .serif)).foregroundStyle(RPColor.ink)
             ForEach(book.chapters) { ch in
                 let verified = appState.isChapterVerified(ch.id)
                 NavigationLink(destination: ChapterIntroView(book: book, chapter: ch)) {
@@ -56,7 +57,7 @@ struct BookDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(ch.title).font(.system(size: 13, weight: .semibold, design: .serif)).foregroundStyle(RPColor.ink)
                             Text(ch.summary).font(.system(size: 11, design: .serif)).foregroundStyle(RPColor.muted2).lineLimit(2)
-                            HStack(spacing: 6) { MonoPill(text: ch.reward, fg: RPColor.success); if verified { MonoPill(text: "Reading Verified", fg: RPColor.success) } }
+                            HStack(spacing: 6) { MonoPill(text: ch.reward, fg: RPColor.success); if verified { MonoPill(text: loc.t("Reading Verified", "Reading Verified"), fg: RPColor.success) } }
                         }
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2).foregroundStyle(RPColor.muted)

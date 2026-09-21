@@ -14,7 +14,8 @@ Design: **parchment / burgundy / gold** — Kolegium, Sigillum, Paszport Literac
 
 | Co | Link |
 |----|------|
-| Strona publiczna | https://kacpersikora.pages.dev/books |
+| Strona główna | https://kacpersikora.pages.dev/ |
+| Strona publiczna ReadProof | https://kacpersikora.pages.dev/books |
 | Health backendu | https://frog02.mikr.us:32287/health |
 | Panel wydawcy | https://kacpersikora.pages.dev/publisher/ |
 | Zasady wydawców | [PUBLISHER_RULES.md](PUBLISHER_RULES.md) |
@@ -98,13 +99,16 @@ readproof/
 ├── README.md                 # ten plik
 ├── PUBLISHER_RULES.md        # zasady dla wydawców (v1.0)
 ├── docs/DEMO.md              # scenariusz demo 60 s
-├── LICENSE                   # MIT
+├── LICENSE                   # proprietary — wszystkie prawa zastrzeżone
 ├── project.yml               # xcodegen → ReadProof.xcodeproj
 ├── ReadProof/                # apka iOS (App, Models, Services, Views, Resources)
 ├── ReadProofLiveActivity/    # widget / Live Activity
 ├── backend/                  # Node backend (server.js, verification.js, texts/)
 │   └── .env.example          # wzór sekretów (prawdziwy .env tylko lokalnie!)
-└── public/books/             # strona statyczna → kacpersikora.pages.dev/books
+├── public/                   # strona główna + statyczne podstrony
+│   ├── index.html            # strona główna → kacpersikora.pages.dev/
+│   ├── books/                # strona statyczna → kacpersikora.pages.dev/books
+│   └── publisher/           # panel wydawcy → kacpersikora.pages.dev/publisher/
 ```
 
 ---
@@ -119,4 +123,4 @@ Klucze prywatne Solana trzymaj poza repo (np. `pitch/.secrets/` — ignorowane p
 
 ## 📄 Licencja
 
-MIT — zob. [LICENSE](LICENSE).
+Proprietary — wszystkie prawa zastrzeżone. Zobacz [LICENSE](LICENSE).

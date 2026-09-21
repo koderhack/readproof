@@ -6,6 +6,17 @@ final class AppState: ObservableObject {
     @Published var wallet = WalletState(address: UserDefaults.standard.string(forKey: "wallet_address"), balance: "0.00 USDC (Devnet)", history: [])
     @Published var proofs: [ReadingProof] = []
     @Published var path = NavigationPath()
+    @Published var role: UserRole? = UserRole(rawValue: UserDefaults.standard.string(forKey: "rp_role") ?? "")
+
+    func setRole(_ r: UserRole) {
+        role = r
+        UserDefaults.standard.set(r.rawValue, forKey: "rp_role")
+    }
+
+    func clearRole() {
+        role = nil
+        UserDefaults.standard.removeObject(forKey: "rp_role")
+    }
 
     init() {
         if let data = UserDefaults.standard.data(forKey: "proofs_v1"),

@@ -22,26 +22,23 @@ struct ReadProofApp: App {
 }
 
 struct RootView: View {
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var loc: LocalizationService
-    @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView()
-                .tabItem { Label(loc.t("Katalog", "Catalog"), systemImage: "books.vertical") }
-                .tag(0)
-            ProofsListView()
-                .tabItem { Label(loc.t("Dowody", "Proofs"), systemImage: "checkmark.seal") }
-                .tag(1)
-            PassportView()
-                .tabItem { Label(loc.t("Paszport", "Passport"), systemImage: "person.text.rectangle") }
-                .tag(2)
+        Group {
+            switch appState.role {
+            case .none:
+                RoleSelectorView()
+            case .student:
+                StudentTabs()
+            case .reader:
+                ReaderTabs()
+            case .teacher:
+                TeacherTabs()
+            }
         }
         .tint(RPColor.primary)
-        .onAppear {
-            let a = UITabBarAppearance(); a.configureWithTransparentBackground()
-            a.backgroundColor = UIColor(Color(hex: "#F9FAFB")); UITabBar.appearance().standardAppearance = a; UITabBar.appearance().scrollEdgeAppearance = a
-        }
     }
 }
 

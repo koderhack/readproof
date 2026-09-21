@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verify a ReadProof Certificate</title>
+<meta name="description" content="Check any ReadProof Certificate by ID: book, holder, score and proof details.">
+<link rel="icon" type="image/png" href="/books/icons/readproof-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<nav class="rp-nav"><div class="wrap">
+  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+  <div class="rp-links">
+    <a href="/students/" class="keep">Students</a>
+    <a href="/teachers/" class="keep">Teachers</a>
+    <a href="/publisher/">Publishers</a>
+    <a href="/" class="cta">Home</a>
+  </div>
+</div></nav>
+
+<main class="wrap">
+  <section class="rp-section tight rp-center" style="padding-bottom:0">
+    <p class="rp-kicker">Verification</p>
+    <h1 class="rp-h2">Verify a certificate.</h1>
+    <p class="rp-sub">Enter a Certificate ID (e.g. <code class="inline">RP-7K2Q</code>) or open a shared certificate link.</p>
+    <form id="f" class="form-row" style="max-width:480px;margin:0 auto">
+      <div class="field" style="flex:1"><label for="q">Certificate ID</label><input id="q" class="mono" placeholder="RP-XXXX" autocomplete="off"></div>
+      <div class="field" style="flex:0;align-self:end"><button class="btn btn-primary" type="submit">Verify</button></div>
+    </form>
+  </section>
+  <section class="rp-section tight"><div id="out"></div></section>
+</main>
+
+<footer class="rp-footer"><div class="wrap">
+  <div><span class="fbrand">ReadProof</span><br>Read a real book. Prove you understood it.</div>
+  <div><a href="/">Home</a> · <a href="/students/">Students</a></div>
+</div></footer>
+
+<script>
+(function(){
+  const API = 'https://frog02.mikr.us:32287';
+  const DEMO = {
+    'RP-7K2Q': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Alexandra Nowak', score: '92%', date: '2026-09-18' },
+    'RP-3M8P': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Bartosz K.', score: '88%', date: '2026-09-17' },
+    'RP-9Q2D': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Ewa M.', score: '81%', date: '2026-09-16' }
+  };
+  const out = document.getElementById('out');
+  const q = document.getElementById('q');
+  function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  async function verify(id){
+    id = (id || '').trim().toUpperCase();
+    if(!id){ out.innerHTML = ''; return; }
+    q.value = id;
+    out.innerHTML = '<p class="muted rp-center">Checking…</p>';
+    // 1) try live backend proofs
+    try{
+      const proofs = await fetch(API + '/api/proofs').then(r => r.json());
+      const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
+      const hit = list.find(p => (p.proofHash || '').toUpperCase().startsWith(id.replace('RP-','')) || (p.id || '').toUpperCase() === id);
+      if(hit){
+        out.innerHTML = certHTML({ book: hit.bookId, author: '', holder: (hit.walletAddress||'').slice(0,10) + '…', score: hit.score + '/' + hit.total, date: hit.timestamp || '' }, false, hit);
+        return;
+      }
+    }catch(e){ /* offline → demo lookup */ }
+    // 2) demo certificates (clearly labeled)
+    const d = DEMO[id];
+    if(d){ out.innerHTML = certHTML(d, true, null); return; }
+    out.innerHTML = '<div class="card rp-center"><h3>Certificate not found</h3><p class="muted">No certificate with ID <span class="mono">' + esc(id) + '</span> in live records or demo set. Check the ID or try a demo: <a href="/verify/?id=RP-7K2Q">RP-7K2Q</a>.</p></div>';
+  }
+  function certHTML(d, demo, raw){
+    return '<div class="cert">'
+      + '<div class="cert-k">ReadProof Certificate · ✓ Verified</div>'
+      + '<h3>' + esc(d.book) + '</h3>'
+      + (d.author ? '<div class="cert-book">' + esc(d.author) + '</div>' : '')
+      + '<div class="cert-name">' + esc(d.holder) + '</div>'
+      + '<p class="muted" style="margin:6px 0 0;font-size:.9rem">Demonstrated understanding · Score: ' + esc(d.score) + '</p>'
+      + '<div class="cert-meta"><span>' + esc(q.value.toUpperCase()) + '</span><span>✓ Proof recorded</span></div>'
+      + '<div class="proof-mini" style="text-align:left;margin-top:18px"><b>Proof Details</b><br>'
+      + '<span class="mono" style="font-size:.75rem">Network: Solana Devnet<br>Proof ID: ' + esc(q.value.toUpperCase()) + '<br>'
+      + (raw && raw.txSignature ? 'Transaction: ' + esc(raw.txSignature) : 'Transaction: devnet record' + (demo ? ' (demo)' : '')) + '</span></div>'
+      + (demo ? '<div style="margin-top:12px"><span class="demo-tag">DEMO · illustrative example</span></div>' : '')
+      + '</div>';
+  }
+  document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); history.replaceState(null,'','?id=' + encodeURIComponent(q.value.trim().toUpperCase())); verify(q.value); });
+  verify(new URLSearchParams(location.search).get('id') || '');
+})();
+</script>
+</body>
+</html>

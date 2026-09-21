@@ -300,16 +300,19 @@ struct ReadingSessionView: View {
     func start() async {
         guard let wallet = appState.wallet.address, PhantomService.isValidSolanaAddress(wallet) else { error="Połącz Phantom Devnet"; starting=false; return }
         do{
+            var totalChallenges = 0
             // książki wydawców startują przez /api/publisher/campaigns/:id/start (ta sama sesja/answer/complete)
             if let cid = campaignId {
                 let s = try await BackendService.shared.startCampaignSession(campaignId: cid, walletAddress: wallet)
                 guard let sid = s.sessionId, let chs = s.challenges else { throw BackendService.GenError.parse }
                 sessionId = sid; challenges = chs; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; failed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false; error = nil
+                totalChallenges = chs.count
             } else {
                 let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
                 sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; failed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false; error = nil
+                totalChallenges = s.challenges.count
             }
-            ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: s.challenges.count)
+            ReadingSessionActivityManager.shared.start(bookId: book.id, bookTitle: book.title, chapterId: chapter.id, chapterTitle: chapter.title, total: totalChallenges)
             cameraMonitor.start() // anty-zdjęcie drugim telefonem — dopiero gdy sesja naprawdę ruszyła
             updateLive()
         } catch BackendService.GenError.cooldown(let retryAfter, let until) {

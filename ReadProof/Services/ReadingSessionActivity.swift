@@ -24,13 +24,17 @@ struct ReadingSessionAttributes: ActivityAttributes {
 final class ReadingSessionActivityManager: ObservableObject {
     static let shared = ReadingSessionActivityManager()
     private var activity: Activity<ReadingSessionAttributes>?
+    private var bookTitle = ""
+    private var chapterTitle = ""
 
-    func start(book: Book, chapter: Chapter, total: Int = 5) {
+    func start(bookId: String, bookTitle: String, chapterId: String, chapterTitle: String, total: Int = 5) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let attrs = ReadingSessionAttributes(sessionId: UUID().uuidString, bookId: book.id, chapterId: chapter.id)
+        self.bookTitle = bookTitle
+        self.chapterTitle = chapterTitle
+        let attrs = ReadingSessionAttributes(sessionId: UUID().uuidString, bookId: bookId, chapterId: chapterId)
         let state = ReadingSessionAttributes.ContentState(
-            bookTitle: book.title,
-            chapterTitle: chapter.title,
+            bookTitle: bookTitle,
+            chapterTitle: chapterTitle,
             progress: 0,
             completed: 0,
             total: total,
@@ -45,8 +49,8 @@ final class ReadingSessionActivityManager: ObservableObject {
 
     func update(completed: Int, total: Int, nextUnlockIn: Int, status: String) {
         let state = ReadingSessionAttributes.ContentState(
-            bookTitle: activity?.attributes.bookId ?? "",
-            chapterTitle: activity?.attributes.chapterId ?? "",
+            bookTitle: bookTitle,
+            chapterTitle: chapterTitle,
             progress: Double(completed)/Double(max(total,1)),
             completed: completed,
             total: total,

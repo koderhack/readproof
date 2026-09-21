@@ -32,7 +32,7 @@ struct ChapterIntroView: View {
 
     var card: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack { MonoPill(text: "Reward: \(chapter.reward) • Solana Devnet", fg: RPColor.success); Spacer(); Text("5 zadań").font(.system(size: 9, design: .monospaced)).foregroundStyle(RPColor.muted) }
+            HStack { MonoPill(text: loc.t("Nagroda: ", "Reward: ") + "\(chapter.reward) • Solana Devnet", fg: RPColor.success); Spacer(); Text(loc.t("5 zadań", "5 challenges")).font(.system(size: 9, design: .monospaced)).foregroundStyle(RPColor.muted) }
             Text(chapter.title).font(.system(size: 18, weight: .bold, design: .serif)).foregroundStyle(RPColor.ink)
             Text(chapter.summary).font(.system(size: 12, design: .serif)).foregroundStyle(RPColor.muted2)
             HStack(spacing: 8) { Label("~3 min", systemImage: "clock").font(.system(size: 10, design: .monospaced)); Label("Jev inside", systemImage: "brain").font(.system(size: 10, design: .monospaced)); Spacer() }.foregroundStyle(RPColor.muted)
@@ -41,9 +41,9 @@ struct ChapterIntroView: View {
 
     var excerpt: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack { Image(systemName: "book"); Text("Przeczytaj rozdział w fizycznej książce").font(.system(size: 12, weight: .semibold, design: .serif)); Spacer() }
+            HStack { Image(systemName: "book"); Text(loc.t("Przeczytaj rozdział w fizycznej książce", "Read the chapter in the physical book")).font(.system(size: 12, weight: .semibold, design: .serif)); Spacer() }
             Text(chapter.contextExcerpt).font(.system(size: 11, design: .serif)).foregroundStyle(Color.black).padding(10).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 8)).overlay(RoundedRectangle(cornerRadius:8).stroke(RPColor.line)).textSelection(.disabled)
-            Text("Brak pełnego tekstu w apce — celowo. Czytaj fizyczną książkę, apka weryfikuje zrozumienie fragmentów (anti-AI).").font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
+            Text(loc.t("Brak pełnego tekstu w apce — celowo. Czytaj fizyczną książkę, apka weryfikuje zrozumienie fragmentów (anti-AI).", "The full text is intentionally not shown in the app. Read the physical book; the app verifies comprehension (anti-AI).")).font(.system(size: 9, design: .serif)).foregroundStyle(RPColor.muted)
         }.padding(14).card()
     }
 }

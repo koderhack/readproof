@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teacher Dashboard — ReadProof (demo)</title>
+<meta name="description" content="Teacher dashboard demo: classes, assignments, student progress and certificates. Illustrative demo data.">
+<link rel="icon" type="image/png" href="/books/icons/readproof-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<style>.tabpage{display:none}.tabpage.active{display:block}</style>
+</head>
+<body>
+<nav class="rp-nav"><div class="wrap">
+  <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof <span class="mono muted" style="font-size:.72rem">· Teacher</span></a>
+  <div class="rp-links">
+    <a href="/teachers/" class="keep">For Teachers</a>
+    <a href="/" class="keep">Home</a>
+    <a href="/verify/" class="cta">Verify</a>
+  </div>
+</div></nav>
+
+<main class="wrap">
+  <section class="rp-section tight">
+    <p class="rp-kicker">Teacher Dashboard</p>
+    <h1 class="rp-h2">Good morning. <span class="demo-tag">DEMO DATA</span></h1>
+    <p class="rp-sub">All numbers below are illustrative demo data — no real students, schools or results.</p>
+    <div class="stat-grid">
+      <div class="stat"><div class="l">Your classes</div><div class="v">3</div></div>
+      <div class="stat"><div class="l">Active assignments</div><div class="v">4</div></div>
+      <div class="stat"><div class="l">Students</div><div class="v">86</div></div>
+      <div class="stat"><div class="l">Average completion</div><div class="v">82%</div></div>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button class="tab" data-tab="classes" aria-selected="false">Classes</button>
+    <button class="tab" data-tab="assignments" aria-selected="false">Assignments</button>
+    <button class="tab" data-tab="students" aria-selected="false">Students</button>
+    <button class="tab" data-tab="certificates" aria-selected="false">Certificates</button>
+  </div>
+
+  <section class="tabpage active" id="tab-overview">
+    <p class="rp-kicker">Upcoming deadlines</p>
+    <div class="rp-grid cols-2">
+      <div class="card flat"><h3>Dziady, Part III · Class 2A</h3><p>23 / 28 completed · Average 86% · <strong>Deadline: Oct 4</strong></p><span class="pill ok">On track</span></div>
+      <div class="card flat"><h3>Lalka · Class 3B</h3><p>18 / 24 completed · Average 79% · <strong>Deadline: Oct 7</strong></p><span class="pill warn">5 students behind</span></div>
+    </div>
+  </section>
+
+  <section class="tabpage" id="tab-classes">
+    <div class="rp-grid cols-3">
+      <div class="card flat"><span class="role-tag teacher">Class 2A</span><h3>28 students</h3><p>Dziady, Part III — 23/28 · avg 86%</p><button class="btn btn-dark btn-sm" data-goto="students">Open class</button></div>
+      <div class="card flat"><span class="role-tag teacher">Class 3B</span><h3>24 students</h3><p>Lalka — 18/24 · avg 79%</p><button class="btn btn-dark btn-sm" data-goto="students">Open class</button></div>
+      <div class="card flat"><span class="role-tag teacher">Class 1C</span><h3>34 students</h3><p>The Hobbit — 30/34 · avg 91%</p><button class="btn btn-dark btn-sm" data-goto="students">Open class</button></div>
+    </div>
+  </section>
+
+  <section class="tabpage" id="tab-assignments">
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Book</th><th>Class</th><th>Progress</th><th>Avg. score</th><th>Deadline</th><th>Status</th></tr>
+      <tr><td>Dziady, Part III</td><td>2A</td><td>23 / 28</td><td>86%</td><td>Oct 4</td><td><span class="pill ok">Active</span></td></tr>
+      <tr><td>Lalka</td><td>3B</td><td>18 / 24</td><td>79%</td><td>Oct 7</td><td><span class="pill warn">Needs attention</span></td></tr>
+      <tr><td>The Hobbit</td><td>1C</td><td>30 / 34</td><td>91%</td><td>Oct 12</td><td><span class="pill ok">Active</span></td></tr>
+      <tr><td>Alice in Wonderland</td><td>1C</td><td>34 / 34</td><td>89%</td><td>Done</td><td><span class="pill mut">Closed</span></td></tr>
+    </table></div>
+  </section>
+
+  <section class="tabpage" id="tab-students">
+    <div class="card" style="margin-bottom:16px">
+      <p class="rp-kicker">Class 2A · Dziady, Part III</p>
+      <p style="margin:0 0 12px"><strong>Progress:</strong> 23 / 28 · <strong>Average score:</strong> 86%</p>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>Student</th><th>Status</th><th>Score</th><th>Certificate</th></tr>
+        <tr><td>Alexandra N.</td><td><span class="pill ok">Completed</span></td><td>92%</td><td><a href="/verify/?id=RP-7K2Q">RP-7K2Q</a></td></tr>
+        <tr><td>Bartosz K.</td><td><span class="pill ok">Completed</span></td><td>88%</td><td><a href="/verify/?id=RP-3M8P">RP-3M8P</a></td></tr>
+        <tr><td>Celina W.</td><td><span class="pill warn">In progress</span></td><td>—</td><td>—</td></tr>
+        <tr><td>Damian L.</td><td><span class="pill mut">Not started</span></td><td>—</td><td>—</td></tr>
+        <tr><td>Ewa M.</td><td><span class="pill ok">Completed</span></td><td>81%</td><td><a href="/verify/?id=RP-9Q2D">RP-9Q2D</a></td></tr>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="tabpage" id="tab-certificates">
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Certificate</th><th>Student</th><th>Book</th><th>Score</th><th>Verify</th></tr>
+      <tr><td class="mono">RP-7K2Q</td><td>Alexandra N.</td><td>Dziady, Part III</td><td>92%</td><td><a href="/verify/?id=RP-7K2Q">Open →</a></td></tr>
+      <tr><td class="mono">RP-3M8P</td><td>Bartosz K.</td><td>Dziady, Part III</td><td>88%</td><td><a href="/verify/?id=RP-3M8P">Open →</a></td></tr>
+      <tr><td class="mono">RP-9Q2D</td><td>Ewa M.</td><td>Dziady, Part III</td><td>81%</td><td><a href="/verify/?id=RP-9Q2D">Open →</a></td></tr>
+    </table></div>
+  </section>
+</main>
+
+<footer class="rp-footer"><div class="wrap">
+  <div><span class="fbrand">ReadProof</span><br>Teacher demo — illustrative data only.</div>
+  <div><a href="/">Home</a> · <a href="/teachers/">For Teachers</a></div>
+</div></footer>
+
+<script>
+(function(){
+  const tabs = document.querySelectorAll('[data-tab]');
+  function show(name){
+    tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false'));
+    document.querySelectorAll('.tabpage').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  }
+  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
+  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => show(b.dataset.goto)));
+})();
+</script>
+</body>
+</html>

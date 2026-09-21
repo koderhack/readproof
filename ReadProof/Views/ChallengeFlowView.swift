@@ -32,9 +32,9 @@ struct ChallengeFlowView: View {
             if showFeedback, let ok = lastCorrect {
                 HStack(spacing:10){
                     Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title2).foregroundStyle(ok ? RPColor.duoGreen : Color.red)
-                    VStack(alignment:.leading){ Text(ok ? "Świetnie!" : "Poprawna odpowiedź: \(correctLabel(for: challenges[index]))").font(.system(size:14, weight:.bold, design:.rounded)).foregroundStyle(ok ? RPColor.duoGreenDark : Color.red) }
+                    VStack(alignment:.leading){ Text(ok ? loc.t("Świetnie!", "Great!") : loc.t("Poprawna odpowiedź: ", "Correct answer: ") + correctLabel(for: challenges[index])).font(.system(size:14, weight:.bold, design:.rounded)).foregroundStyle(ok ? RPColor.duoGreenDark : Color.red) }
                     Spacer()
-                    Button(ok ? "DALEJ" : "OK") {
+                    Button(ok ? loc.t("DALEJ", "NEXT") : "OK") {
                         showFeedback=false
                         if index < challenges.count-1 { withAnimation{ index+=1 } }
                         else { Task{ await finish() } }
@@ -46,7 +46,7 @@ struct ChallengeFlowView: View {
         .background(Color.white)
         .navigationBarHidden(true)
         .navigationDestination(isPresented:$showResult){ if let proof, !results.isEmpty { ResultMinimalView(book:book, chapter:chapter, results:results, proof:proof)}}
-        .overlay{ if evaluating{ VStack(spacing:8){ ProgressView(); Text("Duo ocenia…").font(.system(size:12)).foregroundStyle(RPColor.muted)} .padding(20).background(Color.white).clipShape(RoundedRectangle(cornerRadius:16)).shadow(radius:12)} }
+        .overlay{ if evaluating{ VStack(spacing:8){ ProgressView(); Text(loc.t("Duo ocenia…", "Duo is checking…")).font(.system(size:12)).foregroundStyle(RPColor.muted)} .padding(20).background(Color.white).clipShape(RoundedRectangle(cornerRadius:16)).shadow(radius:12)} }
     }
 
     var duoTopBar: some View {
@@ -77,7 +77,7 @@ struct ChallengeFlowView: View {
                     lastCorrect = ok
                     showFeedback = true
                 } label: {
-                    Text("SPRAWDŹ").font(.system(size:15, weight:.black, design:.rounded)).tracking(1)
+                    Text(loc.t("SPRAWDŹ", "CHECK")).font(.system(size:15, weight:.black, design:.rounded)).tracking(1)
                         .frame(maxWidth:.infinity).padding(.vertical,14)
                         .background(hasAnswer(for: challenges[index].id) ? RPColor.duoGreen : RPColor.duoGray).foregroundStyle(hasAnswer(for: challenges[index].id) ? .white : RPColor.duoGrayDark)
                         .clipShape(RoundedRectangle(cornerRadius:12))
@@ -86,7 +86,7 @@ struct ChallengeFlowView: View {
                 }.disabled(!hasAnswer(for: challenges[index].id)).padding(.horizontal,16).padding(.bottom,6)
             } else {
                 Button{ Task{ await finish() }} label:{
-                    Text("ZAKOŃCZ").font(.system(size:15, weight:.black, design:.rounded)).tracking(1)
+                    Text(loc.t("ZAKOŃCZ", "FINISH")).font(.system(size:15, weight:.black, design:.rounded)).tracking(1)
                     .frame(maxWidth:.infinity).padding(.vertical,14)
                     .background(allAnswered ? RPColor.duoGreen : RPColor.duoGray).foregroundStyle(allAnswered ? .white : RPColor.duoGrayDark)
                     .clipShape(RoundedRectangle(cornerRadius:12))

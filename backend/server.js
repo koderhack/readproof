@@ -7,6 +7,7 @@ import https from 'https';
 import http from 'http';
 import mysql from 'mysql2/promise';
 import { runVerification } from './verification.js';
+import { detectAIWriting, AI_DETECTOR_INFO } from './aiDetector.js';
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 32288;
@@ -14,6 +15,11 @@ const JEV_THRESHOLD = Number(process.env.JEV_THRESHOLD) || 0.28;
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free';
 // Jev — TypeSafe https://docs.typesafe.ai/api  (POST https://api.typesafe.ai/v1/systemone)
+// Opcja A (polecana): Vercel AI Gateway https://vercel.com/ai-gateway/models/jev
+// model typesafe-ai/jev przez AI SDK experimental_evaluate, auth AI_GATEWAY_API_KEY.
+// Free promo do 2026-09-25, potem $0.042/1M input. Wymaga karty w teamie Vercel.
+const AI_GATEWAY_KEY = process.env.AI_GATEWAY_API_KEY || '';
+const JEV_GATEWAY_MODEL = process.env.JEV_GATEWAY_MODEL || 'typesafe-ai/jev';
 const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY || process.env.JEV_API_KEY || '';
 const TYPESAFE_MODEL = process.env.TYPESAFE_MODEL || 'jev-latest';
 const TYPESAFE_ENDPOINT = process.env.TYPESAFE_ENDPOINT || 'https://api.typesafe.ai/v1/systemone';
@@ -25,7 +31,7 @@ const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const PRIVACY_COPY = "ReadProof — Proof of Comprehension, not proof of physical reading. We store ONLY: walletAddress, bookId, chapterId, session_start/end, reading_duration, proof_hash (SHA-256). NEVER stored on-chain: book content, answers, prompts. Book content stays server-only (never full book on-chain). Solana Devnet ONLY (USDC/SOL test funds, no real money). Free LLM routing only. See /api/privacy.";
 const PRIVACY_SHORT = "Privacy: wallet, book, chapter, duration, proof hash only. No content on-chain. Devnet only.";
 
-const ALLOWED_ORIGINS = ['http://frog02.mikr.us:32287','https://frog02.mikr.us:32287','http://localhost:32288','http://127.0.0.1:32288','https://koderhack.github.io','http://koderhack.github.io','https://kacpersikora.pages.dev','https://koderhack.github.io'];
+const ALLOWED_ORIGINS = ['http://frog02.mikr.us:32287','https://frog02.mikr.us:32287','http://localhost:32288','http://127.0.0.1:32288','https://koderhack.github.io','http://koderhack.github.io','https://kacpersikora.pages.dev','https://readproof.pages.dev','https://koderhack.github.io'];
 const corsOptions = {
   origin: function(origin, cb){
     if(!origin) return cb(null,true);
@@ -58,7 +64,7 @@ let challengesByChapter = bundled.challengesByChapter;
 function pickFive(chapterId) {
   const pool = challengesByChapter[chapterId] || [];
   if (!pool.length) return [];
-  let shuffled = [...pool].sort(() => Math.random() - 0.5);
+  let shuffled = [...new Map(pool.filter(c => c && c.id).map(c => [String(c.id), c])).values()].sort(() => Math.random() - 0.5);
   let picked = [];
   let used = new Set();
   for (const c of shuffled) {
@@ -127,7 +133,8 @@ function normalizeChallenge(c){
 }
 async function pickForSession(chapterId, lang='pl'){
   const pool = await ensurePoolAtLeast20(chapterId, lang);
-  let shuffled = [...pool].sort(()=>Math.random()-0.5);
+  let shuffled = [...new Map(pool.filter(c => c && c.id).map(c => [String(c.id), c])).values()].sort(()=>Math.random()-0.5);
+  shuffled = avoidRecentChallenges(chapterId, shuffled);
   let picked=[];
   let used=new Set();
   for(const c of shuffled){
@@ -141,7 +148,9 @@ async function pickForSession(chapterId, lang='pl'){
   for(const jev of jevs){ if(jevCount>=2) break; if(!picked.find(p=>p.id===jev.id)){ picked[picked.length%5]=jev; jevCount++; } }
   return picked.slice(0,5);
 }
-const SESSION_TIMING_DEMO = [0, 120, 240, 360, 480];
+// The mobile flow presents one question at a time. Keep demo questions
+// immediately available; the UI itself still prevents double submissions.
+const SESSION_TIMING_DEMO = [0, 0, 0, 0, 0];
 const SESSION_TIMING_DEV = [0, 0, 0, 0, 0]; // admin dev mode — natychmiastowe odblokowanie
 const SESSION_TIMING_REAL = [0, 300, 600, 900, 1200]; // 5 min / pytanie — bez blokady czasowej, spokojne czytanie
 
@@ -158,6 +167,16 @@ function buildSessionChallenges(picked, startAt, isDemo){
 
 // in-memory sessions cache (also persisted in DB)
 const sessionsMem = new Map();
+const recentChallengeIds = new Map();
+
+function avoidRecentChallenges(chapterId, shuffled) {
+  const recent = new Set(recentChallengeIds.get(chapterId) || []);
+  const fresh = shuffled.filter(c => !recent.has(String(c.id)));
+  const candidates = fresh.length >= 5 ? fresh : shuffled;
+  const selectedIds = candidates.slice(0, 5).map(c => String(c.id));
+  recentChallengeIds.set(chapterId, [...selectedIds, ...[...recent].filter(id => !selectedIds.includes(id))].slice(0, 10));
+  return candidates;
+}
 
 // --- Helpers: ISBN, privacy, Solana ---
 function isValidISBN(isbn){
@@ -312,6 +331,7 @@ if(useMySQL){
         status TEXT DEFAULT 'draft',
         bookContentHash TEXT,
         contentLength INTEGER DEFAULT 0,
+        bookContent TEXT,
         coverUrl TEXT,
         createdAt TEXT,
         updatedAt TEXT
@@ -328,6 +348,9 @@ if(useMySQL){
       )`);
       _db.run(`ALTER TABLE publisher_campaigns ADD COLUMN isbn TEXT`, ()=>{});
       _db.run(`ALTER TABLE publisher_campaigns ADD COLUMN coverUrl TEXT`, ()=>{});
+      _db.run(`ALTER TABLE publisher_campaigns ADD COLUMN bookContent TEXT`, ()=>{});
+      _db.run(`ALTER TABLE publisher_campaigns ADD COLUMN contentLength INTEGER DEFAULT 0`, ()=>{});
+      _db.run(`ALTER TABLE publisher_campaigns ADD COLUMN bookContentHash TEXT`, ()=>{});
       // Apple auth extra columns (safe alter)
       _db.run(`ALTER TABLE users ADD COLUMN appleUserId TEXT`, ()=>{});
       _db.run(`ALTER TABLE users ADD COLUMN sessionToken TEXT`, ()=>{});
@@ -350,7 +373,7 @@ if (useMySQL) {
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_books (id VARCHAR(64) PRIMARY KEY, data JSON)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_challenges (chapterId VARCHAR(64) PRIMARY KEY, data JSON)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_users (walletAddress VARCHAR(64) PRIMARY KEY, displayName VARCHAR(128), email VARCHAR(128), role VARCHAR(32) DEFAULT 'reader', createdAt DATETIME, lastLoginAt DATETIME, appleUserId VARCHAR(64), sessionToken VARCHAR(128), provider VARCHAR(16), nickname VARCHAR(128))`);
-      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_campaigns (id VARCHAR(64) PRIMARY KEY, publisherWallet VARCHAR(64), title VARCHAR(256), author VARCHAR(256), isbn VARCHAR(32), description TEXT, rewardPool DOUBLE DEFAULT 0, rewardPerProof DOUBLE DEFAULT 5, currency VARCHAR(16) DEFAULT 'USDC', status VARCHAR(32) DEFAULT 'draft', bookContentHash VARCHAR(64), contentLength INT DEFAULT 0, coverUrl VARCHAR(512), createdAt DATETIME, updatedAt DATETIME)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_campaigns (id VARCHAR(64) PRIMARY KEY, publisherWallet VARCHAR(64), title VARCHAR(256), author VARCHAR(256), isbn VARCHAR(32), description TEXT, rewardPool DOUBLE DEFAULT 0, rewardPerProof DOUBLE DEFAULT 5, currency VARCHAR(16) DEFAULT 'USDC', status VARCHAR(32) DEFAULT 'draft', bookContentHash VARCHAR(64), contentLength INT DEFAULT 0, bookContent MEDIUMTEXT, coverUrl VARCHAR(512), createdAt DATETIME, updatedAt DATETIME)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_funds (id VARCHAR(64) PRIMARY KEY, campaignId VARCHAR(64), publisherWallet VARCHAR(64), amount DOUBLE, currency VARCHAR(16), txSignature VARCHAR(128), explorerUrl VARCHAR(256), createdAt DATETIME)`);
       // Apple auth migrations — add columns if missing (MySQL IF NOT EXISTS via try/catch)
       for(const q of [
@@ -359,7 +382,10 @@ if (useMySQL) {
         `ALTER TABLE readproof_users ADD COLUMN provider VARCHAR(16)`,
         `ALTER TABLE readproof_users ADD COLUMN nickname VARCHAR(128)`,
         `ALTER TABLE readproof_sessions ADD COLUMN userId VARCHAR(64)`,
-        `ALTER TABLE readproof_proofs ADD COLUMN userId VARCHAR(64)`
+        `ALTER TABLE readproof_proofs ADD COLUMN userId VARCHAR(64)`,
+        `ALTER TABLE readproof_campaigns ADD COLUMN bookContent MEDIUMTEXT`,
+        `ALTER TABLE readproof_campaigns ADD COLUMN contentLength INT DEFAULT 0`,
+        `ALTER TABLE readproof_campaigns ADD COLUMN bookContentHash VARCHAR(64)`
       ]){ try{ await mysqlPool.query(q); }catch(e){ if(!String(e.message).includes('Duplicate column')) console.warn('[migrate]', e.message); } }
       // migrate primary key: allow apple users where id != walletAddress — keep walletAddress PK for now, but add unique index on appleUserId
       try{ await mysqlPool.query(`CREATE UNIQUE INDEX idx_users_apple ON readproof_users(appleUserId)`); }catch(e){}
@@ -382,7 +408,39 @@ function proofHash(bookId, chapterId, wallet, ts, score) {
   const input = `${bookId}|${chapterId}|${wallet}|${new Date(ts).getTime()}|${score}`;
   return crypto.createHash('sha256').update(input).digest('hex').slice(0,16);
 }
+// Jev przez Vercel AI Gateway — model typesafe-ai/jev, AI SDK experimental_evaluate.
+// Wymaga: npm i ai @ai-sdk/gateway + AI_GATEWAY_API_KEY w .env. Fail-soft: błąd → null (fallback niżej).
+async function callJevViaGateway({question, expectedMeaning, userAnswer, context, lang='pl'}) {
+  if (!AI_GATEWAY_KEY) return null;
+  try {
+    const { experimental_evaluate: evaluate } = await import('ai');
+    const state = `Context: ${context || ''}\nQuestion: ${question}\nExpected meaning: ${expectedMeaning}\nUser answer: ${userAnswer}\nLanguage: ${lang}`;
+    const instructions = lang === 'en'
+      ? `Does the user's answer convey the SAME meaning as expected, even if wording differs? Be VERY lenient: synonyms, paraphrases, implied cause (e.g. fairy gave shoes = shoes are enchanted) count as correct. Expected: "${expectedMeaning}".`
+      : `Czy odpowiedź użytkownika przekazuje TO SAMO znaczenie co oczekiwane, nawet jeśli innymi słowami? Bądź BARDZO łagodny: synonimy, parafrazy, dorozumiana przyczyna (np. "wróżka dała buty" = "buty były zaczarowane") liczą się jako dobrze. Oczekiwane: "${expectedMeaning}". Kontekst: "${context || ''}".`;
+    const result = await evaluate({
+      model: JEV_GATEWAY_MODEL,
+      state,
+      questions: { is_correct: { type: 'boolean', instructions } },
+      providerOptions: { gateway: { zeroDataRetention: true } },
+    });
+    const ans = result?.answers?.is_correct;
+    const prob = Number(ans?.probability ?? (ans?.value === true ? 1 : ans?.value === false ? 0 : NaN));
+    if (!Number.isFinite(prob)) return null;
+    const correct = prob >= JEV_THRESHOLD && ans?.value !== false;
+    const reason = lang === 'en'
+      ? `Jev via Vercel AI Gateway p=${prob.toFixed(2)} threshold ${JEV_THRESHOLD}`
+      : `Jev via Vercel AI Gateway p=${prob.toFixed(2)} próg ${JEV_THRESHOLD}`;
+    return { correct, confidence: prob, reason };
+  } catch (e) {
+    console.warn('[jev-gateway] fallback:', e?.message || e);
+    return null;
+  }
+}
 async function callJev({question, expectedMeaning, userAnswer, context, lang='pl'}) {
+  // Najpierw Vercel AI Gateway (free promo), potem bezpośrednie TypeSafe API.
+  const viaGateway = await callJevViaGateway({question, expectedMeaning, userAnswer, context, lang});
+  if (viaGateway) return viaGateway;
   // TypeSafe Jev — POST https://api.typesafe.ai/v1/systemone (docs https://docs.typesafe.ai/api)
   // state = userAnswer (+ context), questions.is_correct typu noul
   if (TYPESAFE_API_KEY) {
@@ -484,7 +542,8 @@ Book: ${chapter.bookId}, chapter ${chapter.index} — ${chapter.title}
 Original excerpt language: often ENGLISH (Gutenberg). IMPORTANT: you MUST output ALL questions, options, expectedMeaning, statements, pairs in ENGLISH.
 Context: ${chapter.contextExcerpt}
 Summary: ${chapter.summary}
-Source fragment (REAL full book text — base questions on it, but school-test style):
+Important: ignore website/legal boilerplate, Gutenberg headers, license text, chapter lists, illustration notes, and any technical metadata from the source website. Base every question ONLY on the actual narrative text of the chapter.
+Source fragment (REAL narrative text only — base questions on it, but school-test style):
 ${chapterFragment(chapter)}
 Requirements — SCHOOL TEST style (sufficient, not picky):
 - Use DIVERSE types from: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
@@ -498,7 +557,8 @@ Książka: ${chapter.bookId}, rozdział ${chapter.index} — ${chapter.title}
 Język oryginalnego fragmentu: często ANGIELSKI (Gutenberg). WAŻNE: MUSISZ wygenerować WSZYSTKIE pytania, opcje, expectedMeaning, statements, pary w języku POLSKIM.
 Kontekst: ${chapter.contextExcerpt}
 Streszczenie: ${chapter.summary}
-Fragment źródłowy (REALNY pełny tekst — pytania na jego podstawie, ale jak test z lektury):
+Ważne: ignoruj teksty techniczne, nagłówki Gutenberg, licencje, listy rozdziałów, notki ilustracji i metadane ze strony źródłowej. Bazuj pytania TYLKO na faktycznej treści narracyjnej rozdziału.
+Fragment źródłowy (TYLKO narracja — pytania na jej podstawie, ale jak test z lektury):
 ${chapterFragment(chapter)}
 Wymagania — styl TEST Z LEKTURY (wystarczający, nie czepialski):
 - Używaj RÓŻNYCH typów z: multiple_choice, true_false, multiple_select, open_question, why_question, ordering, who_said, match, what_next, find_error
@@ -526,11 +586,36 @@ Wymagania — styl TEST Z LEKTURY (wystarczający, nie czepialski):
 
 // --- Pełne teksty książek na serwerze — AI korzysta z realnego fragmentu (nie tylko streszczenia) ---
 const bookTexts = {};
+function sanitizeSourceText(rawText='') {
+  let text = String(rawText || '');
+  if(!text) return '';
+
+  // 1) Drop public-domain site boilerplate and legal wrappers before the real story starts
+  const storyStart = text.search(/(?:^|\n)(?:CHAPTER|Chapter)\s+[IVXLC0-9. -]+/i);
+  if(storyStart > 0) text = text.slice(storyStart);
+
+  // 2) Drop footer and trailing metadata from the Gutenberg/website source
+  const footerIdx = text.search(/(?:^|\n)\*{3,}\s*END OF THE PROJECT GUTENBERG|(?:^|\n)End of the Project Gutenberg/i);
+  if(footerIdx >= 0) text = text.slice(0, footerIdx);
+
+  // 3) Remove line-level metadata/boilerplate left in the source text itself
+  const lines = text.split(/\r?\n/).filter((line) => {
+    const trimmed = line.trim();
+    if(!trimmed) return true;
+    if(/^(?:\*{3,}\s*START OF THE PROJECT GUTENBERG|The Project Gutenberg eBook of|This eBook is for the use of anyone anywhere|Title:|Author:|Release date:|Language:|Other information and formats:|This book is dedicated to|Contents|\[Illustration\]|\*{3,}\s*END OF THE PROJECT GUTENBERG|End of the Project Gutenberg)/i.test(trimmed)) return false;
+    if(/(?:www\.gutenberg\.org|gutenberg\.org|project gutenberg|produced by|transcriber's note|transcription|html|utf-?8|ascii|e-?text|zip file|copyright notice|license|illustration:|image:)/i.test(trimmed)) return false;
+    // keep actual chapter headings, strip only the site metadata around them
+    return true;
+  });
+
+  text = lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  return text;
+}
 function loadTexts(){
   for(const b of books){
     if(!b.fullTextFile) continue;
     for(const cand of ['./texts/'+b.fullTextFile, './'+b.fullTextFile]){
-      try{ if(fs.existsSync(cand)){ bookTexts[b.id]=fs.readFileSync(cand,'utf8'); break; } }catch(e){}
+      try{ if(fs.existsSync(cand)){ const raw = fs.readFileSync(cand,'utf8'); bookTexts[b.id] = sanitizeSourceText(raw); break; } }catch(e){}
     }
   }
   console.log(`[texts] ${Object.keys(bookTexts).length} książek załadowanych (${Object.entries(bookTexts).map(([k,v])=>k+'='+Math.round(v.length/1024)+'KB').join(', ')||'—'})`);
@@ -564,7 +649,7 @@ function langOf(req){
 }
 
 // --- Routes ---
-app.get('/health', (req,res)=>res.json({status:'ok', service:'readproof-backend', port:PORT, books: books.length, chapters: books.reduce((a,b)=>a+b.chapters.length,0), openRouter: !!OPENROUTER_KEY, model: OPENROUTER_MODEL, jevThreshold:JEV_THRESHOLD, jevTypesafe: !!TYPESAFE_API_KEY, lang: langOf(req), sessions: sessionsMem.size, privacy: PRIVACY_SHORT, cors: ALLOWED_ORIGINS, cluster:'devnet', publisher: { campaigns: 'GET /api/publisher/campaigns', users: 'GET /api/users' }}));
+app.get('/health', (req,res)=>res.json({status:'ok', service:'readproof-backend', port:PORT, books: books.length, chapters: books.reduce((a,b)=>a+b.chapters.length,0), openRouter: !!OPENROUTER_KEY, model: OPENROUTER_MODEL, jevThreshold:JEV_THRESHOLD, jevTypesafe: !!TYPESAFE_API_KEY, jevGateway: !!AI_GATEWAY_KEY, jevGatewayModel: JEV_GATEWAY_MODEL, lang: langOf(req), sessions: sessionsMem.size, privacy: PRIVACY_SHORT, cors: ALLOWED_ORIGINS, cluster:'devnet', publisher: { campaigns: 'GET /api/publisher/campaigns', users: 'GET /api/users' }}));
 app.get('/api/privacy', (req,res)=>res.json({
   privacy: PRIVACY_COPY,
   short: PRIVACY_SHORT,
@@ -585,7 +670,7 @@ app.get('/api/config', (req,res)=>res.json({
   cluster:'devnet',
   solana: { rpc: SOLANA_RPC, usdcMint: USDC_MINT_DEVNET, explorer:'https://explorer.solana.com', faucets:{ sol:'https://faucet.solana.com', usdc:'https://faucet.circle.com' } },
   openRouter: { model: OPENROUTER_MODEL, free:true },
-  jev: { model: TYPESAFE_MODEL, threshold: JEV_THRESHOLD }
+  jev: { model: TYPESAFE_MODEL, gatewayModel: JEV_GATEWAY_MODEL, gateway: !!AI_GATEWAY_KEY, direct: !!TYPESAFE_API_KEY, threshold: JEV_THRESHOLD }
 }));
 
 // ===== USERS API =====
@@ -760,15 +845,20 @@ app.get('/api/publisher/campaigns', (req,res)=>{
   sql+=` ORDER BY createdAt DESC LIMIT 100`;
   db.all(sql, params, (err,rows)=>{
     if(err) return res.status(500).json({error:err.message});
-    const enriched = (rows||[]).map(r=>({
-      ...r,
+    const enriched = (rows||[]).map(r=>{
+      const {bookContent, ...rest} = r||{};
+      return {
+      ...rest,
+      hasContent: !!(r.bookContentHash || bookContent),
+      contentLength: r.contentLength || (bookContent ? String(bookContent).length : 0),
       isbnTyped: r.isbn,
       qr: { url: campaignDeepLink(r.id, r.isbn), scheme: campaignPhoneScheme(r.id, r.isbn), qrApi: `/api/publisher/campaigns/${r.id}/qr` },
       rewardPool: `${r.rewardPool} ${r.currency} (Devnet)`,
       funding: { explorerBase:'https://explorer.solana.com', usdcMint: USDC_MINT_DEVNET, cluster:'devnet' },
       privacy: PRIVACY_SHORT,
-      contentNote: r.bookContentHash ? `Server-only ${r.contentLength} chars (hash ${r.bookContentHash.slice(0,16)}…) — never on-chain` : 'No content yet — POST /api/publisher/campaigns/:id/content'
-    }));
+      contentNote: (r.bookContentHash||bookContent) ? `In DB (bookContent) ${r.contentLength||String(bookContent||'').length} chars (hash ${(r.bookContentHash||'').slice(0,16)}…) — visible in PMA, never on-chain` : 'No content yet — POST /api/publisher/campaigns/:id/content'
+      };
+    });
     res.json({count: enriched.length, campaigns: enriched, privacy: PRIVACY_SHORT});
   });
 });
@@ -780,9 +870,12 @@ app.get('/api/publisher/campaigns/:id', (req,res)=>{
     // fetch funds
     db.all(`SELECT * FROM campaign_funds WHERE campaignId=? ORDER BY createdAt DESC`, [row.id], (e2, funds)=>{
       const totalFunded = (funds||[]).reduce((a,f)=>a+Number(f.amount||0),0);
+      const {bookContent, ...rest} = row||{};
       res.json({
         campaign: {
-          ...row,
+          ...rest,
+          hasContent: !!(row.bookContentHash || bookContent),
+          contentLength: row.contentLength || (bookContent ? String(bookContent).length : 0),
           isbnTyped: row.isbn,
           isbnValid: isValidISBN(row.isbn),
           qr: { url: campaignDeepLink(row.id, row.isbn), scheme: campaignPhoneScheme(row.id, row.isbn), qrApi: `/api/publisher/campaigns/${row.id}/qr` },
@@ -791,7 +884,7 @@ app.get('/api/publisher/campaigns/:id', (req,res)=>{
           funds: funds||[],
           privacy: PRIVACY_SHORT,
           cors: ALLOWED_ORIGINS,
-          contentNote: row.bookContentHash ? `Server-only ${row.contentLength} chars (hash ${row.bookContentHash.slice(0,16)}…) — never full book on-chain` : 'No content yet',
+          contentNote: (row.bookContentHash||bookContent) ? `In DB (bookContent) ${row.contentLength||String(bookContent||'').length} chars — visible in PMA, never on-chain` : 'No content yet',
           chain: { cluster:'devnet', usdcMint: USDC_MINT_DEVNET, neverOnChain:'full book text' }
         },
         privacy: PRIVACY_COPY
@@ -880,7 +973,8 @@ app.get('/api/publisher/lookup', (req,res)=>{
       });
       return;
     }
-    res.json({found:true, campaign: {...row, qr:{url:campaignDeepLink(row.id,row.isbn), scheme:campaignPhoneScheme(row.id,row.isbn)}}, privacy: PRIVACY_SHORT });
+    const {bookContent, ...rest} = row||{};
+    res.json({found:true, campaign: {...rest, hasContent: !!(row.bookContentHash||bookContent), qr:{url:campaignDeepLink(row.id,row.isbn), scheme:campaignPhoneScheme(row.id,row.isbn)}}, privacy: PRIVACY_SHORT });
   });
 });
 
@@ -901,7 +995,18 @@ app.post('/api/publisher/campaigns/:id/content', (req,res)=>{
     const path = `./texts/campaign_${safeId}.txt`;
     fs.writeFileSync(path, String(raw), 'utf8');
     // also store in challenges path for LLM? keep as campaign_text
-    db.run(`UPDATE publisher_campaigns SET bookContentHash=?, contentLength=?, updatedAt=? WHERE id=?`, [hash, len, new Date().toISOString(), req.params.id], (e2)=>{
+    // Treść trafia DO BAZY (kolumna bookContent) + kopia plikowa jako backup
+    const doUpdate = (withContent)=>{
+      const sql = withContent
+        ? `UPDATE publisher_campaigns SET bookContent=?, bookContentHash=?, contentLength=?, updatedAt=? WHERE id=?`
+        : `UPDATE publisher_campaigns SET bookContentHash=?, contentLength=?, updatedAt=? WHERE id=?`;
+      const params = withContent
+        ? [String(raw), hash, len, new Date().toISOString(), req.params.id]
+        : [hash, len, new Date().toISOString(), req.params.id];
+      db.run(sql, params, (e2)=>{
+        if(e2 && withContent && /Unknown column|no such column|no column/i.test(String(e2.message||''))){
+          return doUpdate(false); // stara baza bez migracji — zapis samych metadanych
+        }
       if(e2) return res.status(500).json({error:e2.message});
       // store text for fragment LLM
       bookTexts[req.params.id]=String(raw);
@@ -942,11 +1047,16 @@ app.post('/api/publisher/campaigns/:id/content', (req,res)=>{
         bookContentHash: hash,
         hashShort: hash.slice(0,16),
         path,
-        note: 'Content stored SERVER-ONLY (never full book on-chain). On-chain only proofHash + score. File: '+path,
+        storedInDb: withContent,
+        note: withContent
+          ? 'Content stored IN DATABASE (readproof_campaigns.bookContent) + file backup. Never on-chain.'
+          : 'Content stored as file only (DB column bookContent missing — restart backend to migrate).',
         qr: { url: campaignDeepLink(req.params.id, row.isbn), scheme: campaignPhoneScheme(req.params.id, row.isbn) },
         privacy: PRIVACY_COPY
       });
-    });
+      });
+    };
+    doUpdate(true);
   });
 });
 
@@ -954,17 +1064,28 @@ app.get('/api/publisher/campaigns/:id/content', (req,res)=>{
   db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [req.params.id], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'campaign not found'});
-    if(!row.bookContentHash) return res.status(404).json({error:'no content uploaded yet — POST /api/publisher/campaigns/:id/content', privacy: PRIVACY_SHORT});
-    const safeId = req.params.id.replace(/[^a-z0-9-]/gi,'_');
-    const p = `./texts/campaign_${safeId}.txt`;
-    if(!fs.existsSync(p)) return res.status(404).json({error:'file missing on server'});
-    const preview = fs.readFileSync(p,'utf8').slice(0, 2000);
+    if(!row.bookContentHash && !row.bookContent) return res.status(404).json({error:'no content uploaded yet — POST /api/publisher/campaigns/:id/content', privacy: PRIVACY_SHORT});
+    // 1) treść z BAZY (nowe zachowanie)
+    let full = row.bookContent ? String(row.bookContent) : '';
+    // 2) fallback: stary plik na dysku + auto-backfill do bazy
+    if(!full){
+      const safeId = req.params.id.replace(/[^a-z0-9-]/gi,'_');
+      const p = `./texts/campaign_${safeId}.txt`;
+      if(!fs.existsSync(p)) return res.status(404).json({error:'content missing (no DB row, no file) — re-upload via POST /content'});
+      full = fs.readFileSync(p,'utf8');
+      db.run(`UPDATE publisher_campaigns SET bookContent=?, contentLength=?, updatedAt=? WHERE id=?`,
+        [full, full.length, new Date().toISOString(), req.params.id], ()=>{});
+    }
+    const wantFull = req.query.full === '1';
+    const preview = full.slice(0, 2000);
     res.json({
       campaignId: row.id,
-      contentLength: row.contentLength,
+      contentLength: full.length || row.contentLength,
       bookContentHash: row.bookContentHash,
-      preview: preview + (row.contentLength>2000?' …[truncated]':''),
-      note: 'Full content is server-only. This preview is 2k chars. Full text never sent to chain.',
+      preview: preview + (full.length>2000?' …[truncated]':''),
+      ...(wantFull ? { content: full } : {}),
+      source: row.bookContent ? 'database (readproof_campaigns.bookContent)' : 'file (backfilled to DB)',
+      note: 'Full content lives in DB column bookContent — visible in PMA. Never on-chain.',
       privacy: PRIVACY_SHORT
     });
   });
@@ -1155,7 +1276,7 @@ app.post('/api/sessions/start', async (req,res)=>{
   }
   const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
   if(!chapter) return res.status(404).json({error:'chapter not found'});
-  const isDemo = req.query.demo === '1' || req.body.demo === true || true;
+  const isDemo = req.query.demo !== '0' && req.body.demo !== false;
   let picked;
   try{
     // każda sesja — zupełnie nowe 5 pytań live w języku urządzenia (pełny tekst książki na serwerze)
@@ -1242,9 +1363,11 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
   if(s.answers[challengeId]) return res.status(409).json({error:'already answered'});
   let correct=false; let jev=null;
   switch(ch.type){
-    case 'multiple_choice': case 'true_false': case 'what_next': correct = answer === ch.correctAnswer; break;
+    case 'multiple_choice': case 'true_false': case 'what_next':
+      correct = Number(answer) === Number(ch.correctAnswer);
+      break;
     case 'multiple_select': { const exp=new Set(ch.correctAnswers||[]); const got=new Set(Array.isArray(answer)?answer:[]); correct = exp.size===got.size && [...exp].every(v=>got.has(v)); break; }
-    case 'find_error': correct = answer === ch.errorIndex; break;
+    case 'find_error': correct = Number(answer) === Number(ch.errorIndex); break;
     case 'ordering': case 'ranking': correct = JSON.stringify(answer) === JSON.stringify(ch.correctOrder); break;
     case 'match': case 'who_said': {
         if(typeof answer === 'string'){
@@ -1261,7 +1384,7 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     case 'open_question': case 'why_question': {
       if(typeof answer==='string'){
         const j = await callJev({question:ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: answer, context: ch.context||'', lang: s.lang});
-        if(!j) return res.status(503).json({error: s.lang==='en'?'Jev unavailable':'Jev niedostępny — ustaw TYPESAFE_API_KEY'});
+        if(!j) return res.status(503).json({error: s.lang==='en'?'Jev unavailable':'Jev niedostępny — ustaw AI_GATEWAY_API_KEY lub TYPESAFE_API_KEY'});
         jev = j; correct = jev.correct && jev.confidence >= JEV_THRESHOLD;
         // Fallback: gdy odpowiedź zachowuje sens, akceptuj — nie być restrykcyjnie, ma działać w każdej książce
         if(!correct && typeof answer==='string' && ch.expectedMeaning){
@@ -1303,17 +1426,36 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     s.suspicious = 1;
     s.suspiciousReason = `too_fast_answer: ${ch.id} ${elapsed}s`;
   }
-  // AI-writing: odpowiedź otwarta napisana przez AI (wklejona z ChatGPT) — blokada jak przy cheatowaniu
+  // AI-writing: odpowiedź otwarta napisana przez AI (wklejona z ChatGPT) — blokada jak przy cheatowaniu.
+  // Warstwa 1 (sight on AI writing, lokalna heurystyka, free): frazy LLM PL/EN, markdown/listy,
+  // em-dashe, równe zdania (burstiness), wypełniacze, długość/ogólnikowość, self-declaration.
+  // Warstwa 2 (sędzia LLM OpenRouter free, próg 0.85). Wystarczy jedna warstwa → BLOCKED.
   let aiDetected = false;
+  let aiDetail = null;
   if((ch.type==='open_question'||ch.type==='why_question') && typeof answer==='string' && !s.isDevBypass){
-    const det = await callAiDetect(ch.question, answer, s.lang);
-    if(det && det.ai && det.confidence >= 0.85){
-      aiDetected = true;
+    try {
+      const local = detectAIWriting(answer, { context: `${ch.question||''} ${ch.expectedMeaning||''} ${ch.context||''}` });
+      if (local.suspected) {
+        aiDetected = true;
+        aiDetail = { layer: 'heuristic', score: local.score, signals: local.signals };
+      }
+    } catch(e) { /* fail-open dla heurystyki */ }
+    if (!aiDetected) {
+      const det = await callAiDetect(ch.question, answer, s.lang);
+      if(det && det.ai && det.confidence >= 0.85){
+        aiDetected = true;
+        aiDetail = { layer: 'llm-judge', confidence: det.confidence };
+      }
+    }
+    if (aiDetected) {
       correct = false;
       s.suspicious = 1;
-      s.suspiciousReason = `ai_generated_answer: ${ch.id} conf=${det.confidence.toFixed(2)}`;
-      jev = jev ? {...jev, reason: (jev.reason||'') + ` | AI-writing conf=${det.confidence.toFixed(2)}`} : jev;
-      console.log(`[ai-detect] ${s.walletAddress?.slice(0,6)}.. ${ch.id.slice(0,8)} BLOCKED conf=${det.confidence.toFixed(2)}`);
+      s.suspiciousReason = `ai_generated_answer: ${ch.id} ${aiDetail.layer}=${aiDetail.layer==='heuristic' ? aiDetail.score : aiDetail.confidence}`;
+      const extra = aiDetail.layer==='heuristic'
+        ? ` | AI-writing sight score=${aiDetail.score} (${(aiDetail.signals||[]).slice(0,4).join(',')})`
+        : ` | AI-writing conf=${Number(aiDetail.confidence).toFixed(2)}`;
+      jev = jev ? {...jev, reason: (jev.reason||'') + extra} : jev;
+      console.log(`[ai-detect] ${s.walletAddress?.slice(0,6)}.. ${ch.id.slice(0,8)} BLOCKED via ${aiDetail.layer}`);
     }
   }
   s.answers[challengeId] = {answer, answeredAt: answeredAt.toISOString(), correct, jev, elapsed};
@@ -1331,7 +1473,7 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
     }catch(e){ return null; }
     return null;
   })();
-  res.json({challengeId, correct, jev, aiDetected, readingDurationSec: s.readingDurationSec, correctAnswer: ch.correctAnswer, correctAnswers: ch.correctAnswers, correctText, expectedMeaning: ch.expectedMeaning});
+  res.json({challengeId, correct, jev, aiDetected, blocked: aiDetected, blockReason: aiDetected ? s.suspiciousReason : null, readingDurationSec: s.readingDurationSec, correctAnswer: ch.correctAnswer, correctAnswers: ch.correctAnswers, correctText, expectedMeaning: ch.expectedMeaning});
   console.log(`[answer] ${s.walletAddress?.slice(0,6)}.. ${challengeId.slice(0,8)} correct=${correct} type=${ch.type} elapsed=${elapsed}s${jev?` jev=${jev.correct?1:0} conf=${(jev.confidence??0).toFixed(2)}`:''}${aiDetected?' AI-BLOCKED':''}`);
 });
 
@@ -1462,10 +1604,34 @@ app.post('/api/evaluate', async (req,res)=>{
   if(!question || !expectedMeaning || !userAnswer) return res.status(400).json({error:'question, expectedMeaning, userAnswer required'});
   const trimmed=String(userAnswer).trim();
   if(trimmed.length<3) return res.status(400).json({error: lang==='en'?'Too short':'Za krótka odpowiedź'});
+  // AI-writing gate PRZED Jev: wklejone z AI → 422 jak przy cheatowaniu (nie marnujemy Jev na oszustwo)
+  try {
+    const local = detectAIWriting(trimmed, { context: `${question} ${expectedMeaning} ${context||''}` });
+    if (local.suspected) {
+      console.log(`[ai-detect] /evaluate BLOCKED heuristic score=${local.score} (${local.signals.slice(0,4).join(',')})`);
+      return res.status(422).json({error: lang==='en'?'AI-generated answer blocked — write in your own words':'Wykryto odpowiedź z AI — napisz własnymi słowami', code:'ai_blocked', aiDetected:true, blocked:true, layer:'heuristic', score: local.score, signals: local.signals, lang});
+    }
+  } catch(e) { /* fail-open */ }
+  const judge = await callAiDetect(question, trimmed, lang);
+  if (judge && judge.ai && judge.confidence >= 0.85) {
+    console.log(`[ai-detect] /evaluate BLOCKED llm conf=${judge.confidence}`);
+    return res.status(422).json({error: lang==='en'?'AI-generated answer blocked — write in your own words':'Wykryto odpowiedź z AI — napisz własnymi słowami', code:'ai_blocked', aiDetected:true, blocked:true, layer:'llm-judge', confidence: judge.confidence, lang});
+  }
   const fromJev=await callJev({question, expectedMeaning, userAnswer:trimmed, context: context||'', lang});
-  if(!fromJev) return res.status(503).json({error: lang==='en'?'Jev unavailable — set TYPESAFE_API_KEY in backend/.env':'Jev niedostępny — ustaw TYPESAFE_API_KEY w backend/.env', lang});
+  if(!fromJev) return res.status(503).json({error: lang==='en'?'Jev unavailable — set AI_GATEWAY_API_KEY or TYPESAFE_API_KEY in backend/.env':'Jev niedostępny — ustaw AI_GATEWAY_API_KEY lub TYPESAFE_API_KEY w backend/.env', lang});
   res.json({...fromJev, source:'jev', lang});
 });
+
+// Sight on AI writing — opis warstw, progi, sygnały (linkowany z landinga /books#anty-ai)
+app.get('/api/ai-detector/info', (req,res)=>res.json({
+  ...AI_DETECTOR_INFO,
+  layers: [
+    { name:'heuristic-local', cost:'free, offline', threshold: AI_DETECTOR_INFO.threshold, description:'Frazy LLM PL/EN + markdown/listy/em-dash + burstiness (równe zdania) + filler ratio + długość/ogólnikowość + self-declaration. Fail-open: za krótkie (<12 słów) nigdy nie blokuje.' },
+    { name:'llm-judge', model: OPENROUTER_MODEL, threshold: 0.85, description:'Sędzia OpenRouter free pyta wprost: AI czy człowiek. Fail-open: brak klucza / błąd / timeout → null (nie blokuje).' }
+  ],
+  verdict: 'BLOCKED gdy którakolwiek warstwa podejrzewa → correct=false, session suspicious=1 (ai_generated_answer), status Failed — jak screenshot/screenRecording/too_fast. POST /api/sessions/:id/answer zwraca {aiDetected:true, blocked:true}; POST /api/evaluate zwraca 422 {code:"ai_blocked"}. Można od razu ponowić własnymi słowami.',
+  lang: langOf(req)
+}));
 
 app.post('/api/proofs', async (req,res)=>{
   const {bookId, chapterId, answers, walletAddress, userId: bodyUserId, appleUserId} = req.body; // answers: {challengeId: answer}
@@ -1526,16 +1692,25 @@ app.post('/api/proofs', async (req,res)=>{
       }
       case 'open_question': case 'why_question': {
         if(typeof ans==='string'){
-          const j = await callJev({question: ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: ans, context: ch.context||'', lang: langOf(req)});
-          if(!j) return res.status(503).json({error:'Jev unavailable — set TYPESAFE_API_KEY'});
-          jev = j; correct = jev.correct && jev.confidence>=JEV_THRESHOLD;
+          // AI-writing gate (heurystyka lokalna, fail-open) — wklejone z AI = 0 pkt, flaga w wyniku
+          let aiBlocked = false;
+          try {
+            const local = detectAIWriting(ans, { context: `${ch.question||''} ${ch.expectedMeaning||''} ${ch.context||''}` });
+            if (local.suspected) { aiBlocked = true; jev = { correct:false, confidence:0, reason:`AI-writing sight score=${local.score} (${local.signals.slice(0,4).join(',')})` }; correct = false; }
+          } catch(e) {}
+          if (!aiBlocked) {
+            const j = await callJev({question: ch.question, expectedMeaning: ch.expectedMeaning, userAnswer: ans, context: ch.context||'', lang: langOf(req)});
+            if(!j) return res.status(503).json({error:'Jev unavailable — set AI_GATEWAY_API_KEY'});
+            jev = j; correct = jev.correct && jev.confidence>=JEV_THRESHOLD;
+          }
         }
         break;
       }
       default: correct=false;
     }
     if(correct) score++;
-    results.push({challengeId: ch.id, correct, jev, answer: ans});
+    const aiFlag = !!(jev && /AI-writing/i.test(jev.reason||''));
+    results.push({challengeId: ch.id, correct: aiFlag ? false : correct, jev, aiDetected: aiFlag, blocked: aiFlag, answer: ans});
   }
   const total=challenges.length;
   let status='Failed';

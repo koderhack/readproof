@@ -132,7 +132,7 @@ label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin:10p
     <p>Zaloguj się portfelem przez <b>Privy</b> (Phantom, Solflare, Backpack, e-mail), zobacz <b>tylko swoje kampanie</b>, podepnij pulę nagród i drukuj QR na okładkę. Poniżej: ostatnie kampanie w sieci, książki z katalogu i statystyki każdej kampanii.</p>
     <div class="row" style="margin-top:14px">
       <span class="kicker" style="color:#FFD78A" id="apiStatus">łączenie z API…</span>
-      <a class="btn gold sm" href="/books/">Książki</a>
+      <a class="btn gold sm" href="/">Strona główna</a>
       <a class="btn ghost sm" href="https://github.com/koderhack/readproof/blob/main/PUBLISHER_RULES.md" target="_blank">Zasady</a>
     </div>
     <div class="card" style="margin-top:14px;background:rgba(255,251,235,.96)">
@@ -159,8 +159,16 @@ label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin:10p
 </div></header>
 
 <main class="wrap">
+  <!-- TABS: Overview / Challenges / Books / Rewards / Analytics -->
+  <nav class="tabs" aria-label="Zakładki panelu" style="margin-top:16px;position:sticky;top:57px;z-index:20;background:var(--bg);padding:10px 0">
+    <a class="tab" href="#secMine" style="text-decoration:none">Overview</a>
+    <a class="tab" href="#secList" style="text-decoration:none">Challenges</a>
+    <a class="tab" href="#secBooks" style="text-decoration:none">Books</a>
+    <a class="tab" href="#secDetail" style="text-decoration:none">Rewards</a>
+    <a class="tab" href="#secStats" style="text-decoration:none">Analytics</a>
+  </nav>
   <!-- STATS -->
-  <section class="section" aria-label="Statystyki wydawcy">
+  <section class="section" id="secStats" aria-label="Statystyki wydawcy">
     <div class="grid" id="myStats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"></div>
   </section>
   <hr class="perf">
@@ -278,7 +286,7 @@ label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin:10p
 <footer class="footer"><div class="wrap">
   <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
     <div>© 2026 ReadProof — Panel wydawcy • Solana Devnet • <a href="https://github.com/koderhack/readproof/blob/main/PUBLISHER_RULES.md" target="_blank">Zasady wydawców</a></div>
-    <div class="mono">kacpersikora.pages.dev/publisher/ • v3 green</div>
+    <div class="mono">readproof.pages.dev/publisher/ • v4</div>
   </div>
 </div></footer>
 
