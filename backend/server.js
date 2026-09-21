@@ -507,6 +507,34 @@ Wymagania — styl TEST Z LEKTURY (wystarczający, nie czepialski):
   return challenges.map(c=>({...c, id: c.id && String(c.id) ? String(c.id) : crypto.randomUUID(), chapterId: chapter.id}));
 }
 
+async function verifyChallenges(challenges, chapter, lang='pl'){
+  if(!OPENROUTER_KEY || !Array.isArray(challenges) || challenges.length < 5) return challenges;
+  try{
+    const frag = chapterFragment(chapter).slice(0, 3000);
+    const prompt = lang==='en'
+      ? `Verify these ${challenges.length} reading comprehension questions for chapter "${chapter.title}" (book ${chapter.bookId}). Context fragment:\n${frag}\n\nChallenges JSON:\n${JSON.stringify(challenges).slice(0, 8000)}\n\nReturn ONLY JSON: {"validIds": ["id1", "id2", ...]} — include only IDs where question, options (if any) and correct answer/expectedMeaning are factually correct in context of the story and ask about plot content (not moral), are answerable from the fragment/context, and have no hallucinations. Be lenient but filter obvious hallucinations.`
+      : `Zweryfikuj ${challenges.length} pytań ze zrozumienia dla rozdziału "${chapter.title}" (książka ${chapter.bookId}). Fragment:\n${frag}\n\nPytania JSON:\n${JSON.stringify(challenges).slice(0, 8000)}\n\nZwróć TYLKO JSON: {"validIds": ["id1", "id2", ...]} — uwzględnij tylko ID gdzie pytanie, opcje (jeśli są) i poprawna odpowiedź/expectedMeaning są faktycznie poprawne w kontekście historii, pytają o treść fabuły (nie morał), są odpowiedzalne z fragmentu/kontekstu i nie mają halucynacji. Bądź łagodny, filtruj tylko oczywiste halucynacje.`;
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${OPENROUTER_KEY}`,'Content-Type':'application/json','HTTP-Referer':'https://readproof.app'},
+      body: JSON.stringify({model: OPENROUTER_MODEL, messages:[{role:'user', content: prompt}], temperature:0.2, max_tokens:2000}),
+      signal: AbortSignal.timeout(60000)
+    });
+    if(!res.ok) throw new Error('verify OpenRouter '+res.status);
+    const j = await res.json();
+    const content = j.choices?.[0]?.message?.content;
+    if(!content) throw new Error('no verify content');
+    const parsed = extractJSON(content);
+    const validIds = new Set((parsed.validIds || parsed.valid || []).map(String));
+    if(validIds.size < 5) return challenges; // too strict — fallback to all
+    const filtered = challenges.filter(c=> validIds.has(String(c.id)));
+    return filtered.length >= 5 ? filtered : challenges;
+  }catch(e){
+    console.warn(`[verifyChallenges] skip: ${e.message}`);
+    return challenges;
+  }
+}
+
 // --- Pełne teksty książek na serwerze — AI korzysta z realnego fragmentu (nie tylko streszczenia) ---
 const bookTexts = {};
 function loadTexts(){
@@ -1141,20 +1169,26 @@ app.post('/api/sessions/start', async (req,res)=>{
   const isDemo = req.query.demo === '1' || req.body.demo === true || true;
   let picked;
   try{
-    // każda sesja — zupełnie nowe 5 pytań live w języku urządzenia (pełny tekst książki na serwerze)
     const chapterForGen = books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
     if(chapterForGen && OPENROUTER_KEY){
-      // FIRE-AND-FORGET: start wraca natychmiast z puli; LLM (wolny free tier, ~1min) zasila pulę
-      // pytaniami z realnego tekstu na NASTĘPNE sesje. Nigdy nie blokuje startu.
-      callOpenRouterGenerate(chapterForGen, 5, lang).then(async (fresh)=>{
-        challengesByChapter[chapterId] = (challengesByChapter[chapterId]||[]).concat(fresh);
+      // Pula 30 przed każdą sesją — świeże pytania z tekstu, potem weryfikacja drugim callem
+      try{
+        const fresh30 = await callOpenRouterGenerate(chapterForGen, 30, lang);
+        // drugi call: weryfikacja poprawności w kontekście lektury
+        let verified = fresh30;
+        try{
+          verified = await verifyChallenges(fresh30, chapterForGen, lang);
+          console.log(`[pool-verify] ${fresh30.length} → ${verified.length} po weryfikacji (${chapterId})`);
+        }catch(e){ console.warn(`[pool-verify] skip: ${e.message}`); }
+        challengesByChapter[chapterId] = verified;
         try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
-        console.log(`[llm-bg] +${fresh.length} nowych pytań (pełny tekst) dla ${chapterId} — następna sesja dostanie świeże`);
-      }).catch(e=>console.error(`[llm-bg] fail: ${e.message}`));
+        console.log(`[pool-regen] fresh ${verified.length} for ${chapterId} (przed sesją)`);
+      }catch(e){
+        console.error(`[pool-regen] fail, fallback do puli: ${e.message}`);
+      }
     }
     picked = await pickForSession(chapterId, lang);
   }catch(e){
-    // LLM padł / zły JSON → sesja WCIĄŻ startuje z puli (nigdy nie wiesza się "loading")
     console.error(`[start] fallback do puli: ${e.message}`);
     picked = await pickForSession(chapterId, lang).catch(()=>pickFive(chapterId));
   }
