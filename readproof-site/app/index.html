@@ -61,6 +61,13 @@ textarea.big-input{min-height:120px;resize:vertical}
 .hist-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dotted var(--line);font-size:.88rem}
 .hist-row:last-child{border-bottom:0}
 @media (min-width:760px){.app-view{padding-top:30px}}
+@media print{
+  .app-top,.rp-footer,.btn,.no-print{display:none!important}
+  body{background:#fff}
+  body *{visibility:hidden}
+  .q-card,.q-card *{visibility:visible}
+  .q-card{position:absolute;left:0;top:0;width:100%;box-shadow:none;animation:none}
+}
 </style>
 </head>
 <body>
@@ -485,7 +492,39 @@ function paintQuestion(sid, q, done, total){
     view.querySelectorAll('.ans-btn').forEach(x=>x.disabled = true);
     submitAnswer(sid, q, Number(b.dataset.i));
   }));
-  // ordering arrows
+  // przesuwanie palcem (pointer events) — strzałki zostają jako alternatywa
+  view.querySelectorAll('.ord-row').forEach(row=>{
+    row.style.touchAction = 'none';
+    row.style.cursor = 'grab';
+    row.addEventListener('pointerdown', e=>{
+      if(e.target.closest('button')) return;
+      e.preventDefault();
+      const list = document.getElementById('ordList');
+      const startY = e.clientY;
+      row.setPointerCapture(e.pointerId);
+      row.style.position = 'relative'; row.style.zIndex = '5';
+      const move = ev=>{
+        row.style.transform = `translateY(${ev.clientY - startY}px)`;
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const over = el && el.closest ? el.closest('.ord-row') : null;
+        if(over && over !== row){
+          const r = Array.from(list.children);
+          if(r.indexOf(over) > r.indexOf(row)) list.insertBefore(row, over.nextSibling);
+          else list.insertBefore(row, over);
+        }
+      };
+      const up = ()=>{
+        row.style.transform = ''; row.style.zIndex = '';
+        row.removeEventListener('pointermove', move);
+        row.removeEventListener('pointerup', up);
+        row.removeEventListener('pointercancel', up);
+      };
+      row.addEventListener('pointermove', move);
+      row.addEventListener('pointerup', up);
+      row.addEventListener('pointercancel', up);
+    });
+  });
+  // strzałki góra/dół (alternatywa dla przesuwania)
   view.querySelectorAll('.ord-row button').forEach(b=>b.addEventListener('click', ()=>{
     const row = b.closest('.ord-row'), list = document.getElementById('ordList');
     const rows = Array.from(list.children);
@@ -610,6 +649,7 @@ function renderResult(){
       <div style="margin-top:12px"><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(explorerUrl)}">Zobacz w Solana Explorer →</a></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px">
         <button class="btn btn-primary btn-sm" id="bShare">Udostępnij</button>
+        <button class="btn btn-ghost btn-sm" id="bPdf">Pobierz PDF</button>
         <a class="btn btn-ghost btn-sm" target="_blank" id="bLinkedIn" href="#">LinkedIn</a>
         <a class="btn btn-ghost btn-sm" target="_blank" id="bX" href="#">X</a>
       </div>
@@ -629,6 +669,7 @@ function renderResult(){
   });
   document.getElementById('bLinkedIn').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl);
   document.getElementById('bX').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl);
+  document.getElementById('bPdf').addEventListener('click', ()=>window.print());
 }
 
 /* ═══ #/proofs historia (API + lokalnie) ═══ */
