@@ -17,6 +17,12 @@ struct ChallengeFlowView: View {
     @State private var showFeedback = false
     @State private var lastCorrect: Bool? = nil
 
+    init(book: Book = Book(id: "", title: "", author: "", coverEmoji: "📖", coverUrl: nil, description: "", totalChapters: 0, rewardPerChapter: "", sourceUrl: nil, license: nil, fullTextFile: nil, chapters: []), chapter: Chapter = Chapter(id: "", bookId: "", index: 0, title: "", summary: "", contextExcerpt: "", reward: ""), challenges: [Challenge] = []) {
+        self.book = book
+        self.chapter = chapter
+        self.challenges = challenges
+    }
+
     var body: some View {
         VStack(spacing:0){
             duoTopBar

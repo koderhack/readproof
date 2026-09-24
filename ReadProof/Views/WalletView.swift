@@ -133,7 +133,7 @@ struct PassportView: View {
                                 if let tok = auth.user?.sessionToken { Text("session: \(tok.prefix(8))…").font(.caption2.monospaced()).foregroundStyle(RPColor.muted) }
                             }
                             Spacer()
-                            Button("Wyloguj", role:.destructive){ auth.signOut() }.font(.caption.weight(.semibold))
+                            Button("Wyloguj", role:.destructive){ auth.signOut(); appState.logout() }.font(.caption.weight(.semibold))
                         }
                     } else {
                         SignInWithAppleButton(.signIn, onRequest: { r in r.requestedScopes = [.fullName, .email] }, onCompletion: { res in

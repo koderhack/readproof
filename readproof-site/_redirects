@@ -1,0 +1,22 @@
+# ReadProof Cloudflare Pages redirects — order matters (first match wins)
+
+# API proxy via Cloudflare Pages Functions
+/api/*  /functions/api/[[path]].js  200
+
+# Teacher panel
+/teacher/*  /teacher/index.html  200
+/teacher  /teacher/index.html  200
+/app/teacher  /teacher/index.html  200
+
+# Other static pages
+/verify/*  /verify/index.html  200
+/publishers/*  /publishers/index.html  200
+/students/*  /students/index.html  200
+/readers/*  /readers/index.html  200
+
+# App (student)
+/app/*  /app/index.html  200
+/app  /app/index.html  200
+
+# Catch-all SPA
+/*  /app/index.html  200

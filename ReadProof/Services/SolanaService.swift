@@ -9,7 +9,7 @@ final class SolanaService: ObservableObject {
     @Published var lastTx: String?
 
     let devnetRPC = "https://api.devnet.solana.com"
-    let explorerBase = "https://explorer.solana.com/tx/"
+    let explorerBase = "https://explorer.solana.com/tx/?cluster=devnet"
 
     func createProofHash(bookId: String, chapterId: String, wallet: String, timestamp: Date, score: Int) -> String {
         let input = "\(bookId)|\(chapterId)|\(wallet)|\(timestamp.timeIntervalSince1970)|\(score)"

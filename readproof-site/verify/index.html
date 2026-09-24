@@ -30,7 +30,7 @@
       }
 
       @page {
-        size: A4 landscape;
+        size: A4 portrait;
         margin: 0
       }
 
@@ -60,11 +60,12 @@
 <body>
   <nav class="rp-nav">
     <div class="wrap">
-      <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+      <a class="rp-brand" href="/"><span class="rp-brand-mark"><img src="/assets/icon.png" alt=""></span>ReadProof</a>
       <div class="rp-links">
-        <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
-        <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+        <a href="/app/" data-i18n="nav_challenges">Challenges</a>
         <a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
+        <a href="/teachers/"><span data-i18n="nav_teachers">Teachers</span></a>
+        <a href="/students/"><span data-i18n="nav_students">Students</span></a>
         <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button
             data-lang="en">EN</button></span>
         <a href="/" class="cta" data-i18n="nav_home">Home</a>
@@ -76,11 +77,11 @@
     <section class="rp-section tight rp-center" style="padding-bottom:0">
       <p class="rp-kicker" data-i18n="v_k">Verification</p>
       <h1 class="rp-h2" data-i18n="v_h">Verify a certificate.</h1>
-      <p class="rp-sub" data-i18n="v_sub">Enter a Certificate ID (e.g. <code class="inline">RP-7K2Q</code>) or open a
-        shared certificate link.</p>
+      <p class="rp-sub" data-i18n="v_sub">Enter a Certificate ID (e.g. <code class="inline">RP-7K2Q</code>) or a proof
+        hash — or open a shared certificate link.</p>
       <form id="f" class="form-row" style="max-width:480px;margin:0 auto">
         <div class="field" style="flex:1"><label for="q" data-i18n="v_label">Certificate ID</label><input id="q"
-            class="mono" placeholder="RP-XXXX" autocomplete="off"></div>
+            class="mono" placeholder="RP-XXXX / hash" autocomplete="off"></div>
         <div class="field" style="flex:0;align-self:end"><button class="btn btn-primary" type="submit"
             data-i18n="v_btn">Verify</button></div>
       </form>
@@ -98,9 +99,9 @@
     </div>
   </footer>
 
+  <script src="/assets/api.js"></script>
   <script>
     (function () {
-      const API = 'https://frog02.mikr.us:32287';
       const DEMO = {
         'RP-7K2Q': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Alexandra Nowak', score: '92%', date: '2026-09-18' },
         'RP-3M8P': { book: 'Dziady, Part III', author: 'Adam Mickiewicz', holder: 'Bartosz K.', score: '88%', date: '2026-09-17' },
@@ -110,31 +111,28 @@
       const q = document.getElementById('q');
       const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
       function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-      const BASES = ['https://frog02-32287.wykr.es'];
-
       async function apiGet(path) {
-        for (const b of BASES) {
-          try { const r = await fetch(b + path); if (r.ok) return await r.json(); } catch (e) { }
-        }
-        throw new Error('offline');
+        return ReadProofAPI.request(path);
       }
       /* obrazek certyfikatu (PNG do załączenia na X / LinkedIn) + pomoc licencji */
+      const LINKEDIN_ORG_ID = ''; // ID Twojej strony firmowej na LinkedIn (np. '12345678') — pokaże logo firmy przy certyfikacie
       function fitCertText(x, text, cx, y, maxW, size) { let s = size; x.font = '800 ' + s + 'px Georgia,serif'; while (x.measureText(text).width > maxW && s > 28) { s -= 4; x.font = '800 ' + s + 'px Georgia,serif'; } x.fillText(text, cx, y); }
       function certPNG(d) {
-        const W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H;
+        const W = 1200, H = Math.round(W * 297 / 210), c = document.createElement('canvas'); c.width = W; c.height = H;
         const x = c.getContext('2d');
         x.fillStyle = '#FFFBEB'; x.fillRect(0, 0, W, H);
         x.strokeStyle = '#58CC02'; x.lineWidth = 10; x.strokeRect(24, 24, W - 48, H - 48);
         x.strokeStyle = '#C5A15A'; x.lineWidth = 3; x.strokeRect(48, 48, W - 96, H - 96);
         x.textAlign = 'center'; x.fillStyle = '#0B0B0F';
-        x.font = '800 64px Georgia,serif'; x.fillText('ReadProof', W / 2, 150);
-        x.font = '600 30px Georgia,serif'; x.fillStyle = '#5C6368'; x.fillText(d.tierLabel || 'Certificate', W / 2, 205);
-        x.fillStyle = '#0B0B0F'; fitCertText(x, d.book || '', W / 2, 315, 1000, 72);
-        x.font = '400 34px Georgia,serif'; x.fillStyle = '#5C6368'; x.fillText(d.holder || '', W / 2, 378);
-        x.font = '700 46px system-ui,sans-serif'; x.fillStyle = '#0B0B0F'; x.fillText(d.score || '', W / 2, 452);
-        x.font = '400 26px ui-monospace,monospace'; x.fillStyle = '#46A302'; x.fillText('id: ' + (d.id || ''), W / 2, 512);
-        x.fillStyle = '#8A9398'; x.font = '400 24px ui-monospace,monospace'; x.fillText('readproof.pages.dev · Solana Devnet (demo)', W / 2, 562);
-        x.save(); x.translate(W - 195, 150); x.rotate(-0.14);
+        x.font = '800 72px Georgia,serif'; x.fillText('ReadProof', W / 2, 250);
+        x.font = '600 34px Georgia,serif'; x.fillStyle = '#5C6368'; x.fillText(d.tierLabel || 'Certificate', W / 2, 330);
+        x.strokeStyle = '#C5A15A'; x.lineWidth = 2; x.beginPath(); x.moveTo(W / 2 - 260, 400); x.lineTo(W / 2 + 260, 400); x.stroke();
+        x.fillStyle = '#0B0B0F'; fitCertText(x, d.book || '', W / 2, 620, 1000, 76);
+        x.font = '400 36px Georgia,serif'; x.fillStyle = '#5C6368'; x.fillText(d.holder || '', W / 2, 760);
+        x.font = '700 58px system-ui,sans-serif'; x.fillStyle = '#0B0B0F'; x.fillText(d.score || '', W / 2, 980);
+        x.font = '400 30px ui-monospace,monospace'; x.fillStyle = '#46A302'; x.fillText('id: ' + (d.id || ''), W / 2, 1090);
+        x.fillStyle = '#8A9398'; x.font = '400 26px ui-monospace,monospace'; x.fillText('readproof.pages.dev · Solana Devnet (demo)', W / 2, 1190);
+        x.save(); x.translate(W - 210, 270); x.rotate(-0.14);
         x.strokeStyle = '#46A302'; x.lineWidth = 5; x.strokeRect(-135, -46, 270, 92);
         x.fillStyle = '#46A302'; x.font = '900 32px Georgia,serif'; x.fillText(d.seal || 'VERIFIED', 0, 11); x.restore();
         return c.toDataURL('image/png');
@@ -165,39 +163,84 @@
         const c = b && (b.chapters || []).find(x => String(x.id) === String(chapterId));
         return (c && (c.title || c.id)) || String(chapterId || '');
       }
-      async function verify(id) {
-        id = (id || '').trim().toUpperCase();
-        if (!id) { out.innerHTML = ''; return; }
-        q.value = id;
-        out.innerHTML = '<p class="muted rp-center">' + esc(T('vf_checking', 'Checking…')) + '</p>';
-        // 1) try live backend proofs
-        try {
-          const proofs = await apiGet('/api/proofs');
-          const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
-          const hit = list.find(p => (p.proofHash || '').toUpperCase().startsWith(id.replace('RP-', '')) || (p.id || '').toUpperCase() === id);
-          if (hit) {
-            await bookCat();
-            let holderName = (hit.walletAddress || '').slice(0, 10) + '…';
-            try { const u = await apiGet('/api/users/' + encodeURIComponent(hit.walletAddress)); if (u && u.user && (u.user.displayName || u.user.email)) holderName = u.user.displayName || u.user.email; } catch (e) { }
-            const tierTmp = tierOf(hit.score, hit.total);
-            const didTmp = tierTmp === 'full' ? 'wykazał(a) pełne zrozumienie lektury.' : tierTmp === 'partial' ? 'wykazał(a) częściowe zrozumienie lektury.' : 'nie wykazał(a) zrozumienia lektury.';
-            out.innerHTML = certHTML({ book: bookTitle(hit.bookId), bookId: hit.bookId, chapter: chapterTitle(hit.bookId, hit.chapterId), chapterId: hit.chapterId, author: '', holder: holderName, holderDid: didTmp, score: hit.score + '/' + hit.total, date: hit.timestamp || '' }, false, hit);
-            return;
-          }
-        } catch (e) { /* offline → demo lookup */ }
-        // 2) demo certificates (clearly labeled)
-        const d = DEMO[id];
-        if (d) { out.innerHTML = certHTML(d, true, null); return; }
-        out.innerHTML = '<div class="card rp-center"><h3>' + esc(T('vf_notfound', 'Certificate not found')) + '</h3><p class="muted">' + esc(T('vf_noid_a', 'No certificate with ID')) + ' <span class="mono">' + esc(id) + '</span> ' + esc(T('vf_noid_b', 'in live records or demo set.')) + ' <a href="/verify/?id=RP-7K2Q">RP-7K2Q</a>.</p></div>';
+      async function holderNameOf(w) {
+        let name = (w || '').slice(0, 10) + '…';
+        if (!w) return name;
+        try { const u = await apiGet('/api/users/' + encodeURIComponent(w)); if (u && u.user && (u.user.displayName || u.user.email)) name = u.user.displayName || u.user.email; } catch (e) { }
+        return name;
       }
-      /* progi certyfikatu: 5/5 pełne zrozumienie, 3–4/5 (≥60%) częściowe, poniżej brak */
+      function didPhrase(tier) {
+        return tier === 'full' ? esc(T('vf_did_full', 'wykazał(a) pełne zrozumienie lektury.'))
+          : tier === 'partial' ? esc(T('vf_did_partial', 'wykazał(a) częściowe zrozumienie lektury.'))
+            : esc(T('vf_did_none', 'nie wykazał(a) zrozumienia lektury.'));
+      }
+      /* progi certyfikatu: 4–5/5 pełne zrozumienie, 3/5 (60%) częściowe, poniżej brak */
       function tierOf(score, total) {
         const s = Number(score), t = Number(total);
-        if (t > 0 && s >= t) return 'full';
+        if (t > 0 && s >= Math.max(4, t - 1)) return 'full';
         const r = t > 0 ? s / t : ((parseFloat(String(score)) || 0) / 100);
         return r >= 0.6 ? 'partial' : 'none';
       }
-      function certHTML(d, demo, raw) {
+      /* ── pytanie po pytaniu ── */
+      function qaAnswer(it) {
+        const opts = it.options || [];
+        const pick = i => (typeof i === 'number' && opts[i] !== undefined) ? opts[i] : i;
+        let yours = '—';
+        const y = it.your;
+        if (it.type === 'true_false' || it.type === 'multiple_choice' || it.type === 'what_next') {
+          yours = (typeof y === 'number') ? (opts[y] || ('#' + y)) : (typeof y === 'string' && y.trim() ? y : '—');
+        } else if (it.type === 'multiple_select') {
+          yours = Array.isArray(y) ? (y.length ? y.map(i => pick(i)).join(', ') : '—') : String(y ?? '—');
+        } else {
+          yours = (typeof y === 'string' && y.trim()) ? y : '—';
+        }
+        let correct = '—';
+        if (it.type === 'multiple_select') correct = (it.correctAnswers || []).map(i => pick(i)).join(', ') || '—';
+        else if (it.type === 'open_question' || it.type === 'why_question') correct = it.expectedMeaning || it.correctText || '—';
+        else if (it.correctAnswer !== undefined && it.correctAnswer !== null && it.correctAnswer !== '') correct = pick(it.correctAnswer) || '—';
+        else correct = it.correctText || '—';
+        return { yours: String(yours), correct: String(correct) };
+      }
+      function detailHTML(items) {
+        if (!items || !items.length) return '';
+        const rows = items.map((it, i) => {
+          const a = qaAnswer(it);
+          const chip = it.correct ? '<span class="pill ok">✓</span>' : '<span class="pill mut">✗</span>';
+          return `<div style="border-top:1px dashed var(--line);padding:10px 0">
+            <div style="font-size:.9rem;font-weight:600;margin-bottom:4px">${esc(String(i + 1))}. ${esc(it.question || it.challengeId || '')} ${chip}</div>
+            <div style="font-size:.83rem"><span class="muted">${esc(T('vf_your', 'Twoja odpowiedź:'))}</span> <b>${esc(a.yours)}</b><br>
+            <span class="muted">${esc(T('vf_correct', 'Poprawna odpowiedź:'))}</span> <b style="color:var(--green-dark)">${esc(a.correct)}</b></div>
+          </div>`;
+        }).join('');
+        return `<details open class="no-print" style="margin:14px 0 0;text-align:left"><summary class="muted" style="cursor:pointer;font-size:.83rem;font-weight:600">${esc(T('vf_answers', 'Odpowiedzi — pytanie po pytaniu'))}</summary>
+        <div style="margin-top:6px">${rows}</div></details>`;
+      }
+      async function buildDetail(p) {
+        const rawDetail = Array.isArray(p.detail) ? p.detail : (p.detail ? [p.detail] : []);
+        if (!rawDetail.length) return [];
+        let pool = [];
+        try { const j = await apiGet('/api/challenges/' + encodeURIComponent(p.chapterId || '')); pool = Array.isArray(j) ? j : (j.challenges || []); } catch (e) { }
+        const byId = {}; pool.forEach(c => { byId[c.id] = c; });
+        return rawDetail.map(d => {
+          const ch = byId[d.challengeId] || {};
+          const type = d.type || ch.type || '';
+          if (!d.question && !ch.question) return null;
+          return {
+            challengeId: d.challengeId,
+            type,
+            question: d.question || ch.question,
+            options: Array.isArray(d.options) ? d.options : (Array.isArray(ch.options) ? ch.options : []),
+            your: d.yourAnswer,
+            correct: !!d.correct,
+            correctAnswer: (typeof d.correctAnswer === 'number') ? d.correctAnswer : (typeof ch.correctAnswer === 'number' ? ch.correctAnswer : null),
+            correctAnswers: d.correctAnswers || ch.correctAnswers || null,
+            expectedMeaning: d.expectedMeaning || ch.expectedMeaning || null,
+            correctText: d.correctText || null
+          };
+        }).filter(Boolean);
+      }
+      function certHTML(d, demo, raw, detailItems) {
+        detailItems = detailItems || [];
         const ex = explorerHref(raw);
         const tier = raw ? tierOf(raw.score, raw.total) : tierOf(d.score, 100);
         const badge = tier === 'full' ? '✓ Verified'
@@ -205,19 +248,23 @@
         const tierLine = tier === 'full' ? esc(T('lp_line', 'Demonstrated understanding · Score:'))
           : tier === 'partial' ? esc(T('tier_partial', 'Partial understanding'))
             : esc(T('tier_none', 'Understanding not demonstrated'));
+        const hash = raw ? (raw.certHash || raw.proofHash || '—') : '—';
         return '<div class="cert">'
           + '<div class="cert-k">ReadProof Certificate · ' + badge + '</div>'
           + '<h3>' + esc(d.book) + '</h3>'
           + (d.chapter ? '<div class="cert-book">' + esc(d.chapter) + '</div>' : '')
           + (d.author ? '<div class="cert-book">' + esc(d.author) + '</div>' : '')
           + '<div class="cert-name">' + esc(d.holder) + '</div>'
-          + '<p class="muted" style="margin:4px 0 0;font-size:.88rem">Niniejszym potwierdza się, że <b>' + esc(d.holder) + '</b> ' + esc(d.holderDid || tierLine) + '</p>'
+          + '<p class="muted" style="margin:4px 0 0;font-size:.88rem">' + esc(T('vf_cert_says', 'Niniejszym potwierdza się, że') + ' ') + '<b>' + esc(d.holder) + '</b> ' + (d.holderDid || tierLine) + '</p>'
           + '<p style="margin:6px 0 0;font-weight:800;font-size:1.3rem">' + esc(d.score) + '</p>'
-          + '<div class="cert-meta"><span>' + esc(q.value.toUpperCase()) + '</span><span>✓ ' + esc(T('vf_proofrec', 'Proof recorded')) + '</span></div>'
-          + '<div class="cert-meta" style="margin-top:6px"><span class="mono">id: ' + esc(d.bookId || d.book || '') + (d.chapterId ? ' · ' + esc(d.chapterId) : '') + '</span></div>'
+          + '<div class="cert-meta"><span>' + esc((q.value || '').toUpperCase()) + '</span><span>✓ ' + esc(T('vf_proofrec', 'Proof recorded')) + '</span></div>'
+          + '<div class="cert-meta" style="margin-top:6px"><span class="mono">' + esc(T('vf_hash', 'hash:')) + ' ' + esc(String(hash).slice(0, 20)) + (String(hash).length > 20 ? '…' : '') + '</span></div>'
+          + '<div class="cert-meta" style="margin-top:6px"><span>' + esc(d.bookId || d.book || '') + (d.chapterId ? ' · ' + esc(d.chapterId) : '') + '</span></div>'
+          + (raw && raw.walletAddress ? '<div class="cert-meta" style="margin-top:6px"><span class="mono">' + esc((raw.walletAddress || '').slice(0, 8)) + '…' + esc((raw.walletAddress || '').slice(-4)) + '</span></div>' : '')
           + '<div class="proof-mini" style="text-align:left;margin-top:18px"><b>' + esc(T('vf_details', 'Proof Details')) + '</b><br>'
-          + '<span class="mono" style="font-size:.75rem">' + esc(T('vf_net', 'Network: Solana Devnet')) + '<br>' + esc(T('vf_proofid', 'Proof ID:')) + ' ' + esc(q.value.toUpperCase()) + '<br>'
+          + '<span class="mono" style="font-size:.75rem">' + esc(T('vf_net', 'Network: Solana Devnet')) + '<br>' + esc(T('vf_proofid', 'Proof ID:')) + ' ' + esc((q.value || '').toUpperCase()) + '<br>'
           + (raw && raw.txSignature ? esc(T('vf_tx', 'Transaction:')) + ' ' + esc(raw.txSignature) : esc(T('vf_tx', 'Transaction:')) + ' ' + esc(T('vf_devnet', 'devnet record')) + (demo ? ' (demo)' : '')) + '</span></div>'
+          + detailHTML(detailItems)
           + (demo ? '<div style="margin-top:12px"><span class="demo-tag">' + esc(T('vf_demo', 'DEMO · illustrative example')) + '</span></div>' : '')
           + '</div>'
           + '<div class="no-print" style="margin-top:14px;text-align:center"><a class="btn btn-ghost btn-sm" target="_blank" href="' + ex.url + '">' + esc(ex.tx ? T('vf_explorer_tx', 'Zobacz transakcję w Explorerze →') : T('vf_explorer_acct', 'Zobacz konto w Explorerze (Devnet) →')) + '</a></div>'
@@ -230,10 +277,71 @@
           + '<details class="no-print" style="margin:12px auto 0;max-width:520px;text-align:left"><summary class="muted" style="cursor:pointer;font-size:.85rem">' + esc(T('vf_lic', 'Dodaj do profilu LinkedIn → Licencje i certyfikaty')) + '</summary>'
           + '<div class="card flat" style="margin-top:8px;font-size:.85rem">'
           + '<div><b>' + esc(T('vf_lic_name', 'Nazwa')) + ':</b> ' + esc('ReadProof Certificate — ' + (d.book || '')) + ' <button class="btn btn-ghost btn-sm" data-copytext="' + esc('ReadProof Certificate — ' + (d.book || '')) + '">' + esc(T('vf_copy', 'Kopiuj')) + '</button></div>'
-          + '<div style="margin-top:6px"><b>ReadProof</b> · ID: <span class="mono">' + esc(q.value.toUpperCase()) + '</span> <button class="btn btn-ghost btn-sm" data-copytext="' + esc(q.value.toUpperCase()) + '">' + esc(T('vf_copy', 'Kopiuj')) + '</button></div>'
-          + '<div style="margin-top:6px"><b>URL:</b> <span class="mono" style="word-break:break-all">' + esc(location.origin + location.pathname + '?id=' + q.value.toUpperCase()) + '</span></div>'
+          + '<div style="margin-top:6px"><b>ReadProof</b> · ID: <span class="mono">' + esc((q.value || '').toUpperCase()) + '</span> <button class="btn btn-ghost btn-sm" data-copytext="' + esc((q.value || '').toUpperCase()) + '">' + esc(T('vf_copy', 'Kopiuj')) + '</button></div>'
+          + '<div style="margin-top:6px"><b>URL:</b> <span class="mono" style="word-break:break-all">' + esc(location.origin + location.pathname + '?id=' + (q.value || '').toUpperCase()) + '</span></div>'
           + '<p class="muted" style="font-size:.78rem;margin:8px 0 0">' + esc(T('vf_lic_how', 'Profil → Dodaj sekcję → Licencje i certyfikaty → wklej powyższe.')) + '</p>'
           + '</div></details>';
+      }
+      async function verify(value) {
+        const input = (value || '').trim();
+        if (!input) { out.innerHTML = ''; return; }
+        q.value = input;
+        out.innerHTML = '<p class="muted rp-center">' + esc(T('vf_checking', 'Checking…')) + '</p>';
+        // 1) certyfikat po ID (RP-XXXX) — publiczny endpoint /api/certificates/:id
+        try {
+          const j = await apiGet('/api/certificates/' + encodeURIComponent(input));
+          if (j && j.cert) {
+            await bookCat();
+            const c = j.cert;
+            const tier = tierOf(c.score, c.total);
+            const d = {
+              book: c.bookTitle || bookTitle(c.bookId),
+              bookId: c.bookId,
+              chapter: c.kind === 'book' ? esc(T('vf_wholebook', 'Cała lektura')) : (c.chapterTitle || chapterTitle(c.bookId, c.chapterId)),
+              chapterId: c.chapterId || null,
+              author: '',
+              holder: await holderNameOf(c.walletAddress),
+              holderDid: didPhrase(tier),
+              score: c.score + '/' + c.total,
+              date: (c.timestamp || '').slice(0, 10),
+              id: c.id
+            };
+            out.innerHTML = certHTML(d, false, c);
+            return;
+          }
+        } catch (e) { /* 404 / offline → dalej */ }
+        // 2) dowód po proofHash / ID dowodu
+        try {
+          const proofs = await apiGet('/api/proofs?proof=' + encodeURIComponent(input));
+          const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
+          const upp = input.toUpperCase();
+          const hit = list.find(p =>
+            String(p.proofHash || '').toUpperCase().startsWith(upp.replace(/^RP-/, '')) ||
+            String(p.proofHash || '').toUpperCase() === upp ||
+            String(p.id || '').toUpperCase() === upp ||
+            String(p.certId || '').toUpperCase() === upp);
+          if (hit) {
+            await bookCat();
+            const tierTmp = tierOf(hit.score, hit.total);
+            const detailItems = await buildDetail(hit);
+            out.innerHTML = certHTML({
+              book: bookTitle(hit.bookId),
+              bookId: hit.bookId,
+              chapter: chapterTitle(hit.bookId, hit.chapterId),
+              chapterId: hit.chapterId,
+              author: '',
+              holder: await holderNameOf(hit.walletAddress),
+              holderDid: didPhrase(tierTmp),
+              score: hit.score + '/' + hit.total,
+              date: (hit.timestamp || '').slice(0, 10)
+            }, false, hit, detailItems);
+            return;
+          }
+        } catch (e) { /* offline → demo lookup */ }
+        // 3) demo certificates (clearly labeled)
+        const d = DEMO[input.toUpperCase()];
+        if (d) { out.innerHTML = certHTML(d, true, null); return; }
+        out.innerHTML = '<div class="card rp-center"><h3>' + esc(T('vf_notfound', 'Certificate not found')) + '</h3><p class="muted">' + esc(T('vf_noid_a', 'No certificate with ID')) + ' <span class="mono">' + esc(input.toUpperCase()) + '</span> ' + esc(T('vf_noid_b', 'in live records or demo set.')) + ' <a href="/verify/?id=RP-7K2Q">RP-7K2Q</a>.</p></div>';
       }
       document.addEventListener('click', function (e) {
         if (e.target && e.target.id === 'bShare') {
@@ -260,15 +368,34 @@
       document.addEventListener('click', function (e) {
         const t = e.target && (e.target.id === 'bLinkedIn' || e.target.id === 'bX') ? e.target : null;
         if (!t) return;
-        const url = encodeURIComponent(location.origin + location.pathname + '?id=' + encodeURIComponent((document.getElementById('q') || {}).value || ''));
+        const qv = (document.getElementById('q') || {}).value || '';
+        const certUrl = location.origin + location.pathname + '?id=' + encodeURIComponent(qv);
         const title = document.querySelector('.cert h3');
-        const text = encodeURIComponent('ReadProof Certificate — ' + (title ? title.textContent : 'Proof of Comprehension'));
-        t.href = t.id === 'bLinkedIn'
-          ? 'https://www.linkedin.com/sharing/share-offsite/?url=' + url
-          : 'https://twitter.com/intent/tweet?text=' + text + '&url=' + url;
+        const text = 'ReadProof Certificate — ' + (title ? title.textContent : 'Proof of Comprehension');
+        if (t.id === 'bLinkedIn') {
+          // LinkedIn "Add license or certification": prefilled form — https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME
+          const p = new URLSearchParams({
+            startTask: 'CERTIFICATION_NAME',
+            name: text,
+            issueYear: String(new Date().getFullYear()),
+            issueMonth: String(new Date().getMonth() + 1),
+            certUrl,
+            certId: qv
+          });
+          if (LINKEDIN_ORG_ID) p.set('organizationId', LINKEDIN_ORG_ID); // ID strony firmowej → logo firmy przy certyfikacie
+          t.href = 'https://www.linkedin.com/profile/add?' + p.toString();
+        } else {
+          t.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(certUrl);
+        }
       });
-      document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); history.replaceState(null, '', '?id=' + encodeURIComponent(q.value.trim().toUpperCase())); verify(q.value); });
-      verify(new URLSearchParams(location.search).get('id') || '');
+      document.getElementById('f').addEventListener('submit', e => {
+        e.preventDefault();
+        const v = q.value.trim().toUpperCase();
+        history.replaceState(null, '', '?id=' + encodeURIComponent(v));
+        verify(q.value);
+      });
+      const params = new URLSearchParams(location.search);
+      verify(params.get('id') || params.get('proof') || params.get('hash') || '');
     })();
   </script>
   <script src="/assets/i18n.js"></script>

@@ -1,12 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ReadProof for Teachers — Turn reading assignments into measurable understanding</title>
-  <meta name="description"
-    content="Create classes, assign books, monitor progress and see who needs help. Simple teacher dashboard for reading assignments.">
+  <title>ReadProof dla nauczycieli — Panel nauczyciela</title>
+  <meta name="description" content="Twórz testy, zarządzaj klasami, sprawdzaj postępy uczniów i wydawaj certyfikaty w panelu nauczyciela ReadProof.">
   <link rel="icon" type="image/png" href="/assets/icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,16 +18,16 @@
 <body>
   <nav class="rp-nav">
     <div class="wrap">
-      <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+      <a class="rp-brand" href="/"><span class="rp-brand-mark"><img src="/assets/icon.png" alt=""></span>ReadProof</a>
       <div class="rp-links">
-        <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
-        <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
-        <a href="/challenge/" data-i18n="nav_challenges">Challenges</a>
-        <a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
-        <a href="/verify/" data-i18n="nav_verify">Verify</a>
+        <a href="/app/" data-i18n="nav_challenges">Wyzwania</a>
+        <a href="/publishers/" data-i18n="nav_publishers">Wydawcy</a>
+        <a href="/teachers/" class="keep"><span data-i18n="nav_teachers">Nauczyciele</span></a>
+        <a href="/students/"><span data-i18n="nav_students">Uczniowie</span></a>
+        <a href="/verify/"><span>Weryfikacja blockchain</span></a>
         <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button
             data-lang="en">EN</button></span>
-        <a href="/teacher/" class="cta" data-i18n="nav_demo">Demo</a>
+        <a href="/app/" class="cta" data-i18n="cta_explore_ch">Poznaj wyzwania</a>
       </div>
     </div>
   </nav>
@@ -36,153 +35,98 @@
   <header class="rp-hero">
     <div class="wrap">
       <div>
-        <span class="rp-eyebrow" style="background:var(--gold-soft);color:var(--gold-dark);border-color:#E3CE9C"
-          data-i18n="tp_eyebrow">For Teachers</span>
-        <h1 class="rp-h1"><span data-i18n="tp_h_a">Turn reading assignments into</span> <em
-            data-i18n="tp_h_b">measurable understanding.</em></h1>
-        <p class="rp-lead" data-i18n="tp_sub">See who actually understands the reading. Assign books, follow progress,
-          and spot students who need help — before the exam.</p>
+        <span class="wl-badge">Dostępne teraz · <span data-i18n="tag_teachers">Nauczyciele</span></span>
+        <h1 class="rp-h1"><em>Panel nauczyciela.</em></h1>
+        <p class="rp-lead">Twórz testy, zarządzaj klasami, sprawdzaj wyniki uczniów i wydawaj certyfikaty — w jednym miejscu.</p>
         <div class="rp-actions">
-          <a class="btn btn-dark" href="/teacher/" data-i18n="tp_demo">Open demo dashboard</a>
-          <a class="btn btn-ghost" href="#flow" data-i18n="tp_how">How it works</a>
+          <a class="btn btn-dark btn-lg" href="/teacher/">Przejdź do panelu nauczyciela →</a>
         </div>
+        <p class="rp-proofline" style="margin-top:8px">
+          <span><b>✓</b> Wirtualne, papierowe i hybrydowe testy</span>
+          <span><b>✓</b> 5 pytań z każdego rozdziału</span>
+          <span><b>✓</b> Jeden certyfikat za całą książkę</span>
+          <span><b>✓</b> Weryfikacja blockchain dostępna publicznie</span>
+        </p>
       </div>
-      <div><svg viewBox="0 0 320 200" style="width:100%;height:auto" role="img" aria-label="Teacher illustration">
-          <use href="/assets/roles.svg#rp-teacher" />
-        </svg></div>
+      <div class="card cs-card">
+        <p class="rp-kicker">ReadProof dla nauczycieli</p>
+        <div class="book-stack teacher-stack" aria-label="Lektury w panelu nauczyciela">
+          <img src="/assets/covers/maly-ksiaze.jpg" alt="Mały Książę">
+          <img src="/assets/covers/andersen.jpg" alt="Baśnie Andersena">
+          <img src="/assets/covers/ballady-i-romanse.jpg" alt="Ballady i romanse">
+          <span class="book-stack-label">Twoje lektury</span>
+        </div>
+        <h2 style="margin:8px 0 12px">Wszystko, czego potrzebujesz</h2>
+        <ul class="check-list">
+          <li>Konstruktor testów z bankiem pytań</li>
+          <li>Testy wirtualne, papierowe i hybrydowe</li>
+          <li>Zakres całej książki: 5 pytań z każdego rozdziału</li>
+          <li>Jeden certyfikat po zakończeniu testu</li>
+        </ul>
+      </div>
     </div>
   </header>
 
   <main>
-    <section class="rp-section tight" id="flow">
-      <div class="wrap">
-        <p class="rp-kicker" data-i18n="tf_h">Your flow</p>
-        <h2 class="rp-h2" data-i18n="tf_sub">Five steps to a class that reads.</h2>
-        <ol class="steps" style="margin-top:22px">
-          <li><b data-i18n="tf_1">Create a class</b>
-            <p data-i18n="tf_1p">Add your students once — e.g. Class 2A, 28 students.</p>
-          </li>
-          <li><b data-i18n="tf_2">Assign a book</b>
-            <p data-i18n="tf_2p">Choose a title and set a deadline for the challenge.</p>
-          </li>
-          <li><b data-i18n="tf_3">Students complete challenges</b>
-            <p data-i18n="tf_3p">They read the real book and prove understanding chapter by chapter.</p>
-          </li>
-          <li><b data-i18n="tf_4">See results</b>
-            <p data-i18n="tf_4p">Completion rate, average score, per-student results and certificates.</p>
-          </li>
-          <li><b data-i18n="tf_5">Identify who needs help</b>
-            <p data-i18n="tf_5p">Focus your lessons where understanding is weakest.</p>
-          </li>
-        </ol>
-      </div>
-    </section>
-
     <section class="rp-section tight">
       <div class="wrap">
-        <p class="rp-kicker" data-i18n="dp_k">Dashboard preview</p>
-        <h2 class="rp-h2" data-i18n="dp_h">Simple by design.</h2>
-        <p class="rp-sub" data-i18n="dp_sub">No training needed. The dashboard answers three questions: who finished,
-          how they scored, who needs attention. Live network numbers below — try the interactive demo dashboard for the
-          full teacher view.</p>
-        <div class="card">
-          <div class="rp-grid cols-2" style="align-items:start">
-            <div>
-              <p class="rp-kicker"><svg class="ic">
-                  <use href="/assets/icons.svg#i-users" />
-                </svg> <span data-i18n="dp_what">What a class sees</span></p>
-              <h3 data-i18n="dp_what_h">Completion rate, average score, per-student results.</h3>
-              <p class="muted" style="font-size:.92rem" data-i18n="dp_what_p">Assign a book with a deadline. As students
-                verify understanding, the dashboard fills itself: who finished, who is behind, where to focus the next
-                lesson.</p>
-              <div class="rp-actions" style="margin:12px 0 0">
-                <a class="btn btn-dark btn-sm" href="/teacher/" data-i18n="dp_open">Explore the demo dashboard</a>
-              </div>
-            </div>
-            <div class="stat-grid" style="grid-template-columns:1fr 1fr" id="platformStats">
-              <div class="stat">
-                <div class="l">Books on network</div>
-                <div class="v">…</div>
-              </div>
-              <div class="stat">
-                <div class="l">Active challenges</div>
-                <div class="v">…</div>
-              </div>
-              <div class="stat">
-                <div class="l">Proofs recorded</div>
-                <div class="v">…</div>
-              </div>
-              <div class="stat">
-                <div class="l">Verified</div>
-                <div class="v">…</div>
-              </div>
-            </div>
-          </div>
+        <div class="card" style="background:var(--gold-soft);border-color:#E3CE9C">
+          <p class="rp-kicker">Co możesz zrobić?</p>
+          <ul class="check-list" style="margin-bottom:0">
+            <li>Twórz klasy i przypisuj lektury</li>
+            <li>Sprawdzaj postępy i wyniki uczniów</li>
+            <li>Wydawaj certyfikaty</li>
+            <li>Korzystaj z panelu bez dodatkowej konfiguracji</li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <section class="rp-section tight">
-      <div class="wrap">
-        <div class="rp-grid cols-3">
-          <div class="card flat">
-            <h3><svg class="ic">
-                <use href="/assets/icons.svg#i-book" />
-              </svg><span data-i18n="tc_1">Create classes &amp; assign books</span></h3>
-            <p data-i18n="tc_1p">Whole curriculum or a single chapter. Deadlines included.</p>
-          </div>
-          <div class="card flat">
-            <h3><svg class="ic">
-                <use href="/assets/icons.svg#i-chart" />
-              </svg><span data-i18n="tc_2">Monitor progress &amp; review results</span></h3>
-            <p data-i18n="tc_2p">Completion rate and average score per class and per student.</p>
-          </div>
-          <div class="card flat">
-            <h3><svg class="ic">
-                <use href="/assets/icons.svg#i-cert" />
-              </svg><span data-i18n="tc_4">Generate certificates</span></h3>
-            <p data-i18n="tc_4p">Issue ReadProof Certificates of demonstrated understanding.</p>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="rp-footer">
     <div class="wrap">
-      <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Read a real book. Prove you understood
-          it.</span></div>
-      <div><a href="/" data-i18n="nav_home">Home</a> · <a href="/students/" data-i18n="nav_students">Students</a> · <a
-          href="/teacher/" data-i18n="nav_demo">Demo</a></div>
+      <div><span class="fbrand">ReadProof</span><br><span data-i18n="foot_tag">Czytaj prawdziwą książkę. Udowadnij, że ją zrozumiałeś.</span></div>
+      <div><a href="/" data-i18n="nav_home">Start</a> · <a href="/app/" data-i18n="nav_challenges">Wyzwania</a> · <a
+          href="/publishers/" data-i18n="nav_publishers">Wydawcy</a> · <a href="/students/"
+          data-i18n="nav_students">Uczniowie</a></div>
     </div>
   </footer>
 
+  <script src="/assets/api.js"></script>
   <script>
-    (async function () {
-      const BASES = ['https://frog02-32287.wykr.es'];
-
-      async function apiGet(path) {
-        for (const b of BASES) {
-          try { const r = await fetch(b + path); if (r.ok) return await r.json(); } catch (e) { }
+    (function () {
+      var form = document.getElementById('wlForm');
+      if (!form) return;
+      function T(k, fb) { return (window.rpT ? window.rpT(k, fb) : fb); }
+      var msg = function (cls, txt) {
+        var m = document.getElementById('wlMsg');
+        m.className = 'wl-msg ' + cls;
+        m.textContent = txt;
+      };
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var email = document.getElementById('wlEmail').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { msg('err', T('wl_invalid', 'Please enter a valid email address.')); return; }
+        var body = {
+          email: email,
+          role: form.dataset.role || 'teacher',
+          name: document.getElementById('wlName').value.trim() || '',
+          website: document.getElementById('wlWebsite').value
+        };
+        var btn = form.querySelector('button');
+        btn.disabled = true;
+        try {
+          var j = await ReadProofAPI.request('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          var pos = j.position || 0;
+          var key = j.already ? 'wl_already' : 'wl_success';
+          msg('ok', T(key, (j.already ? 'You are already on the list (spot ' : 'You are on the waitlist (spot ') + pos + ') — we\'ll email you when we launch.').replace('{pos}', pos));
+          form.style.display = 'none';
+        } catch (err) {
+          msg('err', T('wl_error', 'Could not save — try again shortly.') + ' (' + err.message + ')');
         }
-        throw new Error('offline');
-      }
-      try {
-        const [books, cj, proofs] = await Promise.all([
-          apiGet('/api/books').catch(() => []),
-          apiGet('/api/publisher/campaigns').catch(() => ({ campaigns: [] })),
-          apiGet('/api/proofs').catch(() => [])
-        ]);
-        const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
-        const camps = cj.campaigns || [];
-        const list = Array.isArray(proofs) ? proofs : (proofs.proofs || []);
-        const ver = list.filter(p => ['Reading Verified', 'Comprehension Verified', 'verified'].includes(p.status));
-        document.getElementById('platformStats').innerHTML =
-          `<div class="stat"><div class="l">${T('ps_books', 'Books on network')}</div><div class="v">${books.length || '—'}</div></div>` +
-          `<div class="stat"><div class="l">${T('ps_challenges', 'Active challenges')}</div><div class="v">${camps.length ? camps.filter(c => c.status === 'active').length + ' / ' + camps.length : '—'}</div></div>` +
-          `<div class="stat"><div class="l">${T('ps_proofs', 'Proofs recorded')}</div><div class="v">${list.length || '—'}</div></div>` +
-          `<div class="stat"><div class="l">${T('ps_verified', 'Verified')}</div><div class="v">${ver.length || '—'}</div></div>`;
-      } catch (e) { }
+        btn.disabled = false;
+      });
     })();
   </script>
   <script src="/assets/i18n.js"></script>

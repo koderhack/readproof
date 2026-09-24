@@ -146,7 +146,6 @@ struct ResultMinimalView: View {
             } else {
                 Button{ if let url=proof.explorerUrl, let u=URL(string:url){ UIApplication.shared.open(u)}} label:{ HStack{ Image(systemName: proof.txSignature == nil ? "checkmark.seal" : "wallet.pass"); Text(proof.txSignature == nil ? "Dowód gotowy (demo — bez live USDC)" : "Wypłać \(proof.reward ?? "5 USDC") do Portfela").font(.system(size:15, weight:.semibold, design:.rounded))}.frame(maxWidth:.infinity).padding(.vertical,14).background(RPColor.inkFixed).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius:14))}
                 HStack(spacing:10){
-                    Button{} label:{ HStack{ Image(systemName:"square.and.arrow.up"); Text("Udostępnij").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
                     Button{} label:{ HStack{ Image(systemName:"doc.text"); Text("Dowód").font(.system(size:13, weight:.medium))}.frame(maxWidth:.infinity).padding(.vertical,12).background(Color.white).clipShape(RoundedRectangle(cornerRadius:12)).overlay(RoundedRectangle(cornerRadius:12).stroke(RPColor.line))}.tint(RPColor.ink)
                 }
                 Label("Zapisano w Solana Devnet: wallet, book, chapter, session, score, duration, verificationVersion, proofHash, timestamp", systemImage:"lock").font(.system(size:11)).foregroundStyle(RPColor.muted)

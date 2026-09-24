@@ -49,7 +49,14 @@ struct HomeView: View {
             .listStyle(.insetGrouped)
             .searchable(text: $query, prompt: loc.t("Szukaj książek…","Search books…"))
             .navigationTitle("ReadProof")
-            .toolbar { ToolbarItem(placement:.principal){ HStack(spacing:8){ Image(systemName:"books.vertical.fill").foregroundStyle(RPColor.primary); Text("ReadProof").font(.headline)} } }
+            .toolbar {
+            ToolbarItem(placement:.principal){ HStack(spacing:8){ Image(systemName:"books.vertical.fill").foregroundStyle(RPColor.primary); Text("ReadProof").font(.headline)} }
+            ToolbarItem(placement:.navigationBarTrailing) {
+                Button(action: { appState.logout() }) {
+                    Label("Wyloguj", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            }
+        }
         }
         .task { await refreshFromServer() }
         .refreshable { await refreshFromServer() }

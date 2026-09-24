@@ -99,7 +99,7 @@ readproof/
 ├── README.md                 # ten plik
 ├── PUBLISHER_RULES.md        # zasady dla wydawców (v1.0)
 ├── docs/DEMO.md              # scenariusz demo 60 s
-├── LICENSE                   # MIT
+├── LICENSE                   # ReadProof Non-Commercial License
 ├── project.yml               # xcodegen → ReadProof.xcodeproj
 ├── ReadProof/                # apka iOS (App, Models, Services, Views, Resources)
 ├── ReadProofLiveActivity/    # widget / Live Activity
@@ -123,4 +123,4 @@ Klucze prywatne Solana trzymaj poza repo (np. `pitch/.secrets/` — ignorowane p
 
 ## 📄 Licencja
 
-MIT — zob. [LICENSE](LICENSE).
+ReadProof Non-Commercial License — użycie komercyjne wymaga pisemnej zgody właściciela praw. Zob. [LICENSE](LICENSE).

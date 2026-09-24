@@ -1,9 +1,6 @@
 import Foundation
 import ActivityKit
 
-// Live Activity + Dynamic Island dla sesji czytania — natywny iOS
-// Pokazuje: książka/rozdział, progress 1/5, odliczanie do odblokowania, hearts
-
 struct ReadingSessionAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var bookTitle: String
@@ -25,12 +22,12 @@ final class ReadingSessionActivityManager: ObservableObject {
     static let shared = ReadingSessionActivityManager()
     private var activity: Activity<ReadingSessionAttributes>?
 
-    func start(book: Book, chapter: Chapter, total: Int = 5) {
+    func start(bookId: String, bookTitle: String, chapterId: String, chapterTitle: String, total: Int = 5) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let attrs = ReadingSessionAttributes(sessionId: UUID().uuidString, bookId: book.id, chapterId: chapter.id)
+        let attrs = ReadingSessionAttributes(sessionId: UUID().uuidString, bookId: bookId, chapterId: chapterId)
         let state = ReadingSessionAttributes.ContentState(
-            bookTitle: book.title,
-            chapterTitle: chapter.title,
+            bookTitle: bookTitle,
+            chapterTitle: chapterTitle,
             progress: 0,
             completed: 0,
             total: total,

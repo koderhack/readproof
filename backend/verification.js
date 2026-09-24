@@ -30,8 +30,9 @@ function runChecks(s, now, isDev) {
   const minimalSec = s.isDemo ? 30 : Math.floor((s.expectedReadingMin || 12) * 60 * 0.35);
   // złagodzone: wczoraj 0.66 było za ostre + demo 60s blokowało szybkie testy; teraz 0.35 i perfect score zwalnia z czasu
   const scoreForMin = Object.values(s.answers || {}).filter((a) => a && a.correct).length;
-  const minPassed = isDev || dur >= minimalSec || scoreForMin === s.challenges.length;
-  checks.push({ name: 'min_duration', passed: minPassed, detail: isDev ? 'dev bypass' : `${dur}s >= ${minimalSec}s${scoreForMin===s.challenges.length?' (perfect score)':''}` });
+  const fullMin = Math.max(4, s.challenges.length - 1); // pełne zrozumienie od 4/5
+  const minPassed = isDev || dur >= minimalSec || scoreForMin >= fullMin;
+  checks.push({ name: 'min_duration', passed: minPassed, detail: isDev ? 'dev bypass' : `${dur}s >= ${minimalSec}s${scoreForMin>=fullMin?' (full score bracket)':''}` });
 
   return {
     checks,
@@ -59,7 +60,8 @@ function hashSession(s, correctFlags, now) {
 function runVerification(s, now = new Date()) {
   const { checks, score, durationSec, correctFlags } = runChecks(s, now, s.isDevBypass);
   const allPassed = checks.filter((c) => !c.passed).length === 0;
-  const verified = allPassed && score === s.challenges.length;
+  const fullMin = Math.max(4, s.challenges.length - 1); // pełne zrozumienie od 4/5
+  const verified = allPassed && score >= fullMin;
 
   let status;
   if (s.suspicious) status = 'Try Again';

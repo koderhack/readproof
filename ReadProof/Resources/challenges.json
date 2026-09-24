@@ -173,6 +173,66 @@
         }
       ],
       "coverUrl": "https://covers.openlibrary.org/b/isbn/9780141439967-L.jpg"
+    },
+    {
+      "id": "kordian",
+      "title": "Kordian",
+      "author": "Juliusz Słowacki",
+      "coverEmoji": "🗡️",
+      "description": "Dramat romantyczny o młodzieńcu poszukującym wielkości: Przygotowanie, Prolog, miłość, próba samobójcza, wędrówka po Europie (London, Italia, Watykan) i spisek koronacyjny w Warszawie. Pełny tekst z domeny publicznej (Wolne Lektury). 5 rozdziałów, 10 challenge'y każdy.",
+      "totalChapters": 5,
+      "rewardPerChapter": "5 USDC",
+      "sourceUrl": "https://wolnelektury.pl/katalog/lektura/kordian/",
+      "license": "Domena publiczna — Wolne Lektury (wolnelektury.pl)",
+      "fullTextFile": "kordian.txt",
+      "chapters": [
+        {
+          "id": "kordian-ch1",
+          "bookId": "kordian",
+          "index": 1,
+          "title": "Przygotowanie",
+          "summary": "Szatan, Czarownica i 10 000 duchów w noc sylwestrową 1799/1800 w chacie Twardowskiego w Karpatach przygotowują los człowieka, który ma się urodzić — los Kordiana.",
+          "contextExcerpt": "PRZYGOTOWANIE — Roku 1799 dnia 31 grudnia w nocy — / chata Twardowskiego w Karpatach; 'Szatani!' — zlatuje 10 000 szatanów, Gehenna i Astaroth liczą wieki.",
+          "reward": "5 USDC"
+        },
+        {
+          "id": "kordian-ch2",
+          "bookId": "kordian",
+          "index": 2,
+          "title": "Prolog",
+          "summary": "Pierwsza Osoba wygłasza proroctwo ducha Apokalipsy wobec siedmiu złotych lichtarzy o męce narodów; Druga Osoba schodzi ku ludziom i ziemi.",
+          "contextExcerpt": "PROLOG — Pierwsza Osoba: 'Boże! zeszlij na lud twój...', 'Jestem duch Apokalipsy', miecz obosieczny, siedem lichtarzy; Druga Osoba — komentarz wobec poety.",
+          "reward": "5 USDC"
+        },
+        {
+          "id": "kordian-ch3",
+          "bookId": "kordian",
+          "index": 3,
+          "title": "Akt pierwszy",
+          "summary": "15-letni Kordian na wsi: służący Grzegorz czyści strzelbę, bajka o Janku, nieszczęśliwa miłość do Laury, gwiazda Kordiana to 'Przyszłość' — a koniec aktu to krzyk o samobójstwie.",
+          "contextExcerpt": "AKT PIERWSZY — SCENA I — 'Chcesz panicz, powiem bajkę'... SCENA II — 'gwiazda Kordiana' = 'Przyszłość'; Grzegorz: 'panicz się zastrzelił!'",
+          "reward": "5 USDC"
+        },
+        {
+          "id": "kordian-ch4",
+          "bookId": "kordian",
+          "index": 4,
+          "title": "Akt drugi",
+          "summary": "Wędrowiec roku 1828: James Park w Londynie, willa Wioletty (przepity majątek), Watykan — Papież nie błogosławi sprawy polskiej, a papuga woła 'Miserere!'.",
+          "contextExcerpt": "AKT DRUGI. ROK 1828. WĘDROWIEC — James Park, 'pens za krzesło'; Rzym — garść ziemi z 10 000 wyrżniętych; 'Niech się Polaki modlą, czczą cara i wierzą'.",
+          "reward": "5 USDC"
+        },
+        {
+          "id": "kordian-ch5",
+          "bookId": "kordian",
+          "index": 5,
+          "title": "Akt trzeci",
+          "summary": "Spisek koronacyjny w Warszawie: hasło 'Winkelried', Kordian mdleje u progu sypialni cara, potem szpital wariatów, Plac Saski i ale Plac Marsowy czeka pluton.",
+          "contextExcerpt": "AKT TRZECI. SPISEK KORONACYJNY — 'To Kordian! Kordian! Kordian!' — Scena ostatnia: Plac Marsowy, nadjeżdża adiutant z ułaskawieniem.",
+          "reward": "5 USDC"
+        }
+      ],
+      "coverUrl": "https://covers.openlibrary.org/b/id/3135358-L.jpg"
     }
   ],
   "challengesByChapter": {
@@ -1682,6 +1742,737 @@
         ],
         "correctAnswer": 0,
         "difficulty": "medium"
+      }
+    ],
+    "kordian-ch1": [
+      {
+        "id": "k1-1",
+        "type": "multiple_choice",
+        "question": "Gdzie rozgrywa się Przygotowanie do dramatu?",
+        "options": [
+          "Chata Twardowskiego w Karpatach",
+          "Zamek królewski w Warszawie",
+          "Park James Park w Londynie",
+          "Willa we Włoszech"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k1-2",
+        "type": "true_false",
+        "question": "Przygotowanie rozgrywa się nocą z 31 grudnia 1799 na 1 stycznia 1800, gdy zaczyna się nowy wiek.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k1-3",
+        "type": "multiple_choice",
+        "question": "Ile tysięcy szatanów zlatuje na wezwanie 'Szatani!'?",
+        "options": [
+          "Dziesięć tysięcy",
+          "Sto",
+          "Trzy tysiące",
+          "Dziesięć"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-4",
+        "type": "multiple_choice",
+        "question": "Jaki przedmiot po Twardowskim nosi przy sobie Szatan?",
+        "options": [
+          "Zgrzebło (grzebień)",
+          "Pistolet",
+          "Pierścień",
+          "Zegar"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-5",
+        "type": "multiple_select",
+        "question": "Które 2 postacie piekielne liczą wieki, zanim wybije godzina?",
+        "options": [
+          "Gehenna",
+          "Astaroth",
+          "Czarownica",
+          "Wiedźma"
+        ],
+        "correctAnswers": [
+          0,
+          1
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-6",
+        "type": "open_question",
+        "question": "Dlaczego Szatan płacze nad losem bohatera w Przygotowaniu?",
+        "context": "Szatan przygotowuje losy człowieka, który ma się narodzić",
+        "expectedMeaning": "Zło osacza bohatera zanim się urodzi — Szatan wie, jaki straszny los (męka, poświęcenie, samotność) czeka Kordiana, i patrzy na niego jak na narzędzie cierpienia",
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-7",
+        "type": "ordering",
+        "question": "Ustaw wydarzenia Przygotowania w kolejności:",
+        "items": [
+          "Czarownica wyprawia gusła w chacie",
+          "Szatan zlatuje w postaci pięknego anioła",
+          "Na wołanie 'Szatani!' zlatuje 10 000 szatanów",
+          "Zegar wybija godzinę nowego wieku"
+        ],
+        "correctOrder": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-8",
+        "type": "what_next",
+        "question": "Co wybija zegar w kluczowym momencie Przygotowania?",
+        "options": [
+          "Północ — koniec roku 1799 i początek nowego stulecia",
+          "Południe w dzień targowy",
+          "Godzinę egzekucji",
+          "Zegar staje i nie wybija nic"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-9",
+        "type": "find_error",
+        "question": "Znajdź nieprawdę o Przygotowaniu:",
+        "statements": [
+          "Chata Twardowskiego znajduje się w Karpatach",
+          "Cała akcja toczy się w południe, w ogrodzie zamkowym",
+          "Na 'Szatani!' spada 10 000 szatanów",
+          "Szatan nosi zgrzebło Twardowskiego"
+        ],
+        "errorIndex": 1,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k1-10",
+        "type": "match",
+        "question": "Dopasuj postać do roli w Przygotowaniu:",
+        "pairs": [
+          {
+            "left": "Szatan",
+            "right": "Zjawia się w postaci pięknego anioła"
+          },
+          {
+            "left": "Czarownica",
+            "right": "Wyprawia gusła i śpiewa"
+          },
+          {
+            "left": "Gehenna",
+            "right": "Liczy wieki przed wybiciem godziny"
+          }
+        ],
+        "difficulty": "medium"
+      }
+    ],
+    "kordian-ch2": [
+      {
+        "id": "k2-1",
+        "type": "multiple_choice",
+        "question": "Kto wypowiada słowa 'Jestem duch Apokalipsy'?",
+        "options": [
+          "Pierwsza Osoba Prologu",
+          "Druga Osoba Prologu",
+          "Czarownica",
+          "Kordian"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k2-2",
+        "type": "true_false",
+        "question": "Pierwsza Osoba Prologu zwraca się do Boga: 'Boże! zeszlij na lud twój...' i prosi o męki niespania dla siebie.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k2-3",
+        "type": "multiple_choice",
+        "question": "Ile złotych lichtarzy otacza ducha Apokalipsy w Prologu?",
+        "options": [
+          "siedem",
+          "dziesięć",
+          "dwanaście",
+          "trzy"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k2-4",
+        "type": "multiple_choice",
+        "question": "Jakiego oręża używa duch Apokalipsy w Prologu?",
+        "options": [
+          "Miecza obosiecznego",
+          "Dzidy rycerskiej",
+          "Topora",
+          "Łuku"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k2-5",
+        "type": "open_question",
+        "question": "Kim jest 'duch Apokalipsy' w Prologu i co zapowiada?",
+        "context": "Chór, siedem lichtarzy, miecz obosieczny",
+        "expectedMeaning": "Nadludzka, biblijna istota zapowiadająca wielkie cierpienia narodów (jak Jan z Apokalipsy) — zwiastun męczeństwa, które spotka ludy i samego bohatera",
+        "difficulty": "medium"
+      },
+      {
+        "id": "k2-6",
+        "type": "what_next",
+        "question": "Czym kończy się Prolog, a zaczyna Akt pierwszy?",
+        "options": [
+          "Na scenę wchodzi nastoletni Kordian w wiejskiej chacie",
+          "Wylatuje Wiedźma na miotle",
+          "Książę Konstanty paraduje w Warszawie",
+          "Kordian wyjeżdża do Anglii"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k2-7",
+        "type": "find_error",
+        "question": "Znajdź nieprawdę o Prologu:",
+        "statements": [
+          "Występuje siedem złotych lichtarzy",
+          "Duch Apokalipsy trzyma miecz obosieczny",
+          "Cały Prolog wypowiadany jest po łacinie",
+          "Druga Osoba schodzi ku ludziom i ziemi"
+        ],
+        "errorIndex": 2,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k2-8",
+        "type": "multiple_select",
+        "question": "Które 2 motywy Apokalipsy pojawiają się w Prologu?",
+        "options": [
+          "Siedem lichtarzy",
+          "Miecz obosieczny",
+          "Latarnia morska",
+          "Waga kupiecka"
+        ],
+        "correctAnswers": [
+          0,
+          1
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k2-9",
+        "type": "true_false",
+        "question": "Druga Osoba Prologu podważa patos Pierwszej Osoby i zstępuje ku ziemskiemu, ludzkiemu wymiarowi.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      }
+    ],
+    "kordian-ch3": [
+      {
+        "id": "k3-1",
+        "type": "multiple_choice",
+        "question": "Ile lat ma Kordian w Akcie pierwszym?",
+        "options": [
+          "15",
+          "17",
+          "21",
+          "12"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k3-2",
+        "type": "multiple_choice",
+        "question": "Jak nazywa się stary i wierny sługa Kordiana?",
+        "options": [
+          "Grzegorz",
+          "Jan",
+          "Tomasz",
+          "Kazimierz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k3-3",
+        "type": "multiple_choice",
+        "question": "Co sługa czyści na początku Sceny I?",
+        "options": [
+          "Strzelbę",
+          "Zegar",
+          "Buty",
+          "Pług"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k3-4",
+        "type": "multiple_choice",
+        "question": "Jak nazywa się ukochana Kordiana?",
+        "options": [
+          "Laura",
+          "Wioletta",
+          "Kalina",
+          "Alicja"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k3-5",
+        "type": "multiple_choice",
+        "question": "Czym jest 'gwiazda Kordiana'?",
+        "options": [
+          "Przyszłość",
+          "Nadzieja",
+          "Kariera wojskowa",
+          "Wielka fortuna"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k3-6",
+        "type": "true_false",
+        "question": "Bajka opowiadana przez Grzegorza dotyczy Janka, którego po nieudanych naukach oddano do szewca.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k3-7",
+        "type": "open_question",
+        "question": "Dlaczego Kordian w Akcie I cierpi mimo młodego wieku?",
+        "context": "Młody panicz na wsi, nieszczęśliwa miłość do Laury",
+        "expectedMeaning": "Nieszczęśliwa miłość do Laury oraz wielkie marzenia o wielkości i przyszłości przy braku prawdziwego czynu — stąd mrok duszy, przygnębienie i próba samobójcza",
+        "difficulty": "medium"
+      },
+      {
+        "id": "k3-8",
+        "type": "who_said",
+        "question": "Kto wypowiada te słowa?",
+        "pairs": [
+          {
+            "left": "Chcesz panicz, powiem bajkę",
+            "right": "Grzegorz"
+          },
+          {
+            "left": "gwiazda Kordiana",
+            "right": "Kordian"
+          },
+          {
+            "left": "panicz się zastrzelił!",
+            "right": "Grzegorz"
+          }
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k3-9",
+        "type": "ordering",
+        "question": "Ustaw wydarzenia Aktu I w kolejności:",
+        "items": [
+          "Grzegorz czyści strzelbę i opowiada bajkę",
+          "Kordian rozmawia z Grzegorzem o wielkiej myśli",
+          "Kordian spotyka Laurę pod gwiazdą 'Przyszłość'",
+          "Grzegorz woła, że panicz się zastrzelił"
+        ],
+        "correctOrder": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k3-10",
+        "type": "what_next",
+        "question": "Czym kończy się Akt pierwszy?",
+        "options": [
+          "Grzegorz krzyczy, że panicz się zastrzelił",
+          "Wojna z Turkami",
+          "Oświadczyny Laury",
+          "Ślub Kordiana i Laury"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k3-11",
+        "type": "true_false",
+        "question": "Na początku utworu Kordian ma 15 lat i mieszka na wsi.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k3-12",
+        "type": "multiple_select",
+        "question": "Które 2 postacie pojawiają się w Akcie I?",
+        "options": [
+          "Grzegorz",
+          "Laura",
+          "Wioletta",
+          "Papież"
+        ],
+        "correctAnswers": [
+          0,
+          1
+        ],
+        "difficulty": "easy"
+      }
+    ],
+    "kordian-ch4": [
+      {
+        "id": "k4-1",
+        "type": "multiple_choice",
+        "question": "W którym roku Kordian wędruje po Europie w Akcie drugim?",
+        "options": [
+          "1828",
+          "1812",
+          "1799",
+          "1830"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k4-2",
+        "type": "multiple_choice",
+        "question": "Od jakiego miejsca zaczyna się Akt drugi?",
+        "options": [
+          "James Park w Londynie",
+          "Rzym i Watykan",
+          "Willa Wioletty we Włoszech",
+          "Mont Blanc"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-3",
+        "type": "multiple_choice",
+        "question": "Czego żąda od przechodniów dozorca w James Park?",
+        "options": [
+          "pens za krzesło",
+          "paszportu i wizy",
+          "wykazania się majątkiem",
+          "opłaty za spacer"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-4",
+        "type": "multiple_choice",
+        "question": "Gdzie Kordian spotyka Wiolettę?",
+        "options": [
+          "We włoskiej willi",
+          "Na londyńskim jarmarku",
+          "W paryskim teatrze",
+          "W hotelu w Berlinie"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-5",
+        "type": "true_false",
+        "question": "Kordian przepił na Wiolettę zawrotny majątek — 'zamek ojców moich stopiłem na złoto'.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-6",
+        "type": "multiple_choice",
+        "question": "Kto wtrąca w Watykanie zakłócenia: 'Miserere!', 'Lacryma Christi', 'De profundis clamavi!'?",
+        "options": [
+          "Papuga",
+          "Papież",
+          "Kardynał",
+          "Grzegorz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-7",
+        "type": "multiple_choice",
+        "question": "Co Papież radzi Polakom w rozmowie z Kordianem?",
+        "options": [
+          "Niech się Polaki modlą, czczą cara i wierzą",
+          "Będę się modlił za ich sprawę",
+          "Polaki, powstańcie!",
+          "Proście o błogosławieństwo cara"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-8",
+        "type": "open_question",
+        "question": "Dlaczego Kordian niesie Papieżowi w Rzymie garść ziemi?",
+        "context": "Watykan, prośba o błogosławieństwo dla Polski",
+        "expectedMeaning": "To ziemia z pól, na których wyrżnięto 10 000 ludzi (dzieci, starców, niewiast) bez sakramentów; Kordian chce obudzić litość i błogosławieństwo dla cierpiącego narodu",
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-9",
+        "type": "who_said",
+        "question": "Kto wypowiada te słowa w Akcie II?",
+        "pairs": [
+          {
+            "left": "pens za krzesło",
+            "right": "Dozorca"
+          },
+          {
+            "left": "Lacryma Christi",
+            "right": "Papuga"
+          },
+          {
+            "left": "Niech się Polaki modlą, czczą cara i wierzą",
+            "right": "Papież"
+          }
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-10",
+        "type": "ordering",
+        "question": "Ustaw kolejność miejsc odwiedzanych przez Kordiana w Akcie II:",
+        "items": [
+          "James Park w Londynie",
+          "Willa Wioletty we Włoszech",
+          "Watykan w Rzymie",
+          "Mont Blanc"
+        ],
+        "correctOrder": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k4-11",
+        "type": "multiple_select",
+        "question": "Które 2 kraje odwiedza Kordian w Akcie drugim?",
+        "options": [
+          "Anglia",
+          "Italia",
+          "Persja",
+          "Peru"
+        ],
+        "correctAnswers": [
+          0,
+          1
+        ],
+        "difficulty": "easy"
+      }
+    ],
+    "kordian-ch5": [
+      {
+        "id": "k5-1",
+        "type": "multiple_choice",
+        "question": "Gdzie dzieje się Akt trzeci?",
+        "options": [
+          "Warszawa — plac przed zamkiem, grobowce, Plac Saski",
+          "Londyn",
+          "Paryż",
+          "Kraków"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k5-2",
+        "type": "multiple_choice",
+        "question": "Czyja koronacja jest tłem spisku?",
+        "options": [
+          "Rosyjskiego cara",
+          "Króla Anglii",
+          "Cesarza Napoleona",
+          "Króla Hiszpanii"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k5-3",
+        "type": "multiple_choice",
+        "question": "Jakie jest hasło spiskowców zebranych w grobowcach?",
+        "options": [
+          "Winkelried",
+          "Wilno",
+          "Wolność",
+          "Zemsta"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k5-4",
+        "type": "multiple_choice",
+        "question": "Kim według Podchorążego był Winkelried?",
+        "options": [
+          "Szwajcarskim dowódcą, który wbił we własne serce dzidy wrogów i otworzył drogę",
+          "Rosyjskim szpiegiem",
+          "Polskim rycerzem",
+          "Księciem litewskim"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k5-5",
+        "type": "true_false",
+        "question": "W Akcie III Kordian mdleje na progu sypialni cara i nie dokonuje zamachu.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k5-6",
+        "type": "what_next",
+        "question": "Co robi car, gdy potyka się o zemdlałego Kordiana?",
+        "options": [
+          "Rani go szpadą w rękę i każe przywołać straż",
+          "Każe go natychmiast ułaskawić",
+          "Ucieka do innego skrzydła",
+          "Wypuszcza go samodzielnie"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium"
+      },
+      {
+        "id": "k5-7",
+        "type": "multiple_choice",
+        "question": "Dokąd — na polecenie cara — trafia żywy Kordian?",
+        "options": [
+          "Do szpitala wariatów",
+          "Do majątku rodzinnego",
+          "Do cytadeli w Petersburgu",
+          "Do klasztoru"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k5-8",
+        "type": "open_question",
+        "question": "Dlaczego 'doktor' w szpitalu (Szatan) stara się przekonać Kordiana, że jego ofiara jest bezsensowna?",
+        "context": "Szpital wariatów, zmagania z gorączką",
+        "expectedMeaning": "Szatan chce zgasić wiarę Kordiana w sens poświęcenia: pokazuje mu waryjatów i wyśmiewa 'wielkich ludzi' — tak próbuje doprowadzić do zwątpienia i załamania bohatera",
+        "difficulty": "medium"
+      },
+      {
+        "id": "k5-9",
+        "type": "who_said",
+        "question": "Kto wypowiada te słowa?",
+        "pairs": [
+          {
+            "left": "To Kordian! Kordian! Kordian! nie znasz nas, Kordianie!",
+            "right": "Spiskowcy"
+          },
+          {
+            "left": "Słuchaj! mówię biciem serca.",
+            "right": "Strach"
+          },
+          {
+            "left": "Wziąść go, prowadzić zaraz na śmierć i na męki!",
+            "right": "Wielki Książę Konstanty"
+          }
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k5-10",
+        "type": "true_false",
+        "question": "Na Placu Saskim Kordian jedzie konno i przeskakuje piramidę z bagnetów.",
+        "options": [
+          "Prawda",
+          "Fałsz"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
+      },
+      {
+        "id": "k5-11",
+        "type": "ordering",
+        "question": "Ustaw wydarzenia Aktu III w kolejności:",
+        "items": [
+          "Spiskowcy w grobowcach uzgadniają zabójstwo cara",
+          "Kordian mdleje u progu sypialni cara",
+          "Car oddaje Kordiana do szpitala wariatów",
+          "Wielki Książę prowadzi Kordiana na Plac Saski"
+        ],
+        "correctOrder": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "difficulty": "medium"
+      },
+      {
+        "id": "k5-12",
+        "type": "what_next",
+        "question": "Czym kończy się utwór (Scena ostatnia, Plac Marsowy)?",
+        "options": [
+          "Do plutonu dojeżdża adiutant z ułaskawieniem",
+          "Kordian ucieka konno do lasu",
+          "Straż zaciąga Kordiana do więzienia",
+          "Kordian zostaje koronowany"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "easy"
       }
     ]
   }

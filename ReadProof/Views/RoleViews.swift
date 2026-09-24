@@ -157,41 +157,60 @@ private struct RoleCard: View {
 
 struct RoleTabsView: View {
     @EnvironmentObject var loc: LocalizationService
+    @EnvironmentObject var appState: AppState
     let role: UserRole
     @State private var selected = 0
+    @State private var showingLogout = false
 
     var body: some View {
-        TabView(selection: $selected) {
-            switch role {
-            case .student:
-                HomeView()
-                    .tabItem { Label(loc.t("Start", "Home"), systemImage: "house") }.tag(0)
-                ChallengeFlowView()
-                    .tabItem { Label(loc.t("Wyzwania", "Challenges"), systemImage: "list.bullet.rectangle") }.tag(1)
-                ProofsListView()
-                    .tabItem { Label(loc.t("Certyfikaty", "Certificates"), systemImage: "checkmark.seal") }.tag(2)
-                PassportView()
-                    .tabItem { Label(loc.t("Profil", "Profile"), systemImage: "person.text.rectangle") }.tag(3)
-            case .reader:
-                HomeView()
-                    .tabItem { Label(loc.t("Start", "Home"), systemImage: "house") }.tag(0)
-                ProofsListView()
-                    .tabItem { Label(loc.t("Dowody", "Proofs"), systemImage: "checkmark.seal") }.tag(1)
-                PassportView()
-                    .tabItem { Label(loc.t("Profil", "Profile"), systemImage: "person.text.rectangle") }.tag(2)
-            case .teacher:
-                HomeView()
-                    .tabItem { Label(loc.t("Klasy", "Classes"), systemImage: "person.2") }.tag(0)
-                ChallengeFlowView()
-                    .tabItem { Label(loc.t("Zadania", "Assignments"), systemImage: "list.bullet.rectangle") }.tag(1)
-                ProofsListView()
-                    .tabItem { Label(loc.t("Uczniowie", "Students"), systemImage: "checkmark.seal") }.tag(2)
-                PassportView()
-                    .tabItem { Label(loc.t("Profil", "Profile"), systemImage: "person.text.rectangle") }.tag(3)
+        NavigationStack {
+            TabView(selection: $selected) {
+                switch role {
+                case .student:
+                    HomeView()
+                        .tabItem { Label(loc.t("Start", "Home"), systemImage: "house") }.tag(0)
+                    ChallengeFlowView()
+                        .tabItem { Label(loc.t("Wyzwania", "Challenges"), systemImage: "list.bullet.rectangle") }.tag(1)
+                    ProofsListView()
+                        .tabItem { Label(loc.t("Certyfikaty", "Certificates"), systemImage: "checkmark.seal") }.tag(2)
+                    PassportView()
+                        .tabItem { Label(loc.t("Profil", "Profile"), systemImage: "person.text.rectangle") }.tag(3)
+                case .reader:
+                    HomeView()
+                        .tabItem { Label(loc.t("Start", "Home"), systemImage: "house") }.tag(0)
+                    ProofsListView()
+                        .tabItem { Label(loc.t("Dowody", "Proofs"), systemImage: "checkmark.seal") }.tag(1)
+                    PassportView()
+                        .tabItem { Label(loc.t("Profil", "Profile"), systemImage: "person.text.rectangle") }.tag(2)
+                case .teacher:
+                    HomeView()
+                        .tabItem { Label(loc.t("Klasy", "Classes"), systemImage: "person.2") }.tag(0)
+                    ChallengeFlowView()
+                        .tabItem { Label(loc.t("Testy", "Tests"), systemImage: "checklist") }.tag(1)
+                    ProofsListView()
+                        .tabItem { Label(loc.t("Dowody", "Proofs"), systemImage: "checkmark.seal") }.tag(2)
+                }
             }
+            .tint(role == .teacher ? Color(hex: "#8A6D00") : role.accent)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { showingLogout = true }) {
+                        Label(loc.t("Wyloguj", "Logout"), systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    .alert(isPresented: $showingLogout) {
+                        Alert(
+                            title: Text(loc.t("Wylogować?", "Logout?")),
+                            message: Text(loc.t("Czy na pewno chcesz wylogować?", "Are you sure you want to logout?")),
+                            primaryButton: .destructive(Text(loc.t("Wyloguj", "Logout"))) {
+                                appState.logout()
+                            },
+                            secondaryButton: .cancel()
+                        )
+                    }
+                }
+            }
+            .onAppear { setupTabBar() }
         }
-        .tint(role == .teacher ? Color(hex: "#8A6D00") : role.accent)
-        .onAppear { setupTabBar() }
     }
 
     private func setupTabBar() {

@@ -12,6 +12,9 @@ Pods/
 backend/node_modules/
 backend/.env
 backend/readproof.db
+teacher-panel/node_modules/
+teacher-panel/dist/
+social/teaser/node_modules/
 *.log
 .DS_Store
 /tmp/
@@ -19,6 +22,10 @@ backend/readproof.db
 backend/certs/key.pem
 backend/*.bak*
 backend/texts/campaign_*
+.impeccable/
+.wrangler/
+readproof-site/.wrangler/
+test-results/
 
 # Sekrety i klucze — NIGDY do repo
 pitch/.secrets/

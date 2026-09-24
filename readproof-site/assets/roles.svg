@@ -38,6 +38,19 @@
     <rect x="52" y="120" width="34" height="44" rx="3" fill="#fff" stroke="#B98A2F" stroke-width="3"/>
     <path d="M59 130h20M59 138h20M59 146h14" stroke="#B98A2F" stroke-width="2.5" stroke-linecap="round"/>
   </symbol>
+  <symbol id="rp-publisher" viewBox="0 0 320 200">
+    <rect width="320" height="200" rx="14" fill="#FBF2DD"/>
+    <circle cx="160" cy="84" r="52" fill="#F0DFAE"/>
+    <circle cx="160" cy="70" r="23" fill="#F2C9A0"/>
+    <path d="M140 64c3-12 11-18 22-18 10 0 18 6 21 17-1 3-2 3-3 2-5-6-16-8-23-5-4-2-9-2-12 1-2 2-4 1-5-1 0 2 0 4 0 4z" fill="#5A3B20"/>
+    <path d="M114 150c2-18 19-28 46-28s43 10 46 28l-8 14H122z" fill="#8A5F16"/>
+    <path d="M96 122l28-12v38l-28 11z" fill="#fff" stroke="#B98A2F" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M100 150l24-10" stroke="#B98A2F" stroke-width="3" stroke-linecap="round"/>
+    <path d="M101 139l20-9M101 130l20-9" stroke="#E4D3A3" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="254" cy="46" r="17" fill="#B98A2F"/>
+    <circle cx="254" cy="46" r="11" fill="#F8F0DA"/>
+    <path d="M249 46l3 3 7-7" stroke="#B98A2F" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
   <symbol id="rp-flow" viewBox="0 0 320 120">
     <rect width="320" height="120" rx="14" fill="#fff"/>
     <g font-family="Inter,sans-serif" font-size="13" font-weight="700" text-anchor="middle">

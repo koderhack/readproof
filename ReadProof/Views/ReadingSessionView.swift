@@ -300,7 +300,7 @@ struct ReadingSessionView: View {
                 let s = try await BackendService.shared.startSession(bookId: book.id, chapterId: chapter.id, walletAddress: wallet)
                 sessionId = s.id; challenges = s.challenges; starting=false; cooldownUntil=nil; hearts = maxHearts; completed = []; answers = [:]; lastResult = nil; lastCorrectText = nil; aiBlocked = false
             }
-            ReadingSessionActivityManager.shared.start(book: book, chapter: chapter, total: challenges.count)
+            ReadingSessionActivityManager.shared.start(bookId: book.id, bookTitle: book.title, chapterId: chapter.id, chapterTitle: chapter.title, total: challenges.count)
             cameraMonitor.start() // anty-zdjęcie drugim telefonem — dopiero gdy sesja naprawdę ruszyła
             updateLive()
         } catch BackendService.GenError.cooldown(let retryAfter, let until) {

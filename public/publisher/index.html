@@ -247,40 +247,6 @@ label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin:10p
     <div id="booksList" class="grid"><div class="muted">Ładowanie…</div></div>
   </section>
   <hr class="perf">
-
-  <!-- CTA + REJESTRACJA -->
-  <section class="section" id="secNew">
-    <div class="cta-band">
-      <h3>Gotowy, by wydać własną kampanię?</h3>
-      <p>Trzy kroki: rejestracja (draft) → wgraj treść → ufunduj pulę. Bez treści i funduszy kampania zostaje szkicem i sesje nie wystartują. Nagroda domyślnie 5 USDC (Devnet) za zweryfikowany dowód.</p>
-      <button class="btn gold" id="btnScrollRegister"><svg class="ic"><use href="#i-plus"/></svg> Zarejestruj kampanię</button>
-      <span class="muted" style="font-size:12px;color:#B9A87F;margin-left:8px">formularz tuż pod przyciskiem ↓</span>
-    </div>
-    <div class="card sealed" id="registerCard" style="margin-top:16px">
-      <h2 style="font-size:22px"><svg class="ic"><use href="#i-plus"/></svg> Rejestracja kampanii</h2>
-      <p class="sub">Krok 1 z 3: utwórz wersję roboczą (<code>draft</code>), potem dodaj treść i ufunduj pulę w szczegółach powyżej.</p>
-      <label for="nWallet">Portfel wydawcy (Solana Devnet)</label>
-      <div class="row">
-        <input id="nWallet" placeholder="np. 9W3k6Vuhq8KMz9Et8vB9o3b6a7C2dEfGhJkLmNoPqRsTu" class="mono" style="flex:1;min-width:220px">
-        <button class="btn ghost sm" id="btnUseConnected">Użyj zalogowanego</button>
-      </div>
-      <div class="row">
-        <div style="flex:2;min-width:200px"><label for="nTitle">Tytuł *</label><input id="nTitle" placeholder="Boska Komedia — Piekło"></div>
-        <div style="flex:1;min-width:160px"><label for="nAuthor">Autor</label><input id="nAuthor" placeholder="Dante Alighieri"></div>
-      </div>
-      <div class="row">
-        <div style="flex:1;min-width:160px"><label for="nIsbn">ISBN (10/13)</label><input id="nIsbn" placeholder="9780140448955" class="mono"></div>
-        <div style="flex:1;min-width:120px"><label for="nReward">Nagroda / dowód</label><input id="nReward" type="number" value="5" min="1"></div>
-        <div style="flex:1;min-width:120px"><label for="nCurrency">Waluta</label><select id="nCurrency"><option>USDC</option><option>SOL</option></select></div>
-      </div>
-      <label for="nDesc">Opis</label>
-      <textarea id="nDesc" placeholder="Krótki opis kampanii…" style="min-height:60px"></textarea>
-      <label for="nCover">Okładka (URL, opcjonalnie)</label>
-      <input id="nCover" placeholder="https://covers.openlibrary.org/b/isbn/9780140448955-L.jpg">
-      <div class="row" style="margin-top:12px"><button class="btn" id="btnCreate"><svg class="ic"><use href="#i-plus"/></svg> Utwórz kampanię</button></div>
-      <div id="createMsg" style="margin-top:8px"></div>
-    </div>
-  </section>
 </main>
 
 <footer class="footer"><div class="wrap">
@@ -316,7 +282,6 @@ function paintAuth(){
   $('privyState').title = w || 'Status portfela';
   $('btnLogout').classList.toggle('hidden', !w);
   $('mineWalletHint').textContent = w || 'zaloguj się powyżej';
-  if(w && !$('nWallet').value) $('nWallet').value = w;
   if(w && !$('fWallet').value) $('fWallet').value = w;
 }
 $('btnSaveIds').addEventListener('click', ()=>{
@@ -326,9 +291,7 @@ $('btnSaveIds').addEventListener('click', ()=>{
   if(man) setWallet(man); else paintAuth();
   if(appId) mountPrivy();
 });
-$('btnUseConnected').addEventListener('click', ()=>{ const w=getWallet(); if(w){ $('nWallet').value=w; } });
 $('btnLogout').addEventListener('click', ()=>{ setWallet(''); renderMine(); renderStats(); });
-$('btnScrollRegister').addEventListener('click', ()=>{ $('registerCard').scrollIntoView({behavior:'smooth',block:'center'}); $('nTitle').focus({preventScroll:true}); });
 /* Phantom direct */
 $('btnPhantom').addEventListener('click', async ()=>{
   try{
@@ -389,7 +352,7 @@ async function mountPrivy(){
 }
 $('btnPrivy').addEventListener('click', ()=>{
   const appId = (localStorage.getItem('readproof_privy_app_id')||'').trim() || $('privyAppId').value.trim() || PRIVY_DEFAULT_APP_ID;
-  if(!appId){ $('registerCard').scrollIntoView({behavior:'smooth'}); $('privyAppId').focus(); alert('Wklej najpierw Privy App ID (dashboard.privy.io). Bez niego użyj Phantom / ręcznego adresu.'); return; }
+  if(!appId){ $('privyAppId').focus(); alert('Wklej najpierw Privy App ID (dashboard.privy.io). Bez niego użyj Phantom / ręcznego adresu.'); return; }
   localStorage.setItem('readproof_privy_app_id', appId);
   mountPrivy();
   $('privyRoot').scrollIntoView({behavior:'smooth',block:'center'});
@@ -419,7 +382,7 @@ function renderMine(){
   $('mineCount').textContent = w ? `(${list.length}/${MINE.length})` : '';
   $('mineList').innerHTML = !w
     ? '<div class="empty">Zaloguj portfel, aby zobaczyć swoje kampanie. Bez logowania widzisz poniżej ostatnie kampanie publiczne.</div>'
-    : (list.map(cardHTML).join('') || '<div class="empty">Brak kampanii dla tego portfela — zarejestruj pierwszą przyciskiem poniżej.</div>');
+    : (list.map(cardHTML).join('') || '<div class="empty">Brak kampanii dla tego portfela.</div>');
   bindOpen($('mineList'));
 }
 document.querySelectorAll('[data-mfilter]').forEach(b=>b.addEventListener('click',()=>{
@@ -543,17 +506,6 @@ async function openDetail(id){
     $('dStats').innerHTML = `<div class="err">Nie udało się pobrać kampanii: ${esc(e.message)}</div>`;
   }
 }
-
-$('btnCreate').addEventListener('click', async () => {
-  try {
-    const body = {publisherWallet: $('nWallet').value.trim(), title: $('nTitle').value.trim(), author: $('nAuthor').value.trim(), isbn: $('nIsbn').value.trim(), description: $('nDesc').value.trim(), rewardPerProof: Number($('nReward').value)||5, currency: $('nCurrency').value, coverUrl: $('nCover').value.trim() || undefined};
-    const j = await api('/api/publisher/campaigns', {method:'POST', body: JSON.stringify(body)});
-    if(body.publisherWallet) setWallet(body.publisherWallet);
-    $('createMsg').innerHTML = `<div class="ok">Utworzono <b>${esc(j.campaign.id)}</b> (draft). Dodaj treść i ufunduj pulę. <button class="btn sm" onclick="location.search='?campaign=${esc(j.campaign.id)}'">Otwórz szczegóły</button></div>`;
-    const rej = await api('/api/publisher/campaigns'); ALL = rej.campaigns||[]; $('campCount').textContent=`(${ALL.length})`;
-    $('campList').innerHTML = ALL.map(cardHTML).join(''); bindOpen($('campList')); renderMine(); renderStats();
-  } catch(e){ $('createMsg').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
-});
 
 init();
 </script>

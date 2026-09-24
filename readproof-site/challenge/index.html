@@ -19,15 +19,15 @@
 <body>
   <nav class="rp-nav">
     <div class="wrap">
-      <a class="rp-brand" href="/"><span class="rp-brand-mark">R</span>ReadProof</a>
+      <a class="rp-brand" href="/"><span class="rp-brand-mark"><img src="/assets/icon.png" alt=""></span>ReadProof</a>
       <div class="rp-links">
-        <a href="/students/" class="keep" data-i18n="nav_students">Students</a>
-        <a href="/teachers/" class="keep" data-i18n="nav_teachers">Teachers</a>
+        <a href="/app/" data-i18n="nav_challenges">Challenges</a>
         <a href="/publishers/" data-i18n="nav_publishers">Publishers</a>
-        <a href="/verify/" data-i18n="nav_verify">Verify</a>
+        <a href="/teachers/"><span data-i18n="nav_teachers">Teachers</span></a>
+        <a href="/students/"><span data-i18n="nav_students">Students</span></a>
         <span class="lang-sw" role="group" aria-label="Language / Język"><button data-lang="pl">PL</button><button
             data-lang="en">EN</button></span>
-        <a href="/" class="cta" data-i18n="nav_home">Home</a>
+        <a href="/app/" class="cta" data-i18n="cta_explore_ch">Explore Challenges</a>
       </div>
     </div>
   </nav>
@@ -36,14 +36,12 @@
     <section class="rp-section tight">
       <p class="rp-kicker"><svg class="ic">
           <use href="/assets/icons.svg#i-chart" />
-        </svg> <span data-i18n="ch_k">Live from the network</span> · <span class="mono"><span class="api-dot"
-            id="apiDot"></span><span id="apiStatus">connecting…</span></span></p>
+        </svg> <span data-i18n="ch_k">Reading challenges</span></p>
       <h1 class="rp-h2" data-i18n="ch_h">Reading challenges.</h1>
-      <p class="rp-sub" data-i18n="ch_sub">Publishers create challenges around books and fund reward pools. Readers
-        participate, ReadProof verifies understanding, rewards go out by predefined rules. Everything below is live
-        network data.</p>
-      <div id="chList">
-        <p class="muted">Loading challenges…</p>
+      <p class="rp-sub" data-i18n="ch_sub">Publiczne wyzwania czytelnicze pojawią się wkrótce. Na razie otwórz aplikację webową i czytaj wbudowane lektury.</p>
+      <div class="rp-actions" style="margin-top:14px">
+        <a class="btn btn-primary" href="/app/" data-i18n="cta_explore_ch">Explore Challenges</a>
+        <a class="btn btn-ghost" href="/" data-i18n="ch_back">Back home</a>
       </div>
     </section>
 
@@ -76,7 +74,7 @@
       <h2 class="rp-h2" data-i18n="ch_want">Want a challenge for your book?</h2>
       <p class="rp-sub" data-i18n="ch_want_sub">Publishers create and fund challenges in the publisher panel.</p>
       <div class="rp-actions" style="justify-content:center">
-        <a class="btn btn-primary" href="/publishers/#panel" data-i18n="pub_panel">Publisher panel</a>
+        <a class="btn btn-primary" href="/publishers/" data-i18n="pub_panel">Publisher panel — coming soon</a>
         <a class="btn btn-ghost" href="/" data-i18n="ch_back">Back home</a>
       </div>
     </section>
@@ -90,16 +88,12 @@
     </div>
   </footer>
 
+  <script src="/assets/api.js"></script>
   <script>
     (async function () {
-      const BASES = ['https://frog02-32287.wykr.es'];
-
       const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
       async function apiGet(path) {
-        for (const b of BASES) {
-          try { const r = await fetch(b + path); if (r.ok) return await r.json(); } catch (e) { }
-        }
-        throw new Error('offline');
+        return ReadProofAPI.request(path);
       }
       const VERIFIED = ['Reading Verified', 'Comprehension Verified', 'verified'];
       const T = (k, fb) => (window.rpT ? window.rpT(k, fb) : fb);
