@@ -12,6 +12,7 @@ const PORTFOLIO_PATHS = new Set(['/api/subscribe', '/api/unsubscribe']);
 // Dopisuj tu KAŻDĄ nową ścieżkę ReadProof, inaczej trafi do DiabCalc i katalog
 // książek wraca pusty.
 const READPROOF_PATHS = [
+  '/health',
   '/api/books',
   '/api/catalog',
   '/api/sessions',
