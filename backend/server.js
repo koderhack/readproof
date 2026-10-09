@@ -9,12 +9,24 @@ import { execFile } from 'child_process';
 import mysql from 'mysql2/promise';
 import { runVerification } from './verification.js';
 import { detectAIWriting, AI_DETECTOR_INFO } from './aiDetector.js';
+import {
+  ANCHOR_VERSION, buildAnchorMemo, parseAnchorMemo, compareWithRow,
+  writeAnchorMemo, readAnchorFromChain,
+} from './anchor.js';
+import { detectChaptersDetailed } from './chapters.js';
+import { runOcrText, parseOcrAnswers, readSheetWithVision, mergeSheetAnswers, visionAvailable } from './paperSheet.js';
+import { createDbHelpers } from './dbHelpers.js';
+import { isApproved as roleIsApproved, isSuspended as roleIsSuspended } from './approval.js';
+import { sanitizeSecurePolicy } from './securityEvents.js';
+import { registerRoleAuth } from './routes/roleAuth.js';
+import { registerAdmin, ensureBootstrapAdmin } from './routes/admin.js';
+import { createSecureSessionStore, registerSecure } from './routes/secure.js';
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 32288;
 const JEV_THRESHOLD = Number(process.env.JEV_THRESHOLD) || 0.28;
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
 // Jev — TypeSafe https://docs.typesafe.ai/api  (POST https://api.typesafe.ai/v1/systemone)
 const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY || process.env.JEV_API_KEY || '';
 const TYPESAFE_MODEL = process.env.TYPESAFE_MODEL || 'jev-latest';
@@ -24,12 +36,12 @@ const SOLANA_PAYER_PRIVATE_KEY = process.env.SOLANA_PAYER_PRIVATE_KEY || ''; // 
 const USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'; // Circle USDC Devnet
 const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-const PRIVACY_COPY = "ReadProof — Proof of Comprehension, not proof of physical reading. We store ONLY: walletAddress, bookId, chapterId, session_start/end, reading_duration, proof_hash (SHA-256). NEVER stored on-chain: book content, answers, prompts. Book content stays server-only (never full book on-chain). Solana Devnet ONLY (USDC/SOL test funds, no real money). Free LLM routing only. See /api/privacy.";
+const PRIVACY_COPY = "ReadProof — Proof of Comprehension, not proof of physical reading. We store ONLY: walletAddress, bookId, chapterId, session_start/end, reading_duration, proof_hash (SHA-256). Each certificate is additionally anchored on Solana Devnet as a signed Memo (SPL Memo v2) containing ONLY: certificate id, kind, wallet, book id, chapter id, score/total, status, issue timestamp and an anchorHash over those fields. NEVER stored on-chain: book content, answers, prompts, reader name. Book content stays server-only (never full book on-chain). Solana Devnet ONLY (USDC/SOL test funds, no real money). Free LLM routing only. See /api/privacy.";
 const PRIVACY_SHORT = "Privacy: wallet, book, chapter, duration, proof hash only. No content on-chain. Devnet only.";
 const ALLOWED_ORIGINS = ['*'];
 const corsOptions = {
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Lang', 'X-User-Id', 'X-Apple-User', 'X-Dev-Mode', 'X-Dev-Password'],
   credentials: false
 };
@@ -55,6 +67,17 @@ for(const k of Object.keys(challengesByChapter||{})) challengesByChapter[k] = sa
 
 function poolForChapter(chapterId){ return challengesByChapter[chapterId] || []; }
 
+// Bezpieczna liczba z wartością zapasową (kwoty, wyniki, rozmiary pul).
+const numOr = (v, d) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
+
+// Jedyny zapis pul do dysku. challenges.json jest źródłem prawdy dla pytań
+// (readproof_challenges jest tylko zrzutem), więc wszystkie mutacje — w tym
+// zatwierdzanie w panelu wydawcy — muszą iść tędy.
+function persistChallenges(){
+  try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); return true; }
+  catch(e){ console.error('[challenges] persist failed', e.message); return false; }
+}
+
 // Generowanie puli pytań — używane TYLKO przez warmAllPools (i ewentualnie POST /api/generate), NIGDY przy starcie sesji
 async function generateChapterPool(chapter, target=10, lang='pl'){
   let pool = poolForChapter(chapter.id);
@@ -63,14 +86,30 @@ async function generateChapterPool(chapter, target=10, lang='pl'){
     const generated = await callOpenRouterGenerate(chapter, Math.min(target, 15), lang);
     pool = pool.concat(sanitizePool(generated));
     challengesByChapter[chapter.id] = pool;
-    try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+    persistChallenges()
+    // Pula EN tego rozdziałiu ma stary podpis ID → przy najbliższym starcie EN
+    // zostanie przebudowana leniwie (ensureEnPool). Nic nie robimy w tle, bo
+    // warmAllPools odpala to dla 100+ rozdziałów i wybiłoby limit Google (429).
     console.log(`[pool-gen] +${generated.length} → pool ${pool.length} (${chapter.id})`);
   }catch(e){ console.error(`[pool-gen] fail (${chapter.id}): ${e.message}`); }
   return pool.length;
 }
 
+// Status pytania w puli:
+//   'approved' — dopuszczone do losowania w sesji czytelnika
+//   'draft'     — wygenerowane, czeka na zatwierdzenie wydawcy
+//   'rejected'  — odrzucone przez wydawcę, nigdy nie wchodzi do sesji
+// Brak pola = 'approved' (wsteczna zgodność z istniejącą pulą).
+const Q_STATUSES = new Set(['approved','draft','rejected']);
+function qStatus(c){ return Q_STATUSES.has(String(c?.status||'')) ? String(c.status) : 'approved'; }
+function isQuestionApproved(c){ return qStatus(c)==='approved'; }
+// Pula dopuszczona do losowania — tylko zatwierdzone pytania.
+function approvedPool(chapterId){
+  return poolForChapter(chapterId).filter(isQuestionApproved);
+}
+
 function pickFive(chapterId) {
-  const pool = poolForChapter(chapterId);
+  const pool = approvedPool(chapterId);
   if (!pool.length) return [];
   let shuffled = [...pool].sort(() => Math.random() - 0.5);
   let picked = [];
@@ -119,7 +158,7 @@ function optIndex(v, opts){
   }
   return -1;
 }
-function normalizeChallenge(c){
+function normalizeChallenge(c, lang='pl'){
   if(!c||typeof c!=='object') return c;
   const n={...c};
   if(n.correct_answer!==undefined && n.correctAnswer===undefined){ n.correctAnswer=n.correct_answer; delete n.correct_answer; }
@@ -143,7 +182,7 @@ function normalizeChallenge(c){
       else if(['false','nie','falsz','fałsz','no','f','n','nieprawda','nieprawdziwe','nieprawdziwy','bledne','błędne','następuje'].includes(sv)) b=false;
       else b = (Number(n.correctAnswer) !== 1); // brak dopasowania — traktuj wg indeksu (0=Prawda, 1=Fałsz)
     }
-    n.options=['Prawda','Fałsz'];
+    n.options = (lang==='en' ? ['True','False'] : ['Prawda','Fałsz']);
     n.correctAnswer = b?0:1;
     if(!n.question || !String(n.question).trim()) n.question = 'Czy poniższe zdanie jest prawdziwe?';
   } else if(n.type==='multiple_choice'||n.type==='what_next'){
@@ -168,15 +207,19 @@ function sanitizePool(list){
     const n=normalizeChallenge(raw);
     if(!n||!CORE.has(n.type)||!n.question||!String(n.question).trim()) continue;
     if(n.type==='multiple_choice'||n.type==='what_next'){ if(!Array.isArray(n.options)||n.options.length<2||!Number.isInteger(n.correctAnswer)||n.correctAnswer<0||n.correctAnswer>=n.options.length) continue; }
-    else if(n.type==='multiple_select'){ if(!Array.isArray(n.options)||n.options.length<2||!Array.isArray(n.correctAnswers)||!n.correctAnswers.length) continue; }
+    // multiple_select z correctAnswers === wszystkie opcje to pytanie bez odpowiedzi:
+    // czytelnik musi zaznaczyć całą listę, żeby trafić. LLM generuje takie regularnie
+    // („Które zwierzęta porzucili gospodarze?" → cztery z czterech), więc odrzucamy.
+    else if(n.type==='multiple_select'){ if(!Array.isArray(n.options)||n.options.length<2||!Array.isArray(n.correctAnswers)||!n.correctAnswers.length) continue; if(n.correctAnswers.length>=n.options.length) continue; }
     else if(n.type==='true_false'){ /* zawsze poprawne po normalizeChallenge */ }
     else if(!n.expectedMeaning||!String(n.expectedMeaning).trim()) continue;
     out.push(n);
   }
   return out;
 }
-function pickForSession(chapterId, lang='pl'){
-  const pool = poolForChapter(chapterId);
+// Losowanie 5 pytań z puli: różnorodność typów + 2 pytania otwarte (żeby sam
+// GPT nie wystarczył). Używane też dla puli EN — dlatego jest czysto na liście.
+function pickFromPool(pool){
   let shuffled = [...pool].sort(()=>Math.random()-0.5);
   let picked=[];
   let used=new Set();
@@ -185,20 +228,36 @@ function pickForSession(chapterId, lang='pl'){
     if(!used.has(c.type) || picked.length>=3){ picked.push(c); used.add(c.type); }
   }
   if(picked.length<5) for(const c of shuffled) if(!picked.find(p=>p.id===c.id) && picked.length<5) picked.push(c);
-  // 2 otwarte na sesję — aby AI/GPT nie wystarczyło
   const jevs = pool.filter(c=>c.type==='open_question'||c.type==='why_question');
   let jevCount = picked.filter(c=>c.type==='open_question'||c.type==='why_question').length;
   for(const jev of jevs){ if(jevCount>=2) break; if(!picked.find(p=>p.id===jev.id)){ picked[picked.length%5]=jev; jevCount++; } }
   return picked.slice(0,5);
 }
+function pickForSession(chapterId, lang='pl'){ return pickFromPool(poolForChapter(chapterId)); }
 const SESSION_TIMING_DEMO = [0, 0, 0, 0, 0];
 const SESSION_TIMING_DEV = [0, 0, 0, 0, 0]; // admin dev mode — natychmiastowe odblokowanie
 const SESSION_TIMING_REAL = [0, 300, 600, 900, 1200]; // 5 min / pytanie — bez blokady czasowej, spokojne czytanie
 
+// Pola, które zdradzają klucz odpowiedzi. Publiczny podgląd puli (np. strona
+// /verify/ budująca opis dowodu) oraz sesja czytelnika dostają treść pytania, ale
+// NIE poprawną odpowiedź ani expectedMeaning — inaczej dałoby się zlać test
+// przed przeczytaniem książki. Ocenianie zawsze robi serwer.
+const ANSWER_SECRET_FIELDS = ['correctAnswer','correctAnswers','correctOrder','errorIndex','expectedMeaning','expected_meaning','correctText','correct_text'];
+function stripAnswers(list){
+  return (list||[]).map(c=>{ const o={...c}; for(const k of ANSWER_SECRET_FIELDS) delete o[k]; return o; });
+}
+
 function buildSessionChallenges(picked, startAt, isDemo){
   const timing = isDemo ? SESSION_TIMING_DEMO : SESSION_TIMING_REAL;
   const startMs = new Date(startAt).getTime();
-  return picked.map((c,i)=>({
+  // UWAGA: tutaj NIE stripAnswers. To z tej listy serwer ocenia odpowiedzi
+  // (/api/sessions/:id/answer) i buduje raport po zakończeniu (/complete) —
+  // z usuniętym correctAnswer każde pytanie ABCD było nie do zaliczenia, bo
+  // porównanie szło z undefined ("-1"), a open/why nie miał czego dać Jevowi.
+  // Klucz zostaje w serwisie i jest obcinany DOPIERO przy wysyłce do czytelnika:
+  // /start i /api/sessions/:id wołają stripAnswers na kopii.
+  // Sesja nie jest zapisywana do bazy (tylko challengeIds), więc klucz nigdzie nie trafia.
+  return (picked||[]).map((c,i)=>({
     ...c,
     releaseAt: new Date(startMs + timing[i]*1000).toISOString(),
     releaseAfterSec: timing[i],
@@ -292,9 +351,16 @@ if(useMySQL){
       : v);
   function mapTables(q){
     return q.replace(/`proofs`/g,'`readproof_proofs`').replace(/`reading_sessions`/g,'`readproof_sessions`').replace(/`users`/g,'`readproof_users`').replace(/`publisher_campaigns`/g,'`readproof_campaigns`').replace(/`campaign_funds`/g,'`readproof_funds`').replace(/`waitlist`/g,'`readproof_waitlist`').replace(/`certificates`/g,'`readproof_certificates`')
+            .replace(/`publisher_books`/g,'`readproof_publisher_books`').replace(/`payouts`/g,'`readproof_payouts`')
             .replace(/\bproofs\b/g,'`readproof_proofs`').replace(/\breading_sessions\b/g,'`readproof_sessions`').replace(/\busers\b/g,'`readproof_users`').replace(/\bpublisher_campaigns\b/g,'`readproof_campaigns`').replace(/\bcampaign_funds\b/g,'`readproof_funds`').replace(/\bwaitlist\b/g,'`readproof_waitlist`').replace(/\bcertificates\b/g,'`readproof_certificates`')
+            .replace(/\bpublisher_books\b/g,'`readproof_publisher_books`').replace(/\bpayouts\b/g,'`readproof_payouts`')
             .replace(/`tests`/g,'`readproof_tests`').replace(/`attempts`/g,'`readproof_attempts`').replace(/`paper_tests`/g,'`readproof_paper_tests`')
-            .replace(/\btests\b/g,'`readproof_tests`').replace(/\battempts\b/g,'`readproof_attempts`').replace(/\bpaper_tests\b/g,'`readproof_paper_tests`');
+            .replace(/\btests\b/g,'`readproof_tests`').replace(/\battempts\b/g,'`readproof_attempts`').replace(/\bpaper_tests\b/g,'`readproof_paper_tests`')
+            // Panel admina + Secure Test Mode
+            .replace(/`test_sessions`/g,'`readproof_test_sessions`').replace(/`security_events`/g,'`readproof_security_events`')
+            .replace(/`audit_logs`/g,'`readproof_audit_logs`').replace(/`admin_accounts`/g,'`readproof_admin_accounts`')
+            .replace(/\btest_sessions\b/g,'`readproof_test_sessions`').replace(/\bsecurity_events\b/g,'`readproof_security_events`')
+            .replace(/\baudit_logs\b/g,'`readproof_audit_logs`').replace(/\badmin_accounts\b/g,'`readproof_admin_accounts`');
   }
   db = {
     run(sql, params, cb){
@@ -375,6 +441,43 @@ if(useMySQL){
         createdAt TEXT,
         updatedAt TEXT
       )`);
+      _db.run(`CREATE TABLE IF NOT EXISTS publisher_books (
+        id TEXT PRIMARY KEY,
+        ownerWallet TEXT,
+        title TEXT,
+        titleEn TEXT,
+        author TEXT,
+        description TEXT,
+        isbn TEXT,
+        language TEXT DEFAULT 'pl',
+        coverUrl TEXT,
+        status TEXT DEFAULT 'draft',
+        contentLength INTEGER DEFAULT 0,
+        bookContentHash TEXT,
+        contentFile TEXT,
+        chapters TEXT,
+        rewardPool REAL DEFAULT 0,
+        rewardPerProof REAL DEFAULT 5,
+        currency TEXT DEFAULT 'USDC',
+        publishedBookId TEXT,
+        errorMessage TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`);
+      _db.run(`CREATE TABLE IF NOT EXISTS payouts (
+        id TEXT PRIMARY KEY,
+        bookId TEXT,
+        walletAddress TEXT,
+        userId TEXT,
+        chapterId TEXT,
+        amount REAL,
+        currency TEXT,
+        status TEXT,
+        txSignature TEXT,
+        explorerUrl TEXT,
+        errorMessage TEXT,
+        createdAt TEXT
+      )`);
       _db.run(`CREATE TABLE IF NOT EXISTS campaign_funds (
         id TEXT PRIMARY KEY,
         campaignId TEXT,
@@ -439,8 +542,77 @@ if(useMySQL){
       _db.run(`ALTER TABLE users ADD COLUMN nickname TEXT`, ()=>{});
       _db.run(`ALTER TABLE reading_sessions ADD COLUMN userId TEXT`, ()=>{});
        _db.run(`ALTER TABLE proofs ADD COLUMN userId TEXT`, ()=>{});
-       _db.run(`ALTER TABLE attempts ADD COLUMN expiresAt TEXT`, ()=>{});
-       _db.run(`ALTER TABLE attempts ADD COLUMN proctoring TEXT`, ()=>{});
+      _db.run(`ALTER TABLE attempts ADD COLUMN expiresAt TEXT`, ()=>{});
+      _db.run(`ALTER TABLE attempts ADD COLUMN proctoring TEXT`, ()=>{});
+      // ── Zatwierdzanie ról (nauczyciel / wydawca) ──
+      // approvalStatus NULL = konto sprzed migracji, traktowane jako 'approved'.
+      _db.run(`ALTER TABLE users ADD COLUMN approvalStatus TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN emailDomain TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN schoolDomain TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN organization TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN verificationCodeHash TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN verificationSentAt TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN verificationAttempts INTEGER DEFAULT 0`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN verifiedAt TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN submittedAt TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN reviewedBy TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN reviewedAt TEXT`, ()=>{});
+      _db.run(`ALTER TABLE users ADD COLUMN reviewReason TEXT`, ()=>{});
+      // ── Panel administratora ──
+      _db.run(`CREATE TABLE IF NOT EXISTS admin_accounts (
+        id TEXT PRIMARY KEY,
+        email TEXT,
+        passwordHash TEXT,
+        walletAddress TEXT,
+        displayName TEXT,
+        sessionToken TEXT,
+        createdAt TEXT,
+        lastLoginAt TEXT,
+        active INTEGER DEFAULT 1
+      )`);
+      _db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+        id TEXT PRIMARY KEY,
+        adminId TEXT,
+        targetUserId TEXT,
+        action TEXT,
+        reason TEXT,
+        timestamp TEXT,
+        metadata TEXT
+      )`);
+      // ── Secure Test Mode ──
+      _db.run(`CREATE TABLE IF NOT EXISTS test_sessions (
+        id TEXT PRIMARY KEY,
+        testId TEXT,
+        attemptId TEXT,
+        userId TEXT,
+        status TEXT DEFAULT 'created',
+        policy TEXT,
+        eventCounts TEXT,
+        startedAt TEXT,
+        expiresAt TEXT,
+        terminatedAt TEXT,
+        terminationReason TEXT,
+        securityViolationCount INTEGER DEFAULT 0,
+        warningCount INTEGER DEFAULT 0,
+        cameraEnabled INTEGER DEFAULT 0,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`);
+      _db.run(`CREATE TABLE IF NOT EXISTS security_events (
+        id TEXT PRIMARY KEY,
+        sessionId TEXT,
+        userId TEXT,
+        type TEXT,
+        severity TEXT,
+        timestamp TEXT,
+        clientTimestamp TEXT,
+        metadata TEXT
+      )`);
+      _db.run(`CREATE INDEX IF NOT EXISTS idx_security_events_session ON security_events(sessionId)`, ()=>{});
+      _db.run(`CREATE INDEX IF NOT EXISTS idx_audit_target ON audit_logs(targetUserId)`, ()=>{});
+      _db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_user_test ON test_sessions(userId)`, ()=>{});
+      _db.run(`CREATE INDEX IF NOT EXISTS idx_users_approval ON users(approvalStatus)`, ()=>{});
     });
     db = _db;
   } else {
@@ -459,26 +631,68 @@ if (useMySQL) {
 await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_users (walletAddress VARCHAR(64) PRIMARY KEY, displayName VARCHAR(128), email VARCHAR(128), role VARCHAR(32) DEFAULT 'reader', createdAt DATETIME, lastLoginAt DATETIME, appleUserId VARCHAR(64), sessionToken VARCHAR(128), provider VARCHAR(16), nickname VARCHAR(128))`);
        await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_classes (id VARCHAR(64) PRIMARY KEY, name VARCHAR(256), bookId VARCHAR(64), chapters JSON, teacher VARCHAR(64), students JSON, code VARCHAR(10), createdAt DATETIME, updatedAt DATETIME)`);
        await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_campaigns (id VARCHAR(64) PRIMARY KEY, publisherWallet VARCHAR(64), title VARCHAR(256), author VARCHAR(256), isbn VARCHAR(32), description TEXT, rewardPool DOUBLE DEFAULT 0, rewardPerProof DOUBLE DEFAULT 5, currency VARCHAR(16) DEFAULT 'USDC', status VARCHAR(32) DEFAULT 'draft', bookContentHash VARCHAR(64), contentLength INT DEFAULT 0, coverUrl VARCHAR(512), createdAt DATETIME, updatedAt DATETIME)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_publisher_books (id VARCHAR(64) PRIMARY KEY, ownerWallet VARCHAR(64), title VARCHAR(256), titleEn VARCHAR(256), author VARCHAR(256), description TEXT, isbn VARCHAR(32), language VARCHAR(8) DEFAULT 'pl', coverUrl VARCHAR(512), status VARCHAR(16) DEFAULT 'draft', contentLength INT DEFAULT 0, bookContentHash VARCHAR(64), contentFile VARCHAR(128), chapters JSON, rewardPool DOUBLE DEFAULT 0, rewardPerProof DOUBLE DEFAULT 5, currency VARCHAR(8) DEFAULT 'USDC', publishedBookId VARCHAR(64), errorMessage VARCHAR(512), createdAt DATETIME, updatedAt DATETIME)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_payouts (id VARCHAR(64) PRIMARY KEY, bookId VARCHAR(64), walletAddress VARCHAR(64), userId VARCHAR(64), chapterId VARCHAR(64), amount DOUBLE, currency VARCHAR(8), status VARCHAR(16), txSignature VARCHAR(128), explorerUrl VARCHAR(256), errorMessage VARCHAR(256), createdAt DATETIME)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_funds (id VARCHAR(64) PRIMARY KEY, campaignId VARCHAR(64), publisherWallet VARCHAR(64), amount DOUBLE, currency VARCHAR(16), txSignature VARCHAR(128), explorerUrl VARCHAR(256), createdAt DATETIME)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_waitlist (id VARCHAR(64) PRIMARY KEY, email VARCHAR(256), role VARCHAR(32), name VARCHAR(128), createdAt DATETIME)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_tests (id VARCHAR(64) PRIMARY KEY, teacherId VARCHAR(64), bookId VARCHAR(64), title VARCHAR(256), chapter VARCHAR(64), testMode VARCHAR(16), status VARCHAR(32), timerEnabled TINYINT DEFAULT 0, timerMinutes INT DEFAULT 0, questions JSON, settings JSON, createdAt DATETIME, updatedAt DATETIME)`);
        await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_attempts (id VARCHAR(64) PRIMARY KEY, challengeId VARCHAR(64), studentId VARCHAR(64), mode VARCHAR(16), status VARCHAR(32), answers JSON, score INT, maxScore INT, submittedAt DATETIME, completedAt DATETIME, detail JSON, paperTestId VARCHAR(64), virtualAttemptId VARCHAR(64), createdAt DATETIME, expiresAt DATETIME, proctoring JSON)`);
       await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_paper_tests (id VARCHAR(64) PRIMARY KEY, challengeId VARCHAR(64), teacherId VARCHAR(64), studentId VARCHAR(64), studentName VARCHAR(128), scans JSON, ocrText LONGTEXT, ocrAnswers JSON, status VARCHAR(32), createdAt DATETIME, updatedAt DATETIME)`);
+      // Panel administratora — hasło (scrypt) + token sesyjny. Portfel Solana jest
+      // adresem jawnym, więc panel NIE opiera się na X-User-Id.
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_admin_accounts (id VARCHAR(64) PRIMARY KEY, email VARCHAR(256) UNIQUE, passwordHash VARCHAR(256), walletAddress VARCHAR(64), displayName VARCHAR(128), sessionToken VARCHAR(128), createdAt DATETIME, lastLoginAt DATETIME, active TINYINT DEFAULT 1)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_audit_logs (id VARCHAR(64) PRIMARY KEY, adminId VARCHAR(64), targetUserId VARCHAR(64), action VARCHAR(48), reason VARCHAR(300), timestamp DATETIME, metadata VARCHAR(1000))`);
+      // Secure Test Mode — stan sesji, zdarzenia bezpieczeństwa. Zdarzenia trzymamy
+      // jako VARCHAR, a nie JSON, bo shim `db.run` zamienia TEXT na VARCHAR(64).
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_test_sessions (id VARCHAR(64) PRIMARY KEY, testId VARCHAR(64), attemptId VARCHAR(64), userId VARCHAR(64), status VARCHAR(16) DEFAULT 'created', policy VARCHAR(2000), eventCounts VARCHAR(2000), startedAt DATETIME, expiresAt DATETIME, terminatedAt DATETIME, terminationReason VARCHAR(300), securityViolationCount INT DEFAULT 0, warningCount INT DEFAULT 0, cameraEnabled TINYINT DEFAULT 0, createdAt DATETIME, updatedAt DATETIME)`);
+      await mysqlPool.query(`CREATE TABLE IF NOT EXISTS readproof_security_events (id VARCHAR(64) PRIMARY KEY, sessionId VARCHAR(64), userId VARCHAR(64), type VARCHAR(48), severity VARCHAR(16), timestamp DATETIME, clientTimestamp DATETIME, metadata VARCHAR(2000))`);
       // Apple auth migrations — add columns if missing (MySQL IF NOT EXISTS via try/catch)
       for(const q of [
         `ALTER TABLE readproof_users ADD COLUMN appleUserId VARCHAR(64)`,
         `ALTER TABLE readproof_users ADD COLUMN sessionToken VARCHAR(128)`,
         `ALTER TABLE readproof_users ADD COLUMN provider VARCHAR(16)`,
         `ALTER TABLE readproof_users ADD COLUMN nickname VARCHAR(128)`,
-        `ALTER TABLE readproof_sessions ADD COLUMN userId VARCHAR(64)`,
-        `ALTER TABLE readproof_proofs ADD COLUMN userId VARCHAR(64)`,
-        `ALTER TABLE readproof_attempts ADD COLUMN expiresAt DATETIME`,
-        `ALTER TABLE readproof_attempts ADD COLUMN proctoring JSON`
+         `ALTER TABLE readproof_sessions ADD COLUMN userId VARCHAR(64)`,
+         `ALTER TABLE readproof_proofs ADD COLUMN userId VARCHAR(64)`,
+         `ALTER TABLE readproof_attempts ADD COLUMN expiresAt DATETIME`,
+         `ALTER TABLE readproof_attempts ADD COLUMN proctoring JSON`,
+         // Kotwiczenie certyfikatów na devnecie. anchorHash jest zobowiązaniem
+         // (skrót w memo), anchorMemo to DOKŁADNIE ten tekst, który poszedł
+         // na łańcuch — bez niego nie da się zweryfikować memo po reconnectzie.
+         `ALTER TABLE readproof_certificates ADD COLUMN anchorHash VARCHAR(64)`,
+         `ALTER TABLE readproof_certificates ADD COLUMN anchorVersion VARCHAR(32)`,
+         `ALTER TABLE readproof_certificates ADD COLUMN anchorSlot BIGINT`,
+         `ALTER TABLE readproof_certificates ADD COLUMN anchorMemo TEXT`,
+         `ALTER TABLE readproof_certificates ADD COLUMN anchorStatus VARCHAR(16)`,
+         `ALTER TABLE readproof_certificates ADD COLUMN anchorError VARCHAR(256)`,
+         `ALTER TABLE readproof_certificates ADD COLUMN anchoredAt DATETIME`,
+         // Zatwierdzanie ról. approvalStatus celowo bez DEFAULT — NULL oznacza
+         // konto sprzed migracji i jest traktowane jako 'approved'.
+         `ALTER TABLE readproof_users ADD COLUMN approvalStatus VARCHAR(16)`,
+         `ALTER TABLE readproof_users ADD COLUMN emailVerified TINYINT DEFAULT 0`,
+         `ALTER TABLE readproof_users ADD COLUMN emailDomain VARCHAR(128)`,
+         `ALTER TABLE readproof_users ADD COLUMN schoolDomain VARCHAR(128)`,
+         `ALTER TABLE readproof_users ADD COLUMN organization VARCHAR(256)`,
+         `ALTER TABLE readproof_users ADD COLUMN verificationCodeHash VARCHAR(64)`,
+         `ALTER TABLE readproof_users ADD COLUMN verificationSentAt DATETIME`,
+         `ALTER TABLE readproof_users ADD COLUMN verificationAttempts INT DEFAULT 0`,
+         `ALTER TABLE readproof_users ADD COLUMN verifiedAt DATETIME`,
+         `ALTER TABLE readproof_users ADD COLUMN submittedAt DATETIME`,
+         `ALTER TABLE readproof_users ADD COLUMN reviewedBy VARCHAR(64)`,
+         `ALTER TABLE readproof_users ADD COLUMN reviewedAt DATETIME`,
+         `ALTER TABLE readproof_users ADD COLUMN reviewReason VARCHAR(300)`
       ]){ try{ await mysqlPool.query(q); }catch(e){ if(!String(e.message).includes('Duplicate column')) console.warn('[migrate]', e.message); } }
       // migrate primary key: allow apple users where id != walletAddress — keep walletAddress PK for now, but add unique index on appleUserId
       try{ await mysqlPool.query(`CREATE UNIQUE INDEX idx_users_apple ON readproof_users(appleUserId)`); }catch(e){}
       try{ await mysqlPool.query(`CREATE INDEX idx_sessions_user ON readproof_sessions(userId)`); }catch(e){}
       try{ await mysqlPool.query(`CREATE INDEX idx_proofs_user ON readproof_proofs(userId)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_pubbooks_owner ON readproof_publisher_books(ownerWallet)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_payouts_book ON readproof_payouts(bookId)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_proofs_book ON readproof_proofs(bookId)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_users_approval ON readproof_users(approvalStatus)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_security_events_session ON readproof_security_events(sessionId)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_audit_target ON readproof_audit_logs(targetUserId)`); }catch(e){}
+      try{ await mysqlPool.query(`CREATE INDEX idx_test_sessions_user ON readproof_test_sessions(userId)`); }catch(e){}
       const [rows] = await mysqlPool.query(`SELECT COUNT(*) as c FROM readproof_books`);
       if(rows[0].c===0){
         for(const b of books) await mysqlPool.query(`INSERT IGNORE INTO readproof_books (id, data) VALUES (?,?)`, [b.id, JSON.stringify(b)]);
@@ -497,12 +711,109 @@ function proofHash(bookId, chapterId, wallet, ts, score) {
   return crypto.createHash('sha256').update(input).digest('hex').slice(0,16);
 }
 const VERIF_STATUSES = new Set(['Reading Verified','Comprehension Verified','Verified','verified']);
+// Statusy, dla których wystawiamy certyfikat RP-XXXXXX. 'Partial Verified' = zrozumienie
+// częściowe (3/5) — certyfikat JEST, ale bez nagrody i bez statusu pełnego zrozumienia.
+const CERT_STATUSES = new Set([...VERIF_STATUSES, 'Partial Verified']);
+// Poziom zrozumienia z proof/cert. Progi zgodne z tierOf() w public/verify.
+function certTier(score, total){
+  const s = Number(score), t = Number(total);
+  if (t > 0 && s >= Math.max(4, t - 1)) return 'full';
+  const r = t > 0 ? s / t : ((parseFloat(String(score)) || 0) / 100);
+  return r >= 0.6 ? 'partial' : 'none';
+}
 const CERT_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // bez I,O,0,1 — czytelne ID
 function certId(){
   let s=''; const rb=crypto.randomBytes(6);
   for(const b of rb) s += CERT_ALPHA[b % CERT_ALPHA.length];
   return `RP-${s.slice(0,6)}`;
 }
+
+// ── Kotwiczenie certyfikatu na Solana Devnet ────────────────────────────────
+// Certyfikat w bazie to stan, który da się podmienić. Memo na devnecie to
+// podpisany, publiczny, niezmienny zapis tych samych pól — plus skrót, który
+// pozwala przeliczyć wszystko z samego łańcucha. Wywołujemy ją PO zapisie
+// wiersza, bo potrzebujemy id i timestampu z bazy (memo musi odtąd być
+// odtwarzalne co do bajtu).
+//
+// Nigdy nie rzucamy i nigdy nie blokujemy wystawienia certyfikatu: brak klucza
+// lub chwilowa awaria RPC nie może odbierać czytelnikowi certyfikatu za
+// zrozumienie. Zamiast tego wiersz dostaje anchorStatus, a anchor można
+// domknąć później (patrz POST /api/certificates/:id/anchor).
+async function anchorCertificate(cert, { force = false } = {}){
+  if(!cert?.id) return null;
+  try{
+    // Nie kotwimy dwa razy — inaczej płacimy za devnet SOL i zaśmiecamy explorer.
+    if(!force && cert.txSignature && cert.anchorMemo) return { skipped: true, reason: 'already anchored' };
+
+    const memo = cert.anchorMemo || buildAnchorMemo(cert);
+    const parsed = parseAnchorMemo(memo);
+    if(!parsed.ok) throw new Error(`memo nieparsowalne: ${parsed.error}`);
+
+    const res = await writeAnchorMemo(memo, { rpc: SOLANA_RPC, privateKey: SOLANA_PAYER_PRIVATE_KEY });
+    if(!res.ok){
+      await markAnchor(cert.id, { status:'unavailable', error: res.error, memo });
+      console.warn(`[anchor] ${cert.id} — brak kotwicy: ${res.error}`);
+      return { ok:false, error: res.error };
+    }
+    await markAnchor(cert.id, {
+      status:'anchored', error:null, memo,
+      hash: parsed.anchorHash, version: ANCHOR_VERSION,
+      slot: res.slot, signature: res.signature, explorer: res.explorerUrl,
+    });
+    console.log(`[anchor] ${cert.id} → slot ${res.slot} ${res.explorerUrl}`);
+    return { ok:true, ...res, anchorHash: parsed.anchorHash };
+  }catch(e){
+    await markAnchor(cert.id, { status:'failed', error: String(e?.message||e).slice(0,240) });
+    console.error(`[anchor] ${cert.id} BŁĄD: ${e.message}`);
+    return { ok:false, error: String(e?.message||e).slice(0,240) };
+  }
+}
+
+// Aktualizacja kotwicy w wierszu certyfikatu. Zdanie po zdaniu, bo niektóre
+// instalacje mają bazę bez nowych kolumn — wtedy zapis po cichu nic nie robi,
+// a kotwica i tak zostaje w łańcuchu i w odpowiedzi publicznej.
+async function markAnchor(id, patch = {}){
+  const cols = [], params = [];
+  const add = (col, val) => { cols.push(`${col}=?`); params.push(val); };
+  if(patch.hash !== undefined) add('anchorHash', patch.hash);
+  if(patch.version !== undefined) add('anchorVersion', patch.version);
+  if(patch.slot !== undefined) add('anchorSlot', patch.slot);
+  if(patch.memo !== undefined) add('anchorMemo', patch.memo);
+  if(patch.status !== undefined) add('anchorStatus', patch.status);
+  if(patch.error !== undefined) add('anchorError', patch.error);
+  if(patch.signature !== undefined) add('txSignature', patch.signature);
+  if(patch.explorer !== undefined) add('explorerUrl', patch.explorer);
+  if(patch.status === 'anchored') add('anchoredAt', new Date());
+  if(!cols.length) return false;
+  params.push(id);
+  try{
+    await dbRunPromise(`UPDATE certificates SET ${cols.join(', ')} WHERE id=?`, params);
+    return true;
+  }catch(e){
+    console.warn(`[anchor] nie zapisano stanu kotwicy ${id}: ${e.message}`);
+    return false;
+  }
+}
+
+// Publiczny widok kotwicy — to, co czytelnik widzi na /verify.
+function anchorView(row){
+  const anchored = row?.anchorStatus === 'anchored' && !!row?.txSignature;
+  return {
+    version: row?.anchorVersion || null,
+    status: row?.anchorStatus || (row?.txSignature ? 'legacy' : 'unavailable'),
+    anchorHash: row?.anchorHash || null,
+    slot: row?.anchorSlot ?? null,
+    memo: row?.anchorMemo || null,
+    anchoredAt: row?.anchoredAt || null,
+    signature: row?.txSignature || null,
+    explorerUrl: row?.explorerUrl || null,
+    // 'anchored' = mamy podpis i memo; 'unverified' = jest podpis, ale memo
+    // nie przyszło z łańcucha (np. kotwica sprzed wdrożenia tego formatu).
+    immutable: anchored && !!row?.anchorMemo ? 'onchain-memo' : (row?.txSignature ? 'tx-only' : 'none'),
+    network: 'devnet',
+  };
+}
+
 function bookCertsForWallet(db, wallet, cb){
   db.all(`SELECT * FROM certificates WHERE walletAddress=? AND kind='book' ORDER BY timestamp DESC`, [wallet], (e,rows)=>cb(e, rows||[]));
 }
@@ -554,7 +865,23 @@ async function callJev({question, expectedMeaning, userAnswer, context, lang='pl
 // Solidny extractor JSON — LLM (OpenRouter free) potrafi dodać fenced code, smy poza {} i zepsuć parsowanie
 function extractJSON(text){
   let t = String(text||'').replace(/```(?:json)?/gi,'').trim();
-  const first = t.indexOf('{');
+  // LLM przy tłumaczeniu quizu zwraca LISTĘ obiektów na najwyższym poziomie.
+  // Bez tej gałęzi wycinanie od pierwszego '{' dawało fragment listy i parse
+  // kończył się "niepoprawny JSON" — czyli quiz EN nigdy się nie budował.
+  const arrFirst = t.indexOf('[');
+  const objFirst = t.indexOf('{');
+  if(arrFirst >= 0 && (objFirst < 0 || arrFirst < objFirst)){
+    let aEnd = t.lastIndexOf(']');
+    let aErr = null;
+    while(aEnd > arrFirst){
+      try{ return JSON.parse(t.slice(arrFirst, aEnd+1)); }
+      catch(e){ aErr = e; aEnd = t.lastIndexOf(']', aEnd-1); }
+    }
+    try{ return JSON.parse(t.slice(arrFirst, t.lastIndexOf(']')+1).replace(/,\s*([\]}])/g,'$1')); }
+    catch(e2){ aErr = e2; }
+    throw aErr || new Error('Nieprawidłowy JSON (lista) od LLM');
+  }
+  const first = objFirst;
   if(first<0) throw new Error('Brak { w odpowiedzi LLM');
   // od ostatniego } w dół — pierwsza parsowalna sekcja wygrywa
   let end = t.lastIndexOf('}');
@@ -571,8 +898,10 @@ function extractJSON(text){
   throw lastErr || new Error('Nieprawidłowy JSON od LLM');
 }
 
-// Lista darmowych modeli z fallbackiem (free tier bywa 429/404) — OPENROUTER_MODELS przez przecinek
-const OPENROUTER_MODELS = (process.env.OPENROUTER_MODELS || `${OPENROUTER_MODEL},openrouter/free,inclusionai/ling-3.0-flash-vl:free,nex-agi/nex-n2.5-mini:free`)
+// Lista darmowych modeli z fallbackiem — darmowy tier OpenRouter regularnie
+// ubija modele (404/429), więc próbujemy po kolei kilku sprawdzonych.
+// OPENROUTER_MODELS po przecinku ma pierwszeństwo.
+const OPENROUTER_MODELS = (process.env.OPENROUTER_MODELS || `${OPENROUTER_MODEL},nvidia/nemotron-3-super-120b-a12b:free,google/gemma-4-31b-it:free,qwen/qwen3.8-27b:free`)
   .split(',').map(s=>s.trim()).filter(Boolean);
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
@@ -630,12 +959,18 @@ async function callOpenAiCompat({base, apiKey, model}, messages, {temperature, m
 }
 
 // Multi-provider LLM: OpenRouter (free) → Gemini → Groq → Mistral → Pollinations (bez klucza)
-async function llmChat(messages, {temperature=0.7, maxTokens=4000, timeout=120000}={}){
+// Modele do tłumaczenia PL->EN. Darmowe modele OpenRouter mają limit per-IP
+// i w praktyce bywają wyczerpane (429) — wtedy quiz EN w ogóle się nie tworzy.
+// Domyślnie próbujemy więc tanich modeli płatnych, a free-tier zostaje jako backup.
+const TRANSLATE_MODELS = (process.env.TRANSLATE_MODELS
+  || 'openai/gpt-4o-mini,qwen/qwen2.5-72b-instruct,meta-llama/llama-3.3-70b-instruct'
+).split(',').map(x=>x.trim()).filter(Boolean);
+async function llmChat(messages, {temperature=0.7, maxTokens=4000, timeout=120000, models=null}={}){
   if(!OPENROUTER_KEY && !GEMINI_API_KEY && !GROQ_API_KEY && !MISTRAL_API_KEY){
     // brak jakiegokolwiek klucza — Pollinations i tak działa bez klucza
   }
   const tryers = [
-    ...(OPENROUTER_KEY?OPENROUTER_MODELS.map(model=>()=>callOpenRouter(model, messages, {temperature, maxTokens, timeout})):[]),
+    ...(OPENROUTER_KEY?(models && models.length ? models : OPENROUTER_MODELS).map(model=>()=>callOpenRouter(model, messages, {temperature, maxTokens, timeout})):[]),
     ...(GEMINI_API_KEY?[()=>callGemini(messages,{temperature, maxTokens, timeout})]:[]),
     ...(GROQ_API_KEY?[()=>callOpenAiCompat({base:'https://api.groq.com/openai/v1/chat/completions', apiKey:GROQ_API_KEY, model:GROQ_MODEL}, messages,{temperature, maxTokens, timeout})]:[]),
     ...(MISTRAL_API_KEY?[()=>callOpenAiCompat({base:'https://api.mistral.ai/v1/chat/completions', apiKey:MISTRAL_API_KEY, model:MISTRAL_MODEL}, messages,{temperature, maxTokens, timeout})]:[]),
@@ -720,75 +1055,371 @@ ${SCHEMA}
   throw lastErr || new Error('OpenRouter: brak modeli');
 }
 
-// Tłumaczenie wybranych pytań sesji na EN (wywoływane przy starcie sesji, gdy lang==='en').
-// Struktura JSON zachowana 1:1 — indeksy/odpowiedzi bez zmian, tłumaczone tylko teksty.
-const _gtxCache = new Map();
+// ===== Tłumaczenie quizu PL -> EN =====
+// Pula pytań żyje po polsku (challenges.json), więc sesja w EN musi pytania przetłumaczyć.
+// Wcześniej szło to przez LLM z backoffem 2,5+6+12+20+30 s: start sesji EN wisiał
+// 1–2 min, a po wyczerpaniu prób i tak serwisował po cichu quiz po polsku.
+// Teraz główną drogą jest Google Translate (bez klucza, ~100 ms/zdanie) z cache
+// na dysku, a LLM zostało wyłącznie jako awaryjny fallback (jeden strzał).
+// Dzięki temu kolejne quizy EN są praktycznie darmowe (trafienie w cache).
+const TRANSLATE_CACHE_FILE = './translate-cache.json';
+let _gtxCache = (()=>{
+  try{
+    const raw = JSON.parse(fs.readFileSync(TRANSLATE_CACHE_FILE,'utf8')) || {};
+    // Wpisy identyczne ze źródłem to nie tłumaczenia (gtx potrafi zwrócić polskie
+    // słowo bez zmian) — wyrzucamy je, inaczej pytanie wychodzi z polskimi opcjami.
+    const clean = {};
+    let dropped = 0;
+    for(const [k,v] of Object.entries(raw)){
+      if(typeof v === 'string' && v.trim() === String(k).trim()){ dropped++; continue; }
+      if(typeof v === 'string' && !validTranslation(v)){ dropped++; continue; }
+      clean[k]=v;
+    }
+    if(dropped) console.log(`[gtx] cache: dropped ${dropped} śmieci/nie-tłumaczeń`);
+    return clean;
+  }catch(e){ return {}; }
+})();
+let _gtxDirty = 0;
+function persistTranslateCache(){
+  if(_gtxDirty<=0) return;
+  _gtxDirty = 0;
+  try{ fs.writeFileSync(TRANSLATE_CACHE_FILE, JSON.stringify(_gtxCache)); }
+  catch(e){ console.warn('[gtx] persist fail: '+e.message); }
+}
+const _gtxPersistTimer = setInterval(persistTranslateCache, 5000);
+if(_gtxPersistTimer.unref) _gtxPersistTimer.unref();
+
+// Google throttluje po IP i odpowiada 429 przy równoległych tłumaczeniach.
+// Dlatego WSZYSTKIE wywołania (sesje + tło) przechodzą przez jedną kolejkę
+// z odstępem między zapytaniami, a po serii 429 włączamy circuit breaker
+// (60 s bez Google) — inaczej pula EN wisiała w retry zamiast zejść na LLM.
+const GTX_MIN_GAP = 110;
+const GTX_BLOCK_AFTER = 5;      // ile 429 z rzędu → breaker
+const GTX_BLOCK_MS = 60000;
+let _gtxQueue = Promise.resolve();
+let _gtxLastAt = 0;
+let _gtxBlockedUntil = 0;
+let _gtxFails = 0;
+function gtxSlot(){
+  const run = _gtxQueue.then(async ()=>{
+    const now = Date.now();
+    const wait = Math.max(_gtxBlockedUntil - now, _gtxLastAt + GTX_MIN_GAP - now);
+    if(wait > 0) await new Promise(r=>setTimeout(r, wait));
+    _gtxLastAt = Date.now();
+  });
+  _gtxQueue = run.catch(()=>{});
+  return run;
+}
+function gtxPenalize(status){
+  if(status===429 || status===403){
+    if(++_gtxFails >= GTX_BLOCK_AFTER){
+      _gtxBlockedUntil = Date.now() + GTX_BLOCK_MS;
+      console.warn(`[gtx] breaker ON (${GTX_BLOCK_MS/1000}s) — przechodzimy na MyMemory/LLM`);
+    }
+  } else _gtxFails = 0;
+}
+
+// Wynik tłumaczenia musi wyglądać jak treść. gtx potrafi zwrócić "."
+// albo interpunkcję zamiast słowa ("Niedźwiedzia" → "."), co psuje pytanie:
+// użytkownik widzi pustą poprawną odpowiedź i myśli, że klucz jest zły.
+function validTranslation(out){
+  const t = String(out == null ? '' : out).trim();
+  if(!t) return false;
+  if(!/[A-Za-z0-9\u00C0-\u024F]/.test(t)) return false;   // sama interpunkcja
+  if(t.length > 1 && t.replace(/[\s.,!?;:'"()\-—…]/g, '').length === 0) return false;
+  return true;
+}
+const sameText = (a, b) => String(a == null ? '' : a).trim() === String(b == null ? '' : b).trim();
+
+async function gtxRaw(text){
+  if(Date.now() < _gtxBlockedUntil) throw new Error('gtx blocked');
+  await gtxSlot();
+  if(Date.now() < _gtxBlockedUntil) throw new Error('gtx blocked');
+  const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=pl&tl=en&dt=t&q='+encodeURIComponent(text);
+  let res;
+  try{ res = await fetch(url, {headers:{'User-Agent':'Mozilla/5.0 (compatible; readproof-translate/2.0)'}, signal: AbortSignal.timeout(8000)}); }
+  catch(e){ throw new Error('gtx net'); }
+  if(!res.ok){ gtxPenalize(res.status); throw new Error('gtx '+res.status); }
+  const j=await res.json().catch(()=>null);
+  const seg=(j && Array.isArray(j[0]))?j[0].map(s=>s&&s[0]).filter(Boolean).join(''):'';
+  if(!validTranslation(seg)) throw new Error('gtx śmieci/empty');
+  _gtxFails = 0;
+  return seg;
+}
+// ---- Drugie źródło: MyMemory (bez klucza) ----
+// Google gtx throttluje po IP (429) i potrafi być niedostępny na długo. MyMemory
+// działa bez klucza, więc jest zabezpieczeniem: gtx → MyMemory → LLM. Bez konta
+// limit to ~5k słów/dobę (z MYMEM_EMAIL w .env rośnie do 50k) — dlatego wyniki
+// też lecą do tego samego cache co gtx i liczba zapytań rośnie tylko z nowymi pytaniami.
+const MYMEM_EMAIL = (process.env.MYMEM_EMAIL || '').trim();
+const MYMEM_MIN_GAP = 220;
+let _mtmLastAt = 0, _mtmBlockedUntil = 0;
+const _mtmQueue = { p: Promise.resolve() };
+function mtmSlot(){
+  const run = _mtmQueue.p.then(async ()=>{
+    const wait = Math.max(_mtmBlockedUntil - Date.now(), _mtmLastAt + MYMEM_MIN_GAP - Date.now());
+    if(wait > 0) await new Promise(r=>setTimeout(r, wait));
+    _mtmLastAt = Date.now();
+  });
+  _mtmQueue.p = run.catch(()=>{});
+  return run;
+}
+const ENTITIES = {'&amp;':'&','&quot;':'"','&#39;':"'",'&apos;':"'",'&lt;':'<','&gt;':'>','&nbsp;':' ','&#39;':"'"};
+const unescapeHtml = t => String(t).replace(/&(amp|quot|apos|#39|lt|gt|nbsp);/g, m => ENTITIES[m] ?? m);
+async function mtmRaw(text){
+  if(Date.now() < _mtmBlockedUntil) throw new Error('mtm blocked');
+  await mtmSlot();
+  const url='https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)
+    +'&langpair=' + encodeURIComponent('pl|en') + (MYMEM_EMAIL ? '&de='+encodeURIComponent(MYMEM_EMAIL) : '');
+  let res;
+  try{ res = await fetch(url, {headers:{'User-Agent':'Mozilla/5.0 (compatible; readproof-translate/2.0)'}, signal: AbortSignal.timeout(10000)}); }
+  catch(e){ throw new Error('mtm net'); }
+  if(!res.ok){ if(res.status===429 || res.status===403) _mtmBlockedUntil = Date.now()+60000; throw new Error('mtm '+res.status); }
+  const j = await res.json().catch(()=>null);
+  if(!j || j.quotaFinished || j.responseStatus && Number(j.responseStatus)>=400){
+    _mtmBlockedUntil = Date.now()+300000;
+    throw new Error('mtm quota');
+  }
+  const out = j && j.responseData && j.responseData.translatedText;
+  if(typeof out !== 'string' || !validTranslation(unescapeHtml(out))) throw new Error('mtm śmieci/empty');
+  return unescapeHtml(out);
+}
+// Tłumaczy pojedynczy fragment: cache → gtx → MyMemory → (błąd → LLM).
+// Wynik identyczny z polskim źródłem NIE jest tłumaczeniem: gtx traktuje czasem
+// polskie słowo jak nazwę własną ("Wilk" → "Wilk") i taki wynik musi trafić do
+// LLM, bo inaczej użytkownik EN widzi quiz z polskimi opcjami i nie ma szans
+// odpowiedzieć. Do cache zapisujemy tylko prawdziwe tłumaczenia.
 async function gtx(text){
   const k = String(text==null?'':text);
   if(!k.trim()) return k;
-  if(_gtxCache.has(k)) return _gtxCache.get(k);
-  await new Promise(r=>setTimeout(r, 120)); // uniknij rate-limit blokady
-  const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=pl&tl=en&dt=t&q='+encodeURIComponent(k);
-  const res=await fetch(url, {headers:{'User-Agent':'Mozilla/5.0 (compatible; readproof-translate/1.0)'}, signal: AbortSignal.timeout(15000)});
-  if(!res.ok) throw new Error('gtx '+res.status);
-  const j=await res.json();
-  const seg=(Array.isArray(j)&&Array.isArray(j[0]))?j[0].map(s=>s&&s[0]).filter(Boolean).join(''):'';
-  if(!seg) throw new Error('gtx empty');
-  _gtxCache.set(k, seg);
-  return seg;
+  const hit = _gtxCache[k];
+  if(hit && !sameText(hit, k)) return hit;
+  if(hit) throw new Error('cache: tłumaczenie == źródło → LLM');
+  const sources = [
+    { name:'gtx', gap:400, fn: gtxRaw },
+    { name:'mtm', gap:600, fn: mtmRaw },
+  ];
+  for(const src of sources){
+    for(let a=0; a<2; a++){
+      let out = null;
+      try{ out = await src.fn(k); }
+      catch(e){ if(a<1) await new Promise(r=>setTimeout(r, src.gap*(a+1)*(a+1))); continue; }
+      if(!validTranslation(out)){ if(a<1) await new Promise(r=>setTimeout(r, 400)); continue; }
+      if(sameText(out, k)) continue;   // bez zmian → następne źródło, potem LLM
+      _gtxCache[k]=out; _gtxDirty++;
+      return out;
+    }
+  }
+  throw new Error('brak użytecznego tłumaczenia (gtx/MyMemory) → LLM');
 }
 
+// Tłumaczy listę z ograniczoną równoległością (Google nie lubi setek równoległych).
+// Zwraca listę fragmentów, których NIE udało się przetłumaczyć (429/5xx) — caller
+// decyduje, czy to dołożyć do LLM, czy puścić dalej (np. nazwy własne).
+async function gtxAll(list, limit=6){
+  const src = [...new Set(list.filter(t=>String(t==null?'':t).trim() && !_gtxCache[t]))];
+  const failed = [];
+  if(src.length){
+    let i=0;
+    // Bez short-circuitu na breakerze: gtx() samo sprawdza blokadę i schodzi
+    // na MyMemory, a potem na LLM. Wcześniejsze `continue` gubiło te próby.
+    const worker = async ()=>{ while(i<src.length){
+      const k=src[i++];
+      try{ await gtx(k); }catch(e){ failed.push(k); console.warn('[tr] '+String(e.message).slice(0,60)+' :: '+k.slice(0,50)); }
+    } };
+    await Promise.all(Array.from({length: Math.min(limit, src.length)}, worker));
+  }
+  return failed;
+}
+
+const slimChallenge = c => ({
+  id:String(c.id||''), type:c.type,
+  question:String(c.question||'').trim()||null,
+  options:Array.isArray(c.options)?c.options:null,
+  statements:Array.isArray(c.statements)?c.statements:null,
+  items:Array.isArray(c.items)?c.items:null,
+  pairs:Array.isArray(c.pairs)?c.pairs:null,
+  expectedMeaning:c.expectedMeaning?String(c.expectedMeaning):null,
+  context:c.context?String(c.context):null
+});
+// Wszystkie teksty pytania — płaska lista do tłumaczenia hurtem.
+function challengeTexts(slim){
+  const out=[];
+  for(const c of slim){
+    if(c.question) out.push(c.question);
+    for(const k of ['options','statements','items']) if(Array.isArray(c[k])) out.push(...c[k]);
+    if(Array.isArray(c.pairs)) c.pairs.forEach(p=>{ out.push(p.left, p.right); });
+    if(c.expectedMeaning) out.push(c.expectedMeaning);
+    if(c.context) out.push(c.context);
+  }
+  return [...new Set(out.filter(t=>String(t||'').trim()))];
+}
+// Sklejenie tłumaczenia z oryginałem: pomijamy puste/null pola i struktury o innej
+// długości (LLM potrafi gubić opcje), żeby nie wyzerować indeksów odpowiedzi.
+function mergeTranslated(c, t){
+  const out={...c};
+  for(const [k,v] of Object.entries(t||{})){
+    if(v===null||v===undefined) continue;
+    if(['options','statements','items'].includes(k) && Array.isArray(c[k]) && (!Array.isArray(v) || v.length!==c[k].length)) continue;
+    if(k==='pairs' && Array.isArray(c.pairs) && (!Array.isArray(v) || v.length!==c.pairs.length)) continue;
+    out[k]=v;
+  }
+  if(out.type==='true_false') out.options=['True','False'];
+  return out;
+}
+
+const EN_POOL_MAX = 12;           // ile pytań tłumaczymy na pulę EN (docelowo)
+const EN_POOL_MIN = 6;            // tyle wystarczy na jeden quiz — budowa etapowa
+const EN_POOL_RETRY_MS = 60000;   // po błędzie tłumaczy nie bijemy w limity co sekundę
+const EN_POOL_WAIT_MS = 12000;    // ile start sesji czeka na zimną pulę EN
+const EN_LLM_CHUNK = 4;           // pytania na jedno wywołanie LLM (mniejsze = odporniej na 429)
+const EN_POOL_FILE = './en-pools.json';
+let _enPools = (()=>{ try{ return JSON.parse(fs.readFileSync(EN_POOL_FILE,'utf8')) || {}; }catch(e){ return {}; } })();
+const _enBuilding = new Map();
+const _enFailedAt = new Map();   // chapterId -> timestamp następnej próby
+function enPoolSig(chapterId){ return approvedPool(chapterId).slice(0, EN_POOL_MAX).map(c=>String(c.id)).sort().join(','); }
+function persistEnPools(){ try{ fs.writeFileSync(EN_POOL_FILE, JSON.stringify(_enPools)); }catch(e){ console.warn('[en-pool] persist fail: '+e.message); } }
+function getEnPool(chapterId){
+  const rec = _enPools[chapterId];
+  if(!rec || !Array.isArray(rec.challenges) || rec.challenges.length < 5) return null;
+  // Pula PL mogła się zmienić (nowe pytania po warmAllPools) — wtedy rebuild.
+  const sig = enPoolSig(chapterId);
+  if(rec.sig && sig && rec.sig !== sig) return null;
+  return rec.challenges;
+}
+// Budowa etapowa: najpierw tyle pytań, ile trzeba na JEDEN quiz (6), potem
+// rozszerzenie puli w tle. Darmowe tłumacze mają limity per-IP/dobę, więc
+// tłumaczenie 12 pytań na wejściu często wybijało limit i niszczyło całą pulę.
+async function buildEnPool(chapterId, count=EN_POOL_MIN){
+  const pool = approvedPool(chapterId).slice(0, count);
+  if(pool.length < 5) return null;
+  const en = await translateChallenges(pool);
+  // Do puli EN wchodzą TYLKO pytania faktycznie przetłumaczone (znacznik _en) —
+  // inaczej użytkownik EN dostałby mieszankę PL/EN.
+  const ok = en.filter(c=>c && c._en && c.question)
+    .map(({_en, ...rest})=>rest);
+  if(ok.length < 5){ console.warn(`[en-pool] za mało przetłumaczonych pytań (${ok.length}/${pool.length})`); return null; }
+  _enPools[chapterId] = {sig: pool.map(c=>String(c.id)).sort().join(','), at:new Date().toISOString(), challenges: ok};
+  persistEnPools();
+  return ok;
+}
+// Rozszerzenie puli EN do EN_POOL_MAX — best effort, w tle, z cooldownem po błędzie.
+function extendEnPool(chapterId){
+  const rec = _enPools[chapterId];
+  if(!rec || rec.challenges.length >= EN_POOL_MAX) return;
+  if((_enFailedAt.get(chapterId) || 0) > Date.now()) return;
+  buildEnPool(chapterId, EN_POOL_MAX)
+    .then(en=>{ if(en && en.length>rec.challenges.length) console.log(`[en-pool] rozszerzona (${chapterId}, ${en.length} pytań)`); })
+    .catch(e=>console.warn(`[en-pool] extend fail (${chapterId}): ${String(e.message).slice(0,70)}`));
+}
+// Zwraca gotową pulę EN albo null (gdy budowa trwa / nie wyszła). Budowa jest
+// współdzielona per-rozdział, więc N równoległych sesji nie mnoży pracy.
+// Gdy trwa w tle — wołający dostaje null (503 translating) i frontend ponawia.
+function ensureEnPool(chapterId, waitMs=0){
+  const cached = getEnPool(chapterId);
+  if(cached){ extendEnPool(chapterId); return Promise.resolve(cached); }
+  // Po nieudanej budowie nie próbujemy znowu co sekundę — tłumacze i tak mają limit.
+  if((_enFailedAt.get(chapterId) || 0) > Date.now()) return Promise.resolve(null);
+  const started = !_enBuilding.has(chapterId);
+  if(started){
+    const p = buildEnPool(chapterId, EN_POOL_MIN)
+      .then(en=>{
+        if(en){ _enFailedAt.delete(chapterId); console.log(`[en-pool] gotowa (${chapterId}, ${en.length} pytań)`); setTimeout(()=>extendEnPool(chapterId), 0); }
+        return en;
+      })
+      .catch(e=>{
+        _enFailedAt.set(chapterId, Date.now() + EN_POOL_RETRY_MS);
+        console.error(`[en-pool] build fail (${chapterId}): ${e.message} — ponawiam za ${EN_POOL_RETRY_MS/1000}s`);
+        return null;
+      })
+      .finally(()=>_enBuilding.delete(chapterId));
+    _enBuilding.set(chapterId, p);
+  }
+  const p = _enBuilding.get(chapterId);
+  if(!waitMs) return p.then(()=>getEnPool(chapterId));
+  return Promise.race([p, new Promise(r=>setTimeout(()=>r(undefined), waitMs))]).then(()=>getEnPool(chapterId));
+}
+// Stan dla startu sesji: pula gotowa / budowa w toku (do ponowienia) / porażka
+// (wtedy lecimy z quizem PL i jawnym langFallback).
+function enPoolStatus(chapterId){
+  return { pool: getEnPool(chapterId), building: _enBuilding.has(chapterId), failedUntil: _enFailedAt.get(chapterId) || 0 };
+}
 async function translateChallenges(chas){
-  const slim = chas.map(c=>({
-    id:String(c.id||''), type:c.type,
-    question:String(c.question||'').trim()||null,
-    options:Array.isArray(c.options)?c.options:null,
-    statements:Array.isArray(c.statements)?c.statements:null,
-    items:Array.isArray(c.items)?c.items:null,
-    pairs:Array.isArray(c.pairs)?c.pairs:null,
-    expectedMeaning:c.expectedMeaning?String(c.expectedMeaning):null,
-    context:c.context?String(c.context):null
+  if(!Array.isArray(chas) || !chas.length) return chas;
+  const slim = chas.map(slimChallenge);
+  // 1) Szybka ścieżka: Google Translate + cache (zwykle <2 s, kolejne quizy ~0 ms).
+  // Pytanie, którego gtx nie ruszył, dostaje _en:false i leci dalej do LLM —
+  // do puli EN wchodzą tylko kompletnie przetłumaczone pytania.
+  const failed = await gtxAll(challengeTexts(slim));
+  const failedSet = new Set(failed);
+  const tr = s => _gtxCache[s] || s;
+  // Pole jest przetłumaczone, tylko jeśli jest w cache ORAZ różni się od polskiego
+  // źródła. Wszystkie pola (pytanie, opcje, pary, expectedMeaning) muszą przejść,
+  // inaczej w quizie zostaje polski fragment.
+  const isTr = v => {
+    if(v === null || v === undefined) return true;
+    if(typeof v === 'string'){ const t=v.trim(); if(!t) return true; const c=_gtxCache[t]; return !!c && !sameText(c, t); }
+    if(Array.isArray(v)) return v.every(isTr);
+    if(typeof v === 'object') return Object.values(v).every(isTr);
+    return true;
+  };
+  const viaGtx = new Map(slim.map(c=>{
+    const ok = !failedSet.has(c.question) && !failedSet.has(c.expectedMeaning)
+      && isTr(c.options) && isTr(c.statements) && isTr(c.items) && isTr(c.pairs);
+    const o={...c};
+    if(c.question) o.question = tr(c.question);
+    for(const k of ['options','statements','items']) if(Array.isArray(c[k])) o[k]=c[k].map(tr);
+    if(Array.isArray(c.pairs)) o.pairs = c.pairs.map(p=>({left: tr(p.left), right: tr(p.right)}));
+    if(c.expectedMeaning) o.expectedMeaning = tr(c.expectedMeaning);
+    if(c.context) o.context = tr(c.context);
+    o._en = ok;
+    return [String(c.id), o];
   }));
-  const tfEn = list => list.map(c=> c.type==='true_false' ? {...c, options:['True','False']} : c);
+  const needLlm = chas.filter(c=>viaGtx.get(String(c.id||''))?._en === false);
+  if(needLlm.length) console.warn(`[translate] ${needLlm.length}/${chas.length} pytań poza gtx → LLM`);
+  if(needLlm.length){
+    const done = new Set();
+    for(let i=0; i<needLlm.length; i+=EN_LLM_CHUNK){
+      const slice = needLlm.slice(i, i+EN_LLM_CHUNK);
+      try{
+        const got = await translateChunkLlm(slice);
+        for(const [id, ch] of got) { viaGtx.set(id, ch); done.add(id); }
+      }catch(e){
+        console.warn(`[translate] chunk ${Math.floor(i/EN_LLM_CHUNK)+1} fail: ${String(e.message).slice(0,80)}`);
+      }
+    }
+    if(!done.size) throw new Error('translateChallenges: brak przetłumaczonych pytań (gtx i LLM niedostępne)');
+  }
+  return chas.map(c=>{ const t=viaGtx.get(String(c.id||'')); return t ? mergeTranslated(c, t) : c; });
+}
+// Jedno wywołanie LLM na mały chunk pytań (4) — mniejsze prompty są odporniejsze
+// na 429 i łatwiej wracają z poprawnym JSON niż tłumaczenie 12 pytań naraz.
+async function translateChunkLlm(slice){
+  const slim = slice.map(slimChallenge);
   const prompt = `Translate this quiz (a school reading test) from Polish to ENGLISH.
 Keep the JSON structure EXACTLY — same fields, same indexes, same order of options/statements/items/pairs. Translate only text content (question, options, statements, items, pairs left/right, expectedMeaning, context).
 Use natural English, school-test wording.
 Translation target language: ENGLISH.
 Proper nouns and Polish character names may stay in original form (e.g. Świteź, Dziady, Pan Tadeusz).
+Return ONLY the translated JSON, nothing else.
 JSON:
-${JSON.stringify(slim)}
-Return ONLY the translated JSON.`;
-  // Free tier bywa 429 / pełna kolejka per-IP (Pollinations max 1 queued) — długi backoff, kilka prób zamiast od razu PL
+${JSON.stringify(slim)}`;
   let lastErr;
-  const backs = [2500, 6000, 12000, 20000, 30000];
-  for(let attempt=0; attempt<=backs.length; attempt++){
+  for(let attempt=0; attempt<2; attempt++){
     try{
-      const content = await llmChat([{role:'user',content:prompt}], {temperature:0.1, maxTokens:4000, timeout:90000});
+      const content = await llmChat([{role:'user',content:prompt}], {temperature:0.1, maxTokens:4000, timeout:45000, models: TRANSLATE_MODELS});
       const parsed = extractJSON(content);
       const arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed && parsed.challenges) ? parsed.challenges : null);
-      if(!Array.isArray(arr)) throw new Error('Tłumaczenie: niepoprawny JSON');
+      if(!Array.isArray(arr)) throw new Error('niepoprawny JSON');
       const byId = new Map(arr.map(x=>[String(x.id), x]));
-      return tfEn(chas.map(c=>{ const tr = byId.get(String(c.id||'')); return tr ? {...c, ...tr} : c; }));
-    }catch(e){ lastErr=e; if(attempt<backs.length){ console.warn(`[translateChallenges] próba ${attempt+1}: ${e.message} — retry za ${backs[attempt]/1000}s`); await new Promise(r=>setTimeout(r, backs[attempt])); } }
+      return slice.map(c=>{
+        const t = byId.get(String(c.id||''));
+        if(!t) return null;
+        return [String(c.id), {...mergeTranslated(c, t), _en:true}];
+      }).filter(Boolean);
+    }catch(e){ lastErr=e; console.warn(`[translate] LLM próba ${attempt+1} fail: ${String(e.message).slice(0,90)}`); }
   }
-  // LLM niedostępny (quota free-tier / 429) — deterministyczne tłumaczenie przez Google Translate, żeby EN zawsze działało
-  try{
-    const translated = [];
-    for(const c of slim){
-      const out = {...c, question: c.question ? await gtx(c.question) : null};
-      if(Array.isArray(c.options)) out.options = await Promise.all(c.options.map(o=>gtx(o)));
-      if(Array.isArray(c.statements)) out.statements = await Promise.all(c.statements.map(o=>gtx(o)));
-      if(Array.isArray(c.items)) out.items = await Promise.all(c.items.map(o=>gtx(o)));
-      if(Array.isArray(c.pairs)) out.pairs = await Promise.all(c.pairs.map(p=>({left: p.left?gtx(p.left):'', right: p.right?gtx(p.right):''})));
-      out.expectedMeaning = c.expectedMeaning ? await gtx(c.expectedMeaning) : null;
-      out.context = c.context ? await gtx(c.context) : null;
-      translated.push(out);
-    }
-    console.log('[translateChallenges] fallback Google Translate OK');
-    const byId2 = new Map(translated.map(x=>[String(x.id), x]));
-    return tfEn(chas.map(c=>{ const tr = byId2.get(String(c.id||'')); return tr ? {...c, ...tr} : c; }));
-  }catch(e2){ console.warn('[translateChallenges] Google fallback fail: '+e2.message); }
-  throw lastErr || new Error('translateChallenges: brak prób');
+  throw lastErr || new Error('LLM: brak tłumaczenia');
 }
 
 async function verifyChallenges(challenges, chapter, lang='pl'){
@@ -876,23 +1507,26 @@ app.get('/api/config', (req,res)=>res.json({
 
 // ===== USERS API =====
 app.post('/api/users', (req,res)=>{
-  const {walletAddress, displayName, email, role} = req.body;
+  const {walletAddress, displayName, email} = req.body;
   if(!walletAddress) return res.status(400).json({error:'walletAddress required (Phantom Devnet)', privacy: PRIVACY_SHORT});
   // Solana address: permissive 32-44 alphanumeric (Devnet test may use phantom generated); loose check for hackathon
   const w = String(walletAddress).trim();
   if(w.length < 32 || w.length > 50) return res.status(400).json({error:'invalid walletAddress length (expected 32-44 base58 — Phantom Devnet)', got: w.length, privacy: PRIVACY_SHORT});
   if(!/^[A-Za-z0-9]{32,50}$/.test(w)) return res.status(400).json({error:'invalid walletAddress format', privacy: PRIVACY_SHORT});
+  // ROLA NIE PRZYCHODZI Z BODY. Podnoszenie roli (publisher/teacher) robi wyłącznie
+  // administrator w bazie — inaczej każdy mógłby POST-em zostać wydawcą.
+  // Pole 'role' w body jest ignorowane celowo.
   const now = new Date().toISOString();
-  db.get(`SELECT * FROM users WHERE walletAddress=?`, [walletAddress], (err,row)=>{
+  db.get(`SELECT * FROM users WHERE walletAddress=?`, [w], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(row){
-      db.run(`UPDATE users SET displayName=?, email=?, role=?, lastLoginAt=? WHERE walletAddress=?`, [displayName||row.displayName, email||row.email, role||row.role, now, walletAddress], ()=>{
+      db.run(`UPDATE users SET displayName=?, email=?, lastLoginAt=? WHERE walletAddress=?`, [displayName||row.displayName, email||row.email, now, w], ()=>{
         res.json({ok:true, user: {...row, displayName: displayName||row.displayName, email: email||row.email, lastLoginAt: now}, privacy: PRIVACY_SHORT, note:'Existing wallet—updated lastLogin'});
       });
     } else {
-      db.run(`INSERT INTO users (walletAddress, displayName, email, role, createdAt, lastLoginAt) VALUES (?,?,?,?,?,?)`, [walletAddress, displayName||null, email||null, role||'reader', now, now], (e2)=>{
+      db.run(`INSERT INTO users (walletAddress, displayName, email, role, createdAt, lastLoginAt) VALUES (?,?,?,?,?,?)`, [w, displayName||null, email||null, 'reader', now, now], (e2)=>{
         if(e2) return res.status(500).json({error:e2.message});
-        res.json({ok:true, user:{walletAddress, displayName: displayName||null, email: email||null, role: role||'reader', createdAt: now, lastLoginAt: now}, privacy: PRIVACY_SHORT});
+        res.json({ok:true, user:{walletAddress: w, displayName: displayName||null, email: email||null, role: 'reader', createdAt: now, lastLoginAt: now}, privacy: PRIVACY_SHORT});
       });
     }
   });
@@ -1219,7 +1853,70 @@ app.post('/api/auth/verify', (req,res)=>{
   return res.redirect(307, '/api/auth/apple');
 });
 
-// ===== PUBLISHER CAMPAIGNS API =====
+// ===== PUBLISHER API =====
+// Bramka: rola 'publisher' z bazy + pinowanie portfela.
+// `publisherWallet` z body/query jest NADPISYWANY portfelem z autoryzacji, więc
+// istniejące endpointy campaigns przestają być IDOR-em (wydawca A nie zobaczy
+// kampanii wydawcy B, nawet jeśli poda jego adres w zapytaniu).
+async function requirePublisher(req, res, next){
+  const actor = reqActor(req);
+  if(!actor) return res.status(401).json({error:'publisher authorization required'});
+  const row = await new Promise((resolve)=>{
+    db.get(`SELECT * FROM users WHERE walletAddress=? OR appleUserId=?`, [actor, actor], (e,r)=>{ if(e) return resolve(null); resolve(r); });
+  });
+  if(!row) return res.status(403).json({error:'publisher account not found'});
+  const role = row.role || 'reader';
+  if(role !== 'publisher') return res.status(403).json({error:'publisher role required'});
+  // Sam wybór roli w formularzu nie daje dostępu. Konto musi być zatwierdzone
+  // przez administratora; zawieszenie natychmiast odbiera dostęp.
+  if(!roleIsApproved(row)) {
+    const status = row.approvalStatus || 'pending';
+    if(roleIsSuspended(row)) return res.status(403).json({error:'publisher account is suspended', approvalStatus: status});
+    return res.status(403).json({error:'publisher account is awaiting administrator approval', approvalStatus: status});
+  }
+  req._role = role;
+  req._user = row;
+  req.publisher = { wallet: row.walletAddress, displayName: row.displayName||null, email: row.email||null };
+  next();
+}
+function publisherOf(req){ return req.publisher?.wallet || ''; }
+function pinPublisherWallet(req,res,next){
+  const w = publisherOf(req);
+  if(req.body && typeof req.body==='object') req.body.publisherWallet = w;
+  if(req.query) req.query.publisherWallet = w;
+  next();
+}
+// Weryfikacja własności. 404 zamiast 403, żeby nie zdradzać istnienia cudzych książek.
+async function ownedPublisherBook(req, bookId){
+  const owner = publisherOf(req);
+  if(!owner) return {error:{status:401, message:'publisher authorization required'}};
+  const id = String(bookId||'');
+  if(!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return {error:{status:400, message:'invalid book id'}};
+  const row = await new Promise((resolve)=>{
+    db.get(`SELECT * FROM publisher_books WHERE id=?`, [id], (e,r)=>{ if(e) return resolve(null); resolve(r); });
+  });
+  if(!row) return {error:{status:404, message:'book not found'}};
+  if(row.ownerWallet !== owner) return {error:{status:404, message:'book not found'}};
+  return {row};
+}
+app.use('/api/publisher', requirePublisher, pinPublisherWallet);
+
+// Weryfikacja własności kampanii (legacy flow). Zwraca 404, żeby nie zdradzać
+// istnienia cudzych kampanii.
+async function ownedCampaign(req, id){
+  const owner = publisherOf(req);
+  const cid = String(id||'');
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(cid)) return {error:{status:400, message:'invalid campaign id'}};
+  const row = await new Promise((resolve)=>{
+    db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [cid], (e,r)=>{ if(e) return resolve(null); resolve(r); });
+  });
+  if(!row) return {error:{status:404, message:'campaign not found'}};
+  if(row.publisherWallet !== owner) return {error:{status:404, message:'campaign not found'}};
+  return {row};
+}
+// Wycisła błędy własności jako odpowiedź HTTP (404/400/401).
+function failOwned(res, owned){ return res.status(owned.error.status).json({error: owned.error.message}); }
+
 app.get('/api/publisher/campaigns', (req,res)=>{
   const {isbn, publisherWallet, status} = req.query;
   let sql=`SELECT * FROM publisher_campaigns WHERE 1=1`;
@@ -1243,7 +1940,10 @@ app.get('/api/publisher/campaigns', (req,res)=>{
   });
 });
 
-app.get('/api/publisher/campaigns/:id', (req,res)=>{
+app.get('/api/publisher/campaigns/:id', async (req,res)=>{
+  const owned = await ownedCampaign(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
   db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [req.params.id], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'campaign not found', privacy: PRIVACY_SHORT});
@@ -1306,7 +2006,9 @@ app.post('/api/publisher/campaigns', (req,res)=>{
     });
 });
 
-app.get('/api/publisher/campaigns/:id/qr', (req,res)=>{
+app.get('/api/publisher/campaigns/:id/qr', async (req,res)=>{
+  const ownedQr = await ownedCampaign(req, req.params.id);
+  if(ownedQr.error) return failOwned(res, ownedQr);
   db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [req.params.id], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'campaign not found'});
@@ -1328,7 +2030,9 @@ app.get('/api/publisher/campaigns/:id/qr', (req,res)=>{
   });
 });
 
-app.get('/api/publisher/campaigns/:id/code', (req,res)=>{
+app.get('/api/publisher/campaigns/:id/code', async (req,res)=>{
+  const ownedCode = await ownedCampaign(req, req.params.id);
+  if(ownedCode.error) return failOwned(res, ownedCode);
   db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [req.params.id], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'campaign not found'});
@@ -1337,15 +2041,16 @@ app.get('/api/publisher/campaigns/:id/code', (req,res)=>{
   });
 });
 
-// ISBN lookup (typed)
+// ISBN lookup (typed) — tylko własne kampanie wydawcy
 app.get('/api/publisher/lookup', (req,res)=>{
   const {isbn, code} = req.query;
   const q = normalizeISBN(isbn||code||'');
   if(!q) return res.status(400).json({error:'isbn or code query required', privacy: PRIVACY_SHORT});
-  db.get(`SELECT * FROM publisher_campaigns WHERE isbn=? OR id=?`, [q, q.startsWith('camp-')?q:`camp-${q.toLowerCase()}`], (err,row)=>{
+  const me = publisherOf(req);
+  db.get(`SELECT * FROM publisher_campaigns WHERE isbn=? AND publisherWallet=?`, [q, me], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row){
-      db.all(`SELECT * FROM publisher_campaigns WHERE isbn LIKE ? LIMIT 10`, [`%${q}%`], (e2, rows)=>{
+      db.all(`SELECT id, title, author, isbn FROM publisher_campaigns WHERE isbn LIKE ? AND publisherWallet=? LIMIT 10`, [`%${q}%`, me], (e2, rows)=>{
         res.json({found:false, query: q, suggestions: rows||[], privacy: PRIVACY_SHORT});
       });
       return;
@@ -1355,7 +2060,9 @@ app.get('/api/publisher/lookup', (req,res)=>{
 });
 
 // Upload book content — server only, never on-chain (only hash)
-app.post('/api/publisher/campaigns/:id/content', (req,res)=>{
+app.post('/api/publisher/campaigns/:id/content', async (req,res)=>{
+  const ownedContent = await ownedCampaign(req, req.params.id);
+  if(ownedContent.error) return failOwned(res, ownedContent);
   const {text, content} = req.body;
   const raw = text||content||'';
   if(!raw || String(raw).length < 100) return res.status(400).json({error:'content too short (min 100 chars). Paste full book chapter text.', privacy: PRIVACY_SHORT});
@@ -1388,7 +2095,7 @@ app.post('/api/publisher/campaigns/:id/content', (req,res)=>{
       }
       if(!challengesByChapter[req.params.id] || challengesByChapter[req.params.id].length <5){
         challengesByChapter[req.params.id]=mockCampaignChallenges(String(raw), req.params.id);
-        try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+        persistChallenges()
       }
       // also auto-generate BETTER challenges via LLM free (fire-and-forget) if key set — will overwrite mock on next session
       if(anyLLM()){
@@ -1399,7 +2106,7 @@ app.post('/api/publisher/campaigns/:id/content', (req,res)=>{
             // merge: keep mock if LLM returns empty, otherwise replace
             if(gen && gen.length>=5){
               challengesByChapter[req.params.id]=gen;
-              try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2)); }catch{}
+              persistChallenges()
               console.log(`[campaign-content] LLM upgraded ${gen.length} challenges for ${req.params.id}`);
             }
           }catch(e){ console.error('[campaign-content] LLM gen failed (mock kept)', e.message); }
@@ -1420,7 +2127,9 @@ app.post('/api/publisher/campaigns/:id/content', (req,res)=>{
   });
 });
 
-app.get('/api/publisher/campaigns/:id/content', (req,res)=>{
+app.get('/api/publisher/campaigns/:id/content', async (req,res)=>{
+  const ownedPreview = await ownedCampaign(req, req.params.id);
+  if(ownedPreview.error) return failOwned(res, ownedPreview);
   db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [req.params.id], (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'campaign not found'});
@@ -1442,16 +2151,20 @@ app.get('/api/publisher/campaigns/:id/content', (req,res)=>{
 
 // Fund reward pool — Devnet USDC/SOL (mock + optional real Solana transfer)
 app.post('/api/publisher/campaigns/:id/fund', async (req,res)=>{
-  const {publisherWallet, amount, currency, txSignature} = req.body;
-  if(!publisherWallet) return res.status(400).json({error:'publisherWallet required', privacy: PRIVACY_SHORT});
-  if(!amount || Number(amount)<=0) return res.status(400).json({error:'amount >0 required', privacy: PRIVACY_SHORT});
-  const cur = (currency==='SOL' ? 'SOL':'USDC');
+  const {amount, currency, txSignature} = req.body;
+  const publisherWallet = publisherOf(req); // z autoryzacji, nie z body
+  if(!publisherWallet) return res.status(401).json({error:'publisher authorization required', privacy: PRIVACY_SHORT});
   const amt = Number(amount);
+  if(amount===undefined || amount===null || amount==='' || !Number.isFinite(amt)) return res.status(422).json({error:'amount must be a number', privacy: PRIVACY_SHORT});
+  if(amt<=0) return res.status(400).json({error:'amount >0 required', privacy: PRIVACY_SHORT});
+  const cur = (currency==='SOL' ? 'SOL':'USDC');
   if(amt>100000) return res.status(400).json({error:'amount too large (max 100k Devnet)', privacy: PRIVACY_SHORT});
+  const ownedFund = await ownedCampaign(req, req.params.id);
+  if(ownedFund.error) return failOwned(res, ownedFund);
   db.get(`SELECT * FROM publisher_campaigns WHERE id=?`, [req.params.id], async (err,row)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'campaign not found'});
-    if(row.publisherWallet !== publisherWallet) return res.status(403).json({error:'only publisherWallet can fund', expected: row.publisherWallet});
+    if(row.publisherWallet !== publisherWallet) return res.status(404).json({error:'campaign not found'});
     if(row.currency !== cur) return res.status(400).json({error:`campaign currency is ${row.currency}, got ${cur}`});
     // Optional: verify txSignature on Devnet via RPC (if provided)
     let verifiedTx = null;
@@ -1493,7 +2206,9 @@ app.post('/api/publisher/campaigns/:id/fund', async (req,res)=>{
   });
 });
 
-app.get('/api/publisher/campaigns/:id/funds', (req,res)=>{
+app.get('/api/publisher/campaigns/:id/funds', async (req,res)=>{
+  const ownedFunds = await ownedCampaign(req, req.params.id);
+  if(ownedFunds.error) return failOwned(res, ownedFunds);
   db.all(`SELECT * FROM campaign_funds WHERE campaignId=? ORDER BY createdAt DESC`, [req.params.id], (err,rows)=>{
     if(err) return res.status(500).json({error:err.message});
     res.json({campaignId: req.params.id, count: rows.length, funds: rows, usdcMint: USDC_MINT_DEVNET, cluster:'devnet', privacy: PRIVACY_SHORT});
@@ -1502,6 +2217,8 @@ app.get('/api/publisher/campaigns/:id/funds', (req,res)=>{
 
 // Campaign challenge bridge — start proof for uploaded campaign book (uses campaign text)
 app.post('/api/publisher/campaigns/:id/start', async (req,res)=>{
+  const ownedStart = await ownedCampaign(req, req.params.id);
+  if(ownedStart.error) return failOwned(res, ownedStart);
   const {walletAddress, userId: bodyUserId, appleUserId} = req.body;
   if(!walletAddress) return res.status(400).json({error:'walletAddress required'});
   let userId = bodyUserId || appleUserId || req.headers['x-user-id'] || req.headers['x-apple-user'] || null;
@@ -1538,7 +2255,7 @@ app.post('/api/publisher/campaigns/:id/start', async (req,res)=>{
           try{
             const chap = { id: req.params.id, bookId: req.params.id, index:1, title: row.title, summary: row.description||row.title, contextExcerpt: txt.slice(0,500) };
             const gen = await callOpenRouterGenerate(chap, 10, langOf(req));
-            if(gen && gen.length>=5){ pool = gen; challengesByChapter[req.params.id]=pool; try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null,2)); }catch{} }
+            if(gen && gen.length>=5){ pool = gen; challengesByChapter[req.params.id]=pool; persistChallenges() }
           }catch(e){ console.error('[campaign/start] LLM fail', e.message); }
         }
         if(pool.length<5){
@@ -1552,7 +2269,7 @@ app.post('/api/publisher/campaigns/:id/start', async (req,res)=>{
             { id:`${cid}-m5`, chapterId:cid, type:'multiple_select', question:`Wybierz 2 cechy tego tekstu`, options:["Narracyjny","Przygodowy","Techniczny manual","Liryczny wiersz"], correctAnswers:[0,1] }
           ];
           challengesByChapter[cid]=pool;
-          try{ fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null,2)); }catch{}
+          persistChallenges()
         }
       }catch(e){ console.error('[campaign/start] gen fail', e.message); }
     }
@@ -1631,17 +2348,39 @@ app.post('/api/sessions/start', async (req,res)=>{
     // pula niegotowa — NIGDY nie blokuj starcia sesji generowaniem; apka pokaże „Oczekiwanie na pulę pytań"
     return res.status(503).json({error:'Oczekiwanie na pulę pytań — generowanie pytań w tle, spróbuj za chwilę', code:'pool_generating', poolCount: poolSzStart, bookId, chapterId});
   }
-  let picked;
-  try{ picked = pickForSession(chapterId, lang); }
-  catch(e){
-    console.error(`[start] fallback do puli: ${e.message}`);
-    picked = pickFive(chapterId);
-  }
-  if(lang === 'en' && Array.isArray(picked) && picked.length){
-    try{ picked = await translateChallenges(picked); }
-    catch(e){ console.warn(`[start] translate (en) fail — sesja w PL: ${e.message}`); }
+  let picked, langFallback = null;
+  if(lang === 'en'){
+    // EN gramy z gotowej puli EN (en-pools.json). Pula jest budowana leniwie:
+    // pierwsze wejście na zimny rozdział czeka na budowę, kolejne są instant.
+    // Jeśli obaj tłumacze (gtx + LLM) są chwilowo niedostępne, NIE blokujemy
+    // użytkownika martwym 503 — dostaje quiz po polsku z jawną flagą
+    // langFallback, którą pokazuje aplikacja, a pula EN dojedzie w tle.
+    const enPool = await ensureEnPool(chapterId, EN_POOL_WAIT_MS);
+    if(enPool && enPool.length >= 5){
+      picked = pickFromPool(enPool);
+    } else {
+      ensureEnPool(chapterId, 0);
+      const st = enPoolStatus(chapterId);
+      // Budowa jeszcze trwa → 503, a aplikacja sama ponawia. Oddanie quizu
+      // po polsku w trakcie tłumaczenia dawało wrażenie „zepsutego EN".
+      if(st.building && Date.now() > st.failedUntil){
+        return res.status(503).json({error:'EN quiz is being translated — retry in a moment', code:'translating', bookId, chapterId, retryAfterSec:8});
+      }
+      picked = pickForSession(chapterId, 'pl');
+      langFallback = 'pl';
+      console.warn(`[start] ${chapterId}: pula EN niedostępna — quiz PL z langFallback`);
+    }
+  } else {
+    try{ picked = pickForSession(chapterId, lang); }
+    catch(e){
+      console.error(`[start] fallback do puli: ${e.message}`);
+      picked = pickFive(chapterId);
+    }
   }
   const startAt = new Date().toISOString();
+  // Język TREŚCI sesji: przy fallbacku pytania są polskie, więc ocenianie (Jev),
+  // podpowiedzi i komunikaty też muszą być polskie — inaczej mieszamy języki.
+  const contentLang = langFallback ? 'pl' : lang;
   const sessionChallenges = isDevBypass ? buildSessionChallenges(picked, startAt, false).map(c=>({...c, releaseAt: startAt})) : buildSessionChallenges(picked, startAt, isDemo);
   const id = crypto.randomUUID();
   const expectedMin = expectedReadingMin || 12;
@@ -1649,18 +2388,18 @@ app.post('/api/sessions/start', async (req,res)=>{
     id, walletAddress: wallet, bookId, chapterId, startAt, endAt: null, status:'reading',
     challengeIds: picked.map(c=>c.id), challenges: sessionChallenges,
     answers: {}, // challengeId -> {answer, answeredAt, correct, jev}
-    readingDurationSec: 0, lang, expectedReadingMin: expectedMin, isDemo, isDevBypass, userId: userId||null
+    readingDurationSec: 0, lang: contentLang, expectedReadingMin: expectedMin, isDemo, isDevBypass, userId: userId||null
   };
   sessionsMem.set(id, session);
   // try with userId column, fallback without if column missing (sqlite old)
   const tryInsert = (withUserId)=>{
     if(withUserId){
       db.run(`INSERT INTO reading_sessions (id, walletAddress, bookId, chapterId, startAt, endAt, status, challengeIds, answers, readingDurationSec, lang, expectedReadingMin, createdAt, userId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [id,wallet,bookId,chapterId,startAt,null,'reading', JSON.stringify(session.challengeIds), JSON.stringify(session.answers), 0, lang, expectedMin, startAt, userId||null],
+        [id,wallet,bookId,chapterId,startAt,null,'reading', JSON.stringify(session.challengeIds), JSON.stringify(session.answers), 0, contentLang, expectedMin, startAt, userId||null],
         (e)=>{ if(e && String(e.message).includes('no column')) tryInsert(false); });
     } else {
       db.run(`INSERT INTO reading_sessions (id, walletAddress, bookId, chapterId, startAt, endAt, status, challengeIds, answers, readingDurationSec, lang, expectedReadingMin, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [id,wallet,bookId,chapterId,startAt,null,'reading', JSON.stringify(session.challengeIds), JSON.stringify(session.answers), 0, lang, expectedMin, startAt]);
+        [id,wallet,bookId,chapterId,startAt,null,'reading', JSON.stringify(session.challengeIds), JSON.stringify(session.answers), 0, contentLang, expectedMin, startAt]);
     }
   };
   tryInsert(true);
@@ -1669,10 +2408,12 @@ app.post('/api/sessions/start', async (req,res)=>{
   const masked = sessionChallenges.map(c=>{
     const unlockAt = new Date(c.releaseAt).getTime();
     const locked = unlockAt > now;
-    if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: lang==='en'?'Reading — unlocks soon':'Czytanie — odblokuje się wkrótce'};
-    return {...normalizeChallenge(c), locked:false};
+    if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: contentLang==='en'?'Reading — unlocks soon':'Czytanie — odblokuje się wkrótce'};
+    // Obcinamy PO normalizeChallenge — normalizacja sama wylicza correctAnswer
+    // dla true_false i multiple_choice, więc obcięcie przed nią nic nie dawało.
+    return {...stripAnswers([normalizeChallenge(c, contentLang)])[0], locked:false};
   });
-  res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, isDevBypass, lang, timing: isDevBypass ? SESSION_TIMING_DEV : (isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL), challenges: masked, poolSize: poolForChapter(chapterId).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
+  res.json({id, walletAddress: wallet, bookId, chapterId, startAt, expectedReadingMin: expectedMin, isDemo, isDevBypass, lang, langFallback, timing: isDevBypass ? SESSION_TIMING_DEV : (isDemo? SESSION_TIMING_DEMO: SESSION_TIMING_REAL), challenges: masked, poolSize: poolForChapter(chapterId).length, note: lang==='en'?'Proof of Comprehension — not proof of physical reading. Challenges unlock gradually to prevent copy-to-AI.':'Proof of Comprehension — nie dowód fizycznego czytania. Challengee odblokowują się stopniowo — nie da się wkleić wszystkich do AI.'});
   console.log(`[start] ${wallet?.slice(0,6)}.. ${bookId}/${chapterId} lang=${lang} demo=${isDemo} dev=${isDevBypass} pool=${poolForChapter(chapterId).length} session=${id.slice(0,8)}`);
 });
 
@@ -1681,8 +2422,8 @@ app.get('/api/sessions/:id', (req,res)=>{
   if(!s){
     db.get(`SELECT * FROM reading_sessions WHERE id=?`, [req.params.id], (err,row)=>{
       if(err||!row) return res.status(404).json({error:'session not found'});
-      // fallback from DB
-      const challenges = JSON.parse(row.challengeIds||'[]').map(id=> poolForChapter(row.chapterId).find(c=>c.id===id) || {id});
+      // fallback z DB — też bez klucza odpowiedzi
+      const challenges = stripAnswers(JSON.parse(row.challengeIds||'[]').map(id=> poolForChapter(row.chapterId).find(c=>c.id===id) || {id}));
       return res.json({id:row.id, walletAddress:row.walletAddress, bookId:row.bookId, chapterId:row.chapterId, startAt:row.startAt, endAt:row.endAt, status:row.status, challenges, answers: JSON.parse(row.answers||'{}')});
     });
     return;
@@ -1691,7 +2432,7 @@ app.get('/api/sessions/:id', (req,res)=>{
   const masked = s.challenges.map(c=>{
     const locked = new Date(c.releaseAt).getTime() > now;
     if(locked) return {id:c.id, type:c.type, releaseAt:c.releaseAt, releaseAfterSec:c.releaseAfterSec, locked:true, hint: s.lang==='en'?'Keep reading…':'Czytaj dalej…'};
-    return {...normalizeChallenge(c), locked:false};
+    return {...stripAnswers([normalizeChallenge(c, s.lang)])[0], locked:false};
   });
   const readingDurationSec = Math.floor((now - new Date(s.startAt).getTime())/1000);
   res.json({...s, readingDurationSec, challenges: masked});
@@ -1703,7 +2444,7 @@ app.post('/api/sessions/:id/answer', async (req,res)=>{
   const {challengeId, answer} = req.body;
   let ch = s.challenges.find(c=>c.id===challengeId);
   if(!ch) return res.status(404).json({error:'challenge not in session'});
-  ch = normalizeChallenge(ch);
+  ch = normalizeChallenge(ch, s.lang);
   if(new Date(ch.releaseAt).getTime() > Date.now()) return res.status(423).json({error:'challenge still locked — keep reading', releaseAt: ch.releaseAt});
   if(s.answers[challengeId]) return res.status(409).json({error:'already answered'});
   let correct=false; let jev=null;
@@ -1874,12 +2615,15 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   const finalStatus = failEarly ? 'Failed' : verdict.status;
   s.status = finalStatus;
 
-  // ── 2. ZAPIS WYNIKU — deciduj nagrodę tylko gdy weryfikacja przeszła ──
+  // ── 2. ZAPIS WYNIKU — nagroda tylko gdy weryfikacja przeszła, certyfikat także dla partial ──
   const proofId = crypto.randomUUID();
   const proofHash = verdict.proofHash;
   const verificationVersion = verdict.verificationVersion;
   let tx=null, explorer=null, reward=null, chapterCertId=null;
-  if(verdict.verified && !failEarly){
+  // tier 'full' → pełne zrozumowanie + nagroda + certyfikat
+  // tier 'partial' → certyfikat ze statusem "częściowe zrozumienie", BEZ nagrody i bez on-chain
+  // tier 'none'   → brak certyfikatu (oszustwo / zbyt niski wynik)
+  if(verdict.tier === 'full' && !failEarly){
     const chapter = books.flatMap(b=>b.chapters).find(c=>c.id===s.chapterId);
     reward = chapter?.reward || '5 USDC';
     // certyfikat rozdziału (RP-XXXXXX) — ID trafia też do memo on-chain
@@ -1890,6 +2634,15 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
       proofHash, timestamp: endAt, verificationVersion, certId: chapterCertId
     });
     if(real){ tx=real.signature; explorer=real.explorer; } else { tx=null; explorer=null; }
+    // Rozliczenie puli wydawcy — tylko dla książek z pulą nagród.
+    // Pula maleje atomowo (warunek w UPDATE), więc dwie równoległe sesje
+    // nie wypłacą z jednej puli. Bez skonfigurowanego payera status='pending'.
+    await settlePublisherPayout({ bookId: s.bookId, chapterId: s.chapterId, wallet: s.walletAddress,
+      userId: (s.userId || null), score: verdict.score, total, reward, tx, explorer, proofHash, at: endAt });
+  } else if(verdict.tier === 'partial' && !failEarly){
+    reward = null;
+    // certyfikat za częściowe zrozumienie — bez nagrody, memo on-chain tylko z proofHash
+    chapterCertId = certId();
   } else {
     reward = null;
   }
@@ -1905,27 +2658,44 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
     return {challengeId:c.id, type:c.type||'', question:c.question||null, options, yourAnswer: ans.answer ?? null, correct: !!ans.correct, correctAnswer, correctAnswers: (c.correctAnswers||null), expectedMeaning: c.expectedMeaning||null, correctText: (c.type==='open_question'||c.type==='why_question') ? (c.expectedMeaning||null) : null, jev: ans.jev || null};
   });
   const userIdForProof = s.userId || req.headers['x-user-id'] || req.headers['x-apple-user'] || req.body?.userId || null;
-  // try insert with userId, fallback without
-  const doProofInsert = (withUser)=>{
+  // Awaitujemy zapisy! Wcześniej były "fire-and-forget", więc /complete odpowiadał ZANIM
+  // proof i certyfikat trafiły do bazy → natychmiastowe otwarcie /verify/?id=RP-… dawało
+  // 404 "certificate not found", a przy awarii DB cert w ogóle nie powstawał.
+  const dbRun = (sql, params)=>new Promise((resolve)=>{ try{ db.run(sql, params, (e)=>resolve(!e)); }catch(e){ resolve(false); } });
+  const doProofInsert = async (withUser)=>{
     if(withUser){
-      db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail, verificationVersion, durationSec, userId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [proofId, s.bookId, s.chapterId, verdict.score, total, finalStatus, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail), verificationVersion, verdict.durationSec, userIdForProof],
-        (e)=>{ if(e && String(e.message).includes('no column')) doProofInsert(false); });
-    } else {
-      db.run(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail, verificationVersion, durationSec) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [proofId, s.bookId, s.chapterId, verdict.score, total, finalStatus, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail), verificationVersion, verdict.durationSec]);
+      const ok = await dbRun(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail, verificationVersion, durationSec, userId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [proofId, s.bookId, s.chapterId, verdict.score, total, finalStatus, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail), verificationVersion, verdict.durationSec, userIdForProof]);
+      if(!ok) await doProofInsert(false); // baza bez kolumny userId → ponów bez niej
+      return ok;
     }
+    return await dbRun(`INSERT INTO proofs (id, bookId, chapterId, score, total, status, walletAddress, timestamp, proofHash, txSignature, explorerUrl, reward, detail, verificationVersion, durationSec) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [proofId, s.bookId, s.chapterId, verdict.score, total, finalStatus, s.walletAddress, endAt, proofHash, tx, explorer, reward, JSON.stringify(detail), verificationVersion, verdict.durationSec]);
   };
-  doProofInsert(true);
+  const proofSaved = await doProofInsert(true);
+  let certSaved = false;
   if(chapterCertId){
-    db.run(`INSERT INTO certificates (id, kind, bookId, chapterId, walletAddress, userId, score, total, status, certHash, txSignature, explorerUrl, timestamp, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [chapterCertId, 'chapter', s.bookId, s.chapterId, s.walletAddress, userIdForProof, verdict.score, total, finalStatus, proofHash, tx, explorer, endAt, endAt],
-      (e)=>{ if(e) console.warn(`[cert] insert fail ${chapterCertId}: ${e.message}`); });
+    certSaved = await dbRun(`INSERT INTO certificates (id, kind, bookId, chapterId, walletAddress, userId, score, total, status, certHash, txSignature, explorerUrl, timestamp, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [chapterCertId, 'chapter', s.bookId, s.chapterId, s.walletAddress, userIdForProof, verdict.score, total, finalStatus, proofHash, tx, explorer, endAt, endAt]);
+    if(!certSaved){
+      console.error(`[cert] insert FAIL ${chapterCertId}: ${s.bookId}/${s.chapterId} ${s.walletAddress} — cert NIE zapisany`);
+      chapterCertId = null; // nie obiecujemy certu, którego nie ma w bazie
+    } else {
+      // Kotwica powstaje PO zapisie wiersza — memo musi odtąd odtwarzać się
+      // co do bajtu z bazy. Czekamy, bo /verify po certyfikacie ma działać
+      // natychmiast, a kotwica musi być już w łańcuchu.
+      await anchorCertificate({
+        id: chapterCertId, kind:'chapter', bookId:s.bookId, chapterId:s.chapterId,
+        walletAddress:s.walletAddress, score: verdict.score, total, status: finalStatus,
+        timestamp: endAt,
+      });
+    }
   }
-  db.run(`UPDATE reading_sessions SET endAt=?, status=?, readingDurationSec=? WHERE id=?`, [endAt, finalStatus, s.readingDurationSec, s.id]);
-  console.log(`[complete] user=${(userIdForProof||'').toString().slice(0,8)} wallet=${s.walletAddress?.slice(0,6)}.. ${s.chapterId} score=${verdict.score}/${total} status=${finalStatus} version=${verificationVersion} proof=${proofHash} verified=${verdict.verified} cert=${chapterCertId||'—'} checks=${verdict.checks.filter(c=>!c.passed).map(c=>c.name).join(',')||'ALL PASS'}`);
+  await dbRun(`UPDATE reading_sessions SET endAt=?, status=?, readingDurationSec=? WHERE id=?`, [endAt, finalStatus, s.readingDurationSec, s.id]);
+  if(!proofSaved) console.error(`[proof] insert FAIL ${proofHash} (${s.bookId}/${s.chapterId})`);
+  console.log(`[complete] user=${(userIdForProof||'').toString().slice(0,8)} wallet=${s.walletAddress?.slice(0,6)}.. ${s.chapterId} score=${verdict.score}/${total} status=${finalStatus} tier=${verdict.tier} version=${verificationVersion} proof=${proofHash} proofSaved=${proofSaved?'OK':'FAIL'} verified=${verdict.verified} cert=${chapterCertId||'—'} checks=${verdict.checks.filter(c=>!c.passed).map(c=>c.name).join(',')||'ALL PASS'}`);
   res.json({
-    sessionId: s.id, proof: {id: proofId, bookId:s.bookId, chapterId:s.chapterId, challengeIds: s.challengeIds, score: verdict.score, total, status: finalStatus, walletAddress:s.walletAddress, userId: userIdForProof, timestamp:endAt, proofHash, txSignature:tx, explorerUrl: explorer, reward, verificationVersion, durationSec: verdict.durationSec, certId: chapterCertId},
+    sessionId: s.id, proof: {id: proofId, bookId:s.bookId, chapterId:s.chapterId, challengeIds: s.challengeIds, score: verdict.score, total, status: finalStatus, tier: verdict.tier, walletAddress:s.walletAddress, userId: userIdForProof, timestamp:endAt, proofHash, txSignature:tx, explorerUrl: explorer, reward, verificationVersion, durationSec: verdict.durationSec, certId: chapterCertId},
     readingDurationSec: verdict.durationSec, startAt: s.startAt, endAt, lang: s.lang,
     verification: { verified: verdict.verified, version: verificationVersion, checks: verdict.checks },
     results: detail,
@@ -1933,28 +2703,50 @@ app.post('/api/sessions/:id/complete', async (req,res)=>{
   });
 });
 
-app.get('/api/books', (req,res)=>res.json(books.map(b=>({...b, chapters:(b.chapters||[]).map(c=>({...c, poolCount:(challengesByChapter[c.id]||[]).length}))}))
+// Książki wstrzymane przez wydawcę znikają z katalogu czytelnika (pauza ≠ usunięcie).
+function isPaused(b){ return !!b._paused; }
+function publicBook(b){
+  if(!b._paused){ const { _paused, ...rest } = b; return rest; }
+  return b;
+}
+app.get('/api/books', (req,res)=>res.json(books.filter(b=>!isPaused(b)).map(b=>{ const pb=publicBook(b); return {...pb, chapters:(pb.chapters||[]).map(c=>({...c, poolCount:approvedPool(c.id).length, draftCount:poolForChapter(c.id).filter(c=>qStatus(c)!=='approved').length}))}; })
   .filter(b=>(b.chapters||[]).length>0 && (b.chapters||[]).every(c=>c.poolCount>=5))));
 
 app.get('/api/books/:bookId', (req,res)=>{
   const b=books.find(x=>x.id===req.params.bookId);
   if(!b) return res.status(404).json({error:'book not found'});
-  res.json(b);
+  if(isPaused(b)) return res.status(404).json({error:'book not available'});
+  res.json(publicBook(b));
 });
 
-app.get('/api/books/:bookId/chapters/:chapterId/challenge', (req,res)=>{
-  const chs=pickFive(req.params.chapterId);
+app.get('/api/books/:bookId/chapters/:chapterId/challenge', async (req,res)=>{
+  const lang = langOf(req);
+  // EN: z gotowej puli EN (jak sesja). Gdy jej jeszcze nie ma — zwracamy PL
+  // i odpalamy budowę w tle, zamiast tłumaczyć na żądanie w pętli HTTP.
+  let chs = null, outLang = lang;
+  if(lang==='en'){
+    const enPool = await ensureEnPool(req.params.chapterId, 8000);
+    if(enPool && enPool.length >= 5){ chs = pickFromPool(enPool); }
+    else { ensureEnPool(req.params.chapterId, 0); outLang = 'pl'; }
+  }
+  if(!chs) chs = pickFive(req.params.chapterId);
   if(!chs.length) return res.status(404).json({error:'no challenges'});
-  res.json({chapterId:req.params.chapterId, count:chs.length, challenges: chs, lang: langOf(req)});
+  res.json({chapterId:req.params.chapterId, count:chs.length, challenges: stripAnswers(chs.map(c=>normalizeChallenge(c, outLang))), lang: outLang});
 });
 
+// Pola, które zdradzają klucz odpowiedzi. Publiczny podgląd puli (np. strona
+// /verify/ budująca opis dowodu) dostaje treść pytania, ale NIE poprawną odpowiedź
+// ani expectedMeaning — inaczej każdy mógłby zlać test przed przeczytaniem książki.
+// Publiczny podgląd puli: treść pytania bez klucza. Nauczyciel i wydawca widzą
+// odpowiedzi przez endpointy z requireTeacher / requirePublisher
+// (/api/teacher/pool, /api/publisher/...), które już istnieją lub powstaną.
 app.get('/api/challenges/:chapterId', (req,res)=>{
   const pool=challengesByChapter[req.params.chapterId];
   if(!pool) return res.status(404).json({error:'not found'});
   if(req.query.pick) {
     const n=Math.min(Number(req.query.pick)||5, pool.length);
-    res.json(pickFive(req.params.chapterId).slice(0,n));
-  } else res.json(pool);
+    res.json(stripAnswers(pickFive(req.params.chapterId).slice(0,n)));
+  } else res.json(stripAnswers(pool));
 });
 
 app.post('/api/evaluate', async (req,res)=>{
@@ -2004,7 +2796,7 @@ const SECRET_KEYS_TEST = ['correctAnswer','correctAnswers','correctOrder','error
 // gradeAnswer(ch, answer, lang) → {correct, jev} — deterministyczny dla pytań
 // zamkniętych, Jev + keyword-fallback dla otwartych. Używany przez OBA tryby.
 async function gradeAnswer(ch, answer, lang='pl'){
-  const q = normalizeChallenge(ch);
+  const q = normalizeChallenge(ch, lang);
   let correct = false;
   let jev = null;
   switch(q.type){
@@ -2063,8 +2855,8 @@ async function gradeAnswer(ch, answer, lang='pl'){
 }
 
 // Poprawna odpowiedź (tekstowo) — do raportu / nauczyciel review
-function answerText(ch){
-  const q = normalizeChallenge(ch);
+function answerText(ch, lang='pl'){
+  const q = normalizeChallenge(ch, lang);
   try{
     if(q.type==='multiple_choice'||q.type==='true_false'||q.type==='what_next') return q.options?.[q.correctAnswer] ?? null;
     if(q.type==='multiple_select') return (q.correctAnswers||[]).map(i=>q.options?.[i]).filter(Boolean).join(', ') || null;
@@ -2086,12 +2878,12 @@ async function gradeTest(questions, answers, lang='pl'){
     const cid = String(ch.id||'');
     const ans = (answers && answers[cid] !== undefined) ? answers[cid] : (answers && answers[ch.id] !== undefined ? answers[ch.id] : null);
     if(ans === null || ans === undefined || (typeof ans === 'string' && !String(ans).trim())){
-      results.push({challengeId: cid, type: ch.type||'', question: ch.question||null, answer: ans ?? null, correct: false, jev: null, skipped: true, correctText: answerText(ch)});
+      results.push({challengeId: cid, type: ch.type||'', question: ch.question||null, answer: ans ?? null, correct: false, jev: null, skipped: true, correctText: answerText(ch, lang)});
       continue;
     }
     const g = await gradeAnswer(ch, ans, lang);
     if(g.correct) score++;
-    results.push({challengeId: cid, type: ch.type||'', question: ch.question||null, answer: ans, correct: !!g.correct, jev: g.jev || null, correctText: answerText(ch)});
+    results.push({challengeId: cid, type: ch.type||'', question: ch.question||null, answer: ans, correct: !!g.correct, jev: g.jev || null, correctText: answerText(ch, lang)});
   }
   const maxScore = qs.length;
   const pct = maxScore ? Math.round((score/maxScore)*100) : 0;
@@ -2230,6 +3022,8 @@ async function issueTestCertificate(attempt, test){
   const values = [certificate.id, certificate.kind, certificate.bookId, certificate.chapterId, certificate.walletAddress, certificate.userId, certificate.score, certificate.total, certificate.status, certificate.certHash, certificate.timestamp, certificate.createdAt];
   if(useMySQL) await dbRunPromise(`INSERT INTO readproof_certificates (id, kind, bookId, chapterId, walletAddress, userId, score, total, status, certHash, timestamp, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, values);
   else await dbRunPromise(`INSERT OR REPLACE INTO certificates (id, kind, bookId, chapterId, walletAddress, userId, score, total, status, certHash, timestamp, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, values);
+  // Certyfikat za cały test też jest niezmienialny — kotwimy go tak samo.
+  await anchorCertificate(certificate);
   return certificate;
 }
 function missingTable(err){ return err && /(no such table|doesn't exist|Unknown table)/i.test(String(err.message||'')); }
@@ -2270,105 +3064,50 @@ function loadTestsFromDb(){
 }
 setTimeout(loadTestsFromDb, useMySQL ? 2500 : 0);
 
-// ── OCR (tesseract CLIT, gdy dostępna; inaczej graceful manual fallback) ──
-let OCR_LANG = 'pol+eng';
-function ensureOcrLang(){ return Promise.resolve(OCR_LANG); }
-async function runOcrText(filePath){
-  try{
-    const { createWorker } = await import('tesseract.js');
-    const worker = await createWorker(OCR_LANG);
-    try{
-      const result = await worker.recognize(filePath);
-      return {ok:true, text:String(result?.data?.text||''), lang:OCR_LANG};
-    }finally{ await worker.terminate(); }
-  }catch(error){
-    return {ok:false, error:String(error?.message||error).slice(0,200), text:'', engineMissing:true};
-  }
-}
-
-// OCR → szkic odpowiedzi (heurystyka; teacher poprawia w OCR Review przed zatwierdzeniem)
-function parseOcrAnswers(text, questions){
-  const out = {};
-  const clean = String(text||'').replace(/\r/g,'').replace(/[•▪●○◯]/g,'');
-  const lines = clean.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
-  const nextQIdx = (fromI) => {
-    for(let i=fromI+1;i<lines.length;i++){
-      if(/^(?:Pytanie|Q|Zadanie|Task|Question)\s*\d+[/.:\s]/i.test(lines[i])) return i;
-    }
-    return lines.length;
-  };
-  for(let i=0;i<questions.length;i++){
-    const q = questions[i];
-    const cid = String(q.id||'');
-    const startStub = String(q.question||'').replace(/\s+/g,' ').slice(0, 26);
-    let regionStart = -1;
-    for(let li=0; li<lines.length; li++){
-      const low = lines[li].toLowerCase();
-      if(startStub.length>=7 && (low.includes(startStub.toLowerCase()) || (startStub.length>=12 && lines[li+1] && lines[li+1].toLowerCase().includes(startStub.toLowerCase()) && false))){
-        regionStart = li; break;
-      }
-    }
-    if(regionStart < 0){ out[cid] = {answer: null, source:'ocr', raw:''}; continue; }
-    const regionEnd = nextQIdx(regionStart);
-    const region = lines.slice(regionStart, regionEnd).join('\n');
-    let ans = null;
-    if(q.type==='multiple_choice'||q.type==='true_false'||q.type==='what_next'){
-      const m = region.match(/(?:^|\s)([A-D])(?=$|\s|[.,;:!?])/i);
-      const stars = region.match(/(?:^|\s)X\s*[:=\-]?\s*([A-D])(?=$|\s|[.,;:!?])/i);
-      const letter = (stars && stars[1]) || (m && m[1]);
-      if(letter){
-        const idx = 'ABCD'.indexOf(String(letter).toUpperCase());
-        if(idx>=0 && q.options && idx < q.options.length) ans = idx;
-      }
-    } else if(q.type==='multiple_select'){
-      const all = region.match(/([A-D])(?=$|\s|[.,;:!?])/gi) || [];
-      ans = all.map(l=>'ABCD'.indexOf(l.toUpperCase())).filter(i=>i>=0 && q.options && i<q.options.length);
-      if(!ans.length){ ans = null; }
-    } else if(q.type==='ordering'||q.type==='ranking'){
-      const pairs = [...region.matchAll(/(\d)\s*[\.\):]?\s*([A-D])/gi)].map(m=>({pos:Number(m[1])-1, idx:'ABCD'.indexOf(m[2].toUpperCase())}));
-      if(pairs.length===q.items?.length && pairs.every(p=>p.idx>=0)){
-        const arr = new Array(q.items.length).fill(null);
-        pairs.forEach(p=>{ if(p.pos>=0 && p.pos<arr.length) arr[p.pos]=p.idx; });
-        if(arr.every(v=>v!==null)) ans = arr;
-      }
-    } else {
-      // open / who_said — tekst z regionu, po wierszu pytania (bez liter A-D)
-      const drained = lines.slice(regionStart+1, regionEnd).filter(l=>!l.toLowerCase().startsWith(startStub.toLowerCase())).join(' ');
-      const cleaned = String(drained||'').trim().replace(/\s+/g,' ').slice(0, 220);
-      if(cleaned.length) ans = cleaned;
-    }
-    out[cid] = {answer: ans, source:'ocr', raw: region};
-  }
-  return out;
-}
-
-// ── PDF builder (bez zewnętrznych zależności — czysty tekst, wbudowana Helvetica) ──
+// ── PDF builder (bez zewnętrznych zależności — Helvetica + prymitywy graficzne) ──
+// Elementy strony: {x,y,t,size,bold} dla tekstu oraz {rect|lw} i {fill|g}
+// dla ramek i linii. Grafika rysowana jest przed tekstem.
 function pdfEscape(t){ return String(t==null?'':t).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
 
+// Wbudowane fonty PDF (Helvetica) mają kodowanie WinAnsi — polskie znaki
+// muszą zejść do ASCII, inaczej wychodzą „krzaczki” i OCR ich nie czyta.
+const PDF_FOLD = { 'ą':'a','Ą':'A','ć':'c','Ć':'C','ę':'e','Ę':'E','ł':'l','Ł':'L',
+  'ń':'n','Ń':'N','ó':'o','Ó':'O','ś':'s','Ś':'S','ź':'z','Ź':'Z','ż':'z','Ż':'Z',
+  'ń':'n','ñ':'n','„':'"','”':'"','“':'"','’':"'",'–':'-','—':'-','…':'...',' ':' ' };
+function pdfSafe(t){
+  return String(t==null?'':t)
+    .replace(/[\u0105\u0104\u0107\u0106\u0119\u0118\u0142\u0141\u0144\u0143\u00f3\u00d3\u015b\u015a\u017a\u0179\u017c\u017b\u00f1\u201e\u201d\u201c\u2019\u2013\u2014\u2026\u00a0]/g, c => PDF_FOLD[c] ?? c)
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
 function buildStandalonePdf(pages){
-  // pages: [{lines:[{x,y,t,size,bold}]}]
-  const fontFamily = {
-    F1: '/Helvetica',
-    F2: '/Helvetica-Bold'
-  };
-  const objs = [];
+  // objs[0] = katalog (obiekt 1), objs[1] = węzeł /Pages (obiekt 2) — miejsce
+  // musi być zarezerwowane przed fontami, inaczej /F1 wskazuje na /Pages
+  // i cały tekst regularny znika z wydruku.
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', ''];
   const addObj = body => { objs.push(body); return objs.length; };
-  const catalogNo = addObj('<< /Type /Catalog /Pages 2 0 R >>');
   const pagesNodeNo = 2;
-  const offsetOf = o => o + 1; // (dummy, real offsets computed below)
   const pageNos = [];
-  const fontNoF1 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-  const fontNoF2 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
-  const fontRef = { F1: fontNoF1, F2: fontNoF2 };
+  const fontNoF1 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const fontNoF2 = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
   const contentNos = [];
   const kids = [];
-  pages.forEach((page,pi)=>{
-    const stream = page.lines.map(l=>{
-      const size = l.size || 11;
-      const font = l.bold ? 'F2' : 'F1';
-      return `BT /${font} ${size} Tf 1 0 0 1 ${(l.x||0).toFixed(2)} ${(l.y||0).toFixed(2)} Tm (${pdfEscape(l.t)}) Tj ET`;
-    }).join('\n');
-    const streamObj = `${stream}\n`;
+  const f = n => (Number(n)||0).toFixed(2);
+  pages.forEach((page)=>{
+    const gfx = [];
+    const txt = [];
+    (page.lines||[]).forEach(l=>{
+      if(l.rect){
+        gfx.push(`q 0 G ${f(l.lw||0.7)} w ${f(l.rect.x)} ${f(l.rect.y)} ${f(l.rect.w)} ${f(l.rect.h)} re S Q`);
+      }else if(l.fill){
+        gfx.push(`q ${f(l.g ?? 0.82)} g ${f(l.fill.x)} ${f(l.fill.y)} ${f(l.fill.w)} ${f(l.fill.h)} re f Q`);
+      }else{
+        const size = l.size || 11;
+        const font = l.bold ? 'F2' : 'F1';
+        txt.push(`BT /${font} ${size} Tf 1 0 0 1 ${f(l.x||0)} ${f(l.y||0)} Tm (${pdfEscape(pdfSafe(l.t))}) Tj ET`);
+      }
+    });
+    const streamObj = [...gfx, ...txt].join('\n') + '\n';
     const contentNo = addObj(`<< /Length ${Buffer.byteLength(streamObj, 'utf8')} >>\nstream\n${streamObj}endstream`);
     contentNos.push(contentNo);
     const pageNo = addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontNoF1} 0 R /F2 ${fontNoF2} 0 R >> >> /Contents ${contentNo} 0 R >>`);
@@ -2377,7 +3116,7 @@ function buildStandalonePdf(pages){
   });
   objs[pagesNodeNo-1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${kids.length} >>`;
   const infoNo = addObj('<< /Title (ReadProof) /Producer (ReadProof) >>');
-  // ── serialize with real xref offsets ──
+  const catalogNo = 1;
   let out = '%PDF-1.4\n';
   const offsets = [0];
   objs.forEach((body, i)=>{
@@ -2391,62 +3130,177 @@ function buildStandalonePdf(pages){
   return Buffer.from(out, 'utf8');
 }
 
+// Arkusz testowy w PDF. Układ celowo identyczny z arkuszem z panelu
+// nauczyciela (teacher-panel → PaperDocument): numer pytania, typ, lista
+// odpowiedzi z literami i jedno oznaczone pole „Odpowiedź:”, w które
+// uczeń wpisuje literę albo tekst. To pole czyta maszynowo.
+const SHEET_LETTERS = ['A','B','C','D','E','F'];
+function sheetTypeTag(q){
+  if(q.type==='true_false'||q.type==='statement') return 'PRAWDA / FAŁSZ';
+  if(q.type==='multiple_select') return 'WIELOKROTNY WYBÓR';
+  if(q.type==='ordering'||q.type==='ranking') return 'KOLEJNOŚĆ';
+  if(q.type==='match'||q.type==='who_said') return 'DOPASOWANIE';
+  if(q.type==='open_question'||q.type==='why_question') return 'OTWARTE';
+  return 'JEDEN WYBÓR';
+}
+const sheetAlphabet = (n) => SHEET_LETTERS.slice(0, Math.max(1, n||1)).join('-');
+
 function buildTestPdf(test, bookTitle, chapterTitle){
-  const W = 595, H = 842, M = 52, TOP = 800, BOT = 44;
-  const usable = W - 2*M;
+  const W = 595, H = 842, M = 44, TOP = 796, BOT = 48, RIGHT = W - M;
   const pages = [];
-  let y = 0;
-  const line = (s, opts={}) => {
-    const size = opts.size || 11;
-    const maxChars = Math.floor(usable / (size * 0.53));
-    const words = String(s==null?'':s).split(/\s+/).filter(Boolean);
-    const wrapped = [];
-    let cur = '';
+  let y = TOP;
+  const newPage = () => { pages.push({lines:[]}); y = TOP; };
+  const tw = (t,size,bold) => String(t==null?'':t).length * size * (bold ? 0.56 : 0.5);
+  const wrap = (str,size,maxW) => {
+    const words = String(str==null?'':str).split(/\s+/).filter(Boolean);
+    const out = []; let cur = '';
     for(const w of words){
-      if(cur && ((cur+' '+w).trim().length > maxChars)){ wrapped.push(cur); cur = w; }
-      else cur = (cur ? cur+' ' : '') + w;
+      if(cur && tw(cur+' '+w, size, false) > maxW){ out.push(cur); cur = w; }
+      else cur = cur ? cur+' '+w : w;
     }
-    if(cur || !wrapped.length) wrapped.push(cur || '');
-    for(const w of wrapped){
-      if(!pages.length || (y - size*1.30) < BOT){ pages.push({lines:[]}); y = TOP; }
-      pages[pages.length-1].lines.push({ x: M, y, t: w, size, bold: !!opts.bold });
-      y -= size*1.25;
-    }
-    if(opts.after) y -= opts.after;
+    if(cur || !out.length) out.push(cur);
+    return out;
   };
-  const letters = ['A','B','C','D','E','F'];
-  // ── strona 1: arkusz testu ──
-  line(`${bookTitle} — ${chapterTitle}`, {size:13, bold:true});
-  line(test.title || 'Test sprawdzający', {size:17, bold:true, after:8});
-  line('Imię i nazwisko ucznia: ______________________________________', {size:11, after:8});
-  line('Instrukcja: zaznacz poprawną odpowiedź kółkiem (A, B, C lub D). W pytaniach otwartych wpisz odpowiedź czytelnie w wyznaczonych liniach.', {size:9, after:12});
-  (test.questions||[]).forEach((qRaw, qi)=>{
-    const q = qRaw;
-    line(`Pytanie ${qi+1}. ${String(q.question||'')}`, {size:11, bold:true, after:2});
-    if(Array.isArray(q.options) && q.options.length){
-      (q.options||[]).forEach((o,oi)=> line(`   ${letters[oi]||(oi+1)}.  ${String(o||'')}`, {size:10.5}));
-    } else if(q.type==='ordering' && Array.isArray(q.items)){
-      (q.items||[]).forEach((o,oi)=> line(`   ${oi+1}.  ${String(o||'')}`, {size:10.5}));
-    } else if(Array.isArray(q.pairs) && q.pairs.length){
-      (q.pairs||[]).forEach(p=> line(`   ${String(p.left||'')}  →  ${String(p.right||'')}`, {size:10.5}));
+  // target: {items, y} — pozwala budować blok pytania w buforze i wstawić go
+  // w całości na jednej stronie.
+  const T = (t,str,o={}) => {
+    const size = o.size || 11, bold = !!o.bold, x = (o.x ?? M) + (o.indent || 0);
+    const y0 = (o.yAt != null) ? o.yAt : t.y;
+    const lines = wrap(str, size, Math.max(40, RIGHT - x));
+    lines.forEach((w, li)=>{
+      const ly = y0 - li * (o.lead || size*1.34);
+      if(ly - size < BOT && !t.buffer){ if(t.autoPage){ newPage(); t.page = pages.length-1; } else return; }
+      t.items.push({x, y:ly, t:w, size, bold});
+    });
+    if(o.yAt == null) t.y = y0 - lines.length * (o.lead || size*1.34);
+  };
+  const RT = (t,str,o={}) => { const size=o.size||10, bold=!!o.bold; T(t,str,{...o, x: RIGHT - tw(str,size,bold), size, bold}); };
+  const BOX = (t,rect,lw) => t.items.push({rect, lw: lw ?? 0.7});
+  const RULE = (t,x1,x2,yy,lw) => t.items.push({fill:{x:Math.min(x1,x2), y:yy, w:Math.abs(x2-x1), h:lw ?? 0.6}, g:0.8});
+  const commit = (buf, gap=8) => {
+    const height = buf.y0 - buf.y;
+    if(y - height < BOT) newPage();
+    const dy = y - buf.y0;
+    buf.items.forEach(it => pages[pages.length-1].lines.push(
+      it.rect ? {rect:{x:it.rect.x, y:it.rect.y+dy, w:it.rect.w, h:it.rect.h}, lw:it.lw}
+              : it.fill ? {fill:{x:it.fill.x, y:it.fill.y+dy, w:it.fill.w, h:it.fill.h}, g:it.g}
+              : {x:it.x, y:it.y+dy, t:it.t, size:it.size, bold:it.bold}
+    ));
+    y = buf.y - gap;
+  };
+  // Bufor pozwala zbudować całe pytanie i wstawić je na jednej stronie —
+  // podział pilnuje commit(), więc T nie może nic pominąć.
+  const newBuf = (y0) => ({items:[], y:y0, y0, buffer:true});
+  // Wstawia blok dokładnie tam, gdzie był zbudowany (np. stopka u dołu strony).
+  const commitAt = (buf) => {
+    buf.items.forEach(it => pages[pages.length-1].lines.push(
+      it.rect ? {rect:it.rect, lw:it.lw}
+              : it.fill ? {fill:it.fill, g:it.g}
+              : {x:it.x, y:it.y, t:it.t, size:it.size, bold:it.bold}
+    ));
+  };
+
+  // pole odpowiedzi: ramka + etykieta + ramki na litery
+  const slot = (t, label, hint, boxes) => {
+    const top = t.y + 11, h = 24, bottom = top - h;
+    BOX(t,{x:M+4, y:bottom, w:RIGHT-M-4, h});
+    const baseY = t.y;
+    T(t, label, {x:M+12, size:9.5, bold:true});
+    if(hint) T(t, hint, {x:M+12+tw(label,9.5,true)+3, size:8, yAt: baseY});
+    const bw = 15, gap = 7;
+    let bx = RIGHT - 10 - (boxes*(bw+gap) - gap);
+    for(let i=0;i<boxes;i++){ BOX(t,{x:bx, y:bottom+4.5, w:bw, h:15}, 0.9); bx += bw+gap; }
+    t.y = bottom - 7;
+  };
+  // ramka na odpowiedź otwartą: 4 linie do pisania
+  const openSlot = (t) => {
+    const top = t.y + 11, h = 74, bottom = top - h;
+    BOX(t,{x:M+4, y:bottom, w:RIGHT-M-4, h});
+    T(t, 'Odpowiedź:', {x:M+12, size:9.5, bold:true});
+    T(t, 'własnymi słowami, w ramce', {x:M+12+tw('Odpowiedź:',9.5,true)+3, size:8, yAt: top - 11});
+    for(let i=0;i<4;i++) RULE(t, M+12, RIGHT-8, bottom + h - 16 - i*16, 0.6);
+    t.y = bottom - 7;
+  };
+
+  pages.push({lines:[]});
+  const head = newBuf(y); head.y0 = y; head.autoPage = true; head.page = 0;
+  T(head,'ReadProof — arkusz testu',{size:8.5});
+  RT(head, `${bookTitle} — ${chapterTitle}`, {size:9});
+  head.y -= 4;
+  T(head, test.title || 'Test sprawdzający', {size:16, bold:true});
+  head.y -= 3;
+  T(head, `Kod arkusza: ____________________    Wersja: A    Data: ______________    Godzina: ______________`, {size:9.5});
+  T(head, `Imię i nazwisko: ______________________________________________    Numer ucznia: ______________`, {size:9.5});
+  head.y -= 4;
+  const instrTop = head.y + 9, instrBottom = instrTop - 54;
+  BOX(head,{x:M, y:instrBottom, w:RIGHT-M, h:54}, 0.9);
+  T(head,'INSTRUKCJA', {x:M+9, size:9, bold:true});
+  T(head,'Odpowiedź wpisz wyłącznie w pole „Odpowiedź:”. Pytania zamknięte: jedna litera (A, B, C, D; w P/F litera P lub F).', {x:M+9, size:8.5, indent:0});
+  T(head,'Wielokrotny wybór: litery oddzielone przecinkami. Kolejność i dopasowanie: litery oddzielone spacją.', {x:M+9, size:8.5});
+  T(head,'Pytania otwarte: odpowiedź własnymi słowami w ramce. Pisz czytelnie, drukowanymi literami.', {x:M+9, size:8.5});
+  head.y = instrBottom - 12;
+  commit(head, 10);
+
+  (test.questions||[]).forEach((q, qi)=>{
+    const buf = newBuf(y);
+    const isTF = q.type==='true_false' || q.type==='statement';
+    const opts = (isTF || q.type==='find_error') ? [] : (Array.isArray(q.options) ? q.options : []);
+    const items = Array.isArray(q.items) ? q.items : [];
+    const pairs = Array.isArray(q.pairs) ? q.pairs : [];
+    T(buf, `${qi+1}. ${String(q.question||'')}`, {size:10.5, bold:true});
+    RT(buf, sheetTypeTag(q), {size:8});
+    buf.y -= 2;
+    if(isTF){
+      T(buf, 'P - Prawda            F - Falsz', {size:9.5, indent:10});
+      buf.y -= 2;
+    }else if(opts.length){
+      opts.forEach((o,oi)=> T(buf, `${SHEET_LETTERS[oi]||('('+(oi+1)+')')}.  ${String(o||'')}`, {size:9.5, indent:10}));
+      buf.y -= 3;
+    }else if(items.length){
+      items.forEach((it,ii)=> T(buf, `${SHEET_LETTERS[ii]||('('+(ii+1)+')')}.  ${String(it||'')}`, {size:9.5, indent:10}));
+      T(buf, 'Wpisz w polu kolejność liter od najpierw do ostatniego.', {size:8, indent:10});
+      buf.y -= 3;
+    }else if(pairs.length){
+      pairs.forEach((p,pi)=> T(buf, `${pi+1}.  ${String(p.left||'')}`, {size:9.5, indent:10}));
+      T(buf, `Litery: ${pairs.map((_,pi)=>SHEET_LETTERS[pi]).join(', ')}`, {size:8, indent:10});
+      buf.y -= 3;
     }
-    if(q.type==='open_question'||q.type==='why_question'||q.type==='who_said'){
-      for(let l=0;l<4;l++) line('   ______________________________', {size:10});
-    } else {
-      line('   ○ A   ○ B   ○ C   ○ D', {size:10.5});
+    if(q.type==='open_question' || q.type==='why_question' || q.type==='who_said'){
+      openSlot(buf);
+    }else if(q.type==='ordering' || q.type==='ranking'){
+      slot(buf, 'Kolejność:', `${items.length} litery, oddzielone spacją`, items.length || 3);
+    }else if(q.type==='match'){
+      slot(buf, 'Odpowiedź:', `litery do wierszy 1-${pairs.length||3}, oddzielone spacją`, pairs.length || 3);
+    }else if(isTF){
+      slot(buf, 'Odpowiedź:', 'jedna litera: P lub F', 1);
+    }else if(q.type==='multiple_select'){
+      slot(buf, 'Odpowiedź:', `litery oddzielone przecinkami: ${sheetAlphabet(opts.length)}`, Math.max(2, opts.length));
+    }else{
+      slot(buf, 'Odpowiedź:', `jedna litera: ${sheetAlphabet(opts.length)}`, Math.max(2, Math.min(4, opts.length||4)));
     }
-    line('', {size:4, after:4});
+    commit(buf, 9);
   });
-  // ── strona 2: klucz odpowiedzi (nauczyciel) ──
-  pages.push({lines:[]}); y = TOP;
-  line('KLUCZ ODPOWIEDZI — tylko dla nauczyciela', {size:13, bold:true, after:8});
-  line(`${test.title || 'Test sprawdzający'} — ${bookTitle} — ${chapterTitle}`, {size:11, after:8});
-  (test.questions||[]).forEach((qRaw, qi)=>{
-    const q = qRaw;
-    const correct = answerText(qRaw);
-    line(`${qi+1}. ${String(q.question||'')}`, {size:11, after:1});
-    line(`   → Poprawna odpowiedź: ${correct ?? '—'}`, {size:10.5, bold:true, after:4});
+
+  // stopka arkusza — zawsze u dołu ostatniej strony
+  const footBuf = newBuf(BOT + 30);
+  RULE(footBuf, M, RIGHT, footBuf.y+4, 0.8);
+  footBuf.y -= 8;
+  T(footBuf, `Suma punktów: ____________ / ${(test.questions||[]).length}`, {size:9.5});
+  T(footBuf, `Data oceny: ____________          Podpis nauczyciela: ____________________`, {size:9.5});
+  commitAt(footBuf);
+
+  // ── klucz odpowiedzi (nauczyciel) ──
+  newPage();
+  const keyBuf = newBuf(y);
+  T(keyBuf, 'KLUCZ ODPOWIEDZI — tylko dla nauczyciela', {size:13, bold:true});
+  T(keyBuf, `${test.title || 'Test sprawdzający'} — ${bookTitle} — ${chapterTitle}`, {size:10});
+  keyBuf.y -= 4;
+  (test.questions||[]).forEach((q, qi)=>{
+    T(keyBuf, `${qi+1}. ${String(q.question||'')}`, {size:10});
+    T(keyBuf, `   → Poprawna odpowiedź: ${answerText(q) ?? '—'}`, {size:9.5, bold:true, indent:6});
   });
+  commit(keyBuf, 0);
+
   return buildStandalonePdf(pages);
 }
 
@@ -2468,6 +3322,13 @@ async function requireTeacher(req, res, next){
   if(!row) return res.status(403).json({error:'user not found'});
   const role = row.role || 'reader';
   if(role !== 'teacher' && role !== 'publisher') return res.status(403).json({error:'teacher access required'});
+  // Nauczyciel nie jest nauczycielem dlatego, że tak się zarejestrował. Konto
+  // musi mieć szkolny e-mail, potwierdzony kodem, i decyzję administratora.
+  if(!roleIsApproved(row)) {
+    const status = row.approvalStatus || 'pending';
+    if(roleIsSuspended(row)) return res.status(403).json({error:'teacher account is suspended', approvalStatus: status});
+    return res.status(403).json({error:'teacher account is awaiting administrator approval', approvalStatus: status, emailVerified: !!row.emailVerified});
+  }
   req._role = role;
   req._user = row;
   next();
@@ -2492,6 +3353,43 @@ async function requireStudent(req, res, next){
 app.use('/api/teacher', requireTeacher);
 app.use('/api/student', requireStudent);
 
+// ── Panel administratora + zatwierdzanie ról + Secure Test Mode ────────────────
+// Trzy nowe routery, podpięte do istniejącego shim-a `db`. Żaden z nich nie
+// tworzy własnego logowania — admin ma hasło, a zgłoszenia o role korzystają
+// z tego samego tożsamości (portfel) co reszta aplikacji.
+const dbHelpers = createDbHelpers({ db, useMySQL });
+const secureStore = createSecureSessionStore({ helpers: dbHelpers });
+
+registerRoleAuth(app, { helpers: dbHelpers });
+
+registerAdmin(app, {
+  helpers: dbHelpers,
+  sessions: secureStore,
+  recordSecurityEvents: (...args) => secureStore.recordSecurityEvents(...args),
+  terminateSession: (...args) => secureStore.terminateSession(...args),
+});
+
+registerSecure(app, {
+  helpers: dbHelpers,
+  store: secureStore,
+  testsMem, attemptsMem, classesMem, normalizeClassCode,
+  sanitizeStudentAnswers, stripTestSecrets, gradeTest, issueTestCertificate, persistAttempt,
+  testBookTitle, testChapterTitle, requireStudent, studentActor,
+});
+
+if(useMySQL){
+  setTimeout(() => {
+    store_loadSessions();
+    ensureBootstrapAdmin(dbHelpers).then(r => console.log(r.ok ? `[admin] konto: ${r.email}${r.created?' (utworzone)':''}` : `[admin] pominięto bootstrap: ${r.reason}`)).catch(e=>console.warn('[admin] bootstrap:', e.message));
+  }, 3200);
+} else {
+  setTimeout(() => {
+    store_loadSessions();
+    ensureBootstrapAdmin(dbHelpers).then(r => console.log(r.ok ? `[admin] konto: ${r.email}${r.created?' (utworzone)':''}` : `[admin] pominięto bootstrap: ${r.reason}`)).catch(e=>console.warn('[admin] bootstrap:', e.message));
+  }, 200);
+}
+async function store_loadSessions(){ await secureStore.load().catch(e=>console.warn('[secure] load:', e.message)); }
+
 // ── Nauczyciel: tworzenie / lista / edycja / aktywacja ──
 app.post('/api/teacher/challenges', (req,res)=>{
   const teacher = reqActor(req);
@@ -2510,7 +3408,7 @@ app.post('/api/teacher/challenges', (req,res)=>{
     title: String(title||'Test'), chapter: scope === 'book' ? '' : String(chapter||assessment.chapter||''), chapters: assessment.chapters, testMode,
     status: 'draft',
     timerEnabled: !!timerEnabled, timerMinutes: Math.max(0, Number(timerMinutes)||0),
-    questions: qs, settings: {mode: testMode, scope, chapters: assessment.chapters},
+    questions: qs, settings: {mode: testMode, scope, chapters: assessment.chapters, secure: sanitizeSecurePolicy(req.body?.secure || req.body?.secureMode || undefined)},
     createdAt: now, updatedAt: now
   };
   testsMem.set(t.id, t); persistTest(t);
@@ -2525,7 +3423,7 @@ app.get('/api/teacher/challenges', (req,res)=>{
     title:t.title, chapter:t.chapter, chapterTitle:testChapterTitle(t.bookId, t.chapter),
     chapters:t.chapters || t.settings?.chapters || (t.chapter ? [t.chapter] : []), scope:t.settings?.scope || 'chapter',
     testMode:t.testMode, status:t.status, timerEnabled:t.timerEnabled, timerMinutes:t.timerMinutes,
-    questionCount:(t.questions||[]).length, createdAt:t.createdAt
+    questionCount:(t.questions||[]).length, createdAt:t.createdAt, secure:t.settings?.secure || null
   }));
   res.json({ok:true, challenges: list});
 });
@@ -2553,8 +3451,12 @@ app.patch('/api/teacher/challenges/:id', (req,res)=>{
   const t = testsMem.get(req.params.id);
   if(!t) return res.status(404).json({error:'challenge not found'});
   if(t.teacherId !== teacher) return res.status(403).json({error:'not your challenge'});
-  const {title, chapters: requestedChapters, certificateScope, testMode, timerEnabled, timerMinutes, questions, status} = req.body || {};
+  const {title, chapters: requestedChapters, certificateScope, testMode, timerEnabled, timerMinutes, questions, status, secure, secureMode} = req.body || {};
   if(title !== undefined) t.title = String(title);
+  if(secure !== undefined || secureMode !== undefined){
+    t.settings = t.settings || {};
+    t.settings.secure = sanitizeSecurePolicy(secure ?? secureMode);
+  }
   if(testMode !== undefined){
     if(!TEST_MODES.has(testMode)) return res.status(400).json({error:'testMode must be VIRTUAL, PAPER or BOTH'});
     t.testMode = testMode; t.settings = t.settings||{}; t.settings.mode = testMode;
@@ -2694,15 +3596,60 @@ app.post('/api/teacher/paper/:id/ocr', async (req,res)=>{
   const t = testsMem.get(p.challengeId);
   const file = (p.scans||[]).slice(-1)[0]?.file;
   if(!file || !fs.existsSync(file)) return res.status(400).json({error:'no scan image stored'});
-  const ocr = await runOcrText(file);
   const qs = (t && (t.questions||[])) || [];
-  const parsed = parseOcrAnswers(ocr.text, qs);
-  p.ocrText = ocr.text || '';
-  p.ocrAnswers = { answers: parsed };
-  p.status = ocr.engineMissing ? 'ocr_unavailable' : 'ocr_done';
+  // PAPER_OCR: auto (oba silniki) | tesseract | vision
+  const mode = String(process.env.PAPER_OCR || 'auto').toLowerCase();
+  let engine = 'none';
+  let ocrText = '';
+  let fromTesseract = {};
+  let fromVision = {};
+  let engineMissing = false;
+  const notes = [];
+
+  if(mode !== 'vision'){
+    const ocr = await runOcrText(file);
+    ocrText = ocr.text || '';
+    engineMissing = !!ocr.engineMissing;
+    if(ocr.ok){
+      fromTesseract = parseOcrAnswers(ocrText, qs);
+      engine = 'tesseract';
+    }else{
+      notes.push(ocr.error || 'OCR textowy niedostępny na serwerze');
+    }
+  }
+
+  if(mode !== 'tesseract' && visionAvailable()){
+    const v = await readSheetWithVision(file, qs);
+    if(v.ok){
+      fromVision = v.answers || {};
+      engine = engine === 'tesseract' ? 'tesseract+vision' : 'vision';
+      if(!ocrText) ocrText = v.text || '';
+      notes.push(`model wizyjny: ${v.engine}`);
+    }else{
+      notes.push(v.error || 'model wizyjny niedostępny');
+      if(mode === 'vision') engineMissing = true;
+    }
+  }else if(mode !== 'tesseract'){
+    notes.push('model wizyjny nie skonfigurowany (GEMINI_API_KEY)');
+  }
+
+  const parsed = (engine === 'tesseract') ? mergeSheetAnswers(fromTesseract, fromVision, qs)
+              : (engine === 'vision') ? fromVision
+              : {};
+
+  p.ocrText = ocrText;
+  p.ocrAnswers = { answers: parsed, engine };
+  p.status = (engine === 'none') ? 'ocr_unavailable' : 'ocr_done';
   p.updatedAt = new Date().toISOString();
   paperMem.set(p.id, p); persistPaper(p);
-  res.json({ok:true, paper:{id:p.id, status:p.status, language: ocr.lang, ocrText: p.ocrText.slice(0,3000), ocrAnswers: p.ocrAnswers.answers, questions: qs.map(stripTestSecrets), engineMissing: ocr.engineMissing, note: ocr.engineMissing ? 'OCR niedostępny na serwerze — wpisz odpowiedzi ręcznie w review.' : undefined}});
+  res.json({ok:true, paper:{
+    id:p.id, status:p.status, language: 'pol+eng', engine,
+    ocrText: p.ocrText.slice(0,3000),
+    ocrAnswers: p.ocrAnswers.answers,
+    questions: qs.map(stripTestSecrets),
+    engineMissing,
+    note: notes.length ? notes.join(' · ') : undefined
+  }});
 });
 
 // Potwierdzenie papieru → wspólny pipeline → TestAttempt(mode=PAPER) → gradeTest
@@ -2758,6 +3705,8 @@ app.get('/api/student/challenges', requireStudent, (req,res)=>{
     chapters:t.chapters || t.settings?.chapters || [], scope:t.settings?.scope || 'chapter',
     testMode:t.testMode, timerEnabled:t.timerEnabled, timerMinutes:t.timerMinutes,
     questionCount:(t.questions||[]).length, createdAt:t.createdAt,
+    // Student widzi tylko CZY test jest w trybie bezpiecznym, nigdy progi.
+    secureEnabled: t.settings?.secure?.enabled !== false,
     canVirtual: t.testMode==='VIRTUAL'||t.testMode==='BOTH'
   })).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   res.json({ok:true, challenges: list});
@@ -2959,8 +3908,8 @@ app.post('/api/proofs', async (req,res)=>{
   }
   const total=challenges.length;
   let status='Failed';
-  if(score>=4) status='Reading Verified'; // pełne zrozumienie od 4/5
-  else if(score>=3) status='Try Again';
+  if(score>=Math.max(4,total-1)) status='Reading Verified'; // pełne zrozumienie
+  else if(score>=3) status='Partial Verified';              // certyfikat bez nagrody
   const now=new Date().toISOString();
   const hash=proofHash(bookId, chapterId, wallet, now, score);
   let tx=null, explorer=null, reward=null;
@@ -2989,6 +3938,37 @@ app.post('/api/proofs', async (req,res)=>{
   res.json({id, bookId, chapterId, score, total, status, walletAddress: wallet, userId: userId||null, timestamp: now, proofHash: hash, txSignature: tx, explorerUrl: explorer, reward, results});
 });
 
+// Jednorazowe przejęcie starych dowodów (sprzed stabilnego readerId).
+// Przenosimy TYLKO wiersze z pustym userId, więc cudze, już przypisane dowody
+// pozostają nietknięte. Ograniczenia (świadomie konserwatywne):
+//  - userId bierzemy z nagłówka autoryzacyjnego, nie z body (inaczej dowolny identyfikator)
+//  - nie wolno claimować portfela, który ma już przypisanego właściciela
+//  - audyt w logu — zdarzenie jest odwracalne i widoczne
+const CLAIM_AUDIT = new Map();
+app.post('/api/proofs/claim', (req,res)=>{
+  const wallet=(req.body?.wallet||req.query.wallet||'').toString().trim();
+  const headerUser=String(req.headers['x-user-id']||req.headers['x-apple-user']||'').trim();
+  const bodyUser=(req.body?.userId||'').toString().trim();
+  if(!wallet) return res.status(400).json({error:'wallet required'});
+  if(!headerUser) return res.status(401).json({error:'x-user-id header required'});
+  // nagłówek ma pierwszeństwo; body tylko gdy brak nagłówka (kompatybilność)
+  const userId=headerUser||bodyUser;
+  if(bodyUser && headerUser && bodyUser!==headerUser) return res.status(400).json({error:'userId does not match authenticated header'});
+  // rate limit: max 20 claimów na portfel
+  const key = wallet.slice(0,8);
+  const seen = CLAIM_AUDIT.get(key) || 0;
+  if(seen >= 20) return res.status(429).json({error:'too many claim attempts for this wallet'});
+  CLAIM_AUDIT.set(key, seen+1);
+  const stamp = (table)=>new Promise((resolve)=>{
+    try{ db.run(`UPDATE ${table} SET userId=? WHERE walletAddress=? AND (userId IS NULL OR userId='')`, [userId, wallet], (e)=>resolve(e?0:1)); }
+    catch(e){ resolve(0); }
+  });
+  Promise.all([stamp('proofs'), stamp('certificates')]).then(([a,b])=>{
+    console.log(`[claim] reader=${userId.slice(0,12)} wallet=${wallet.slice(0,6)}.. proofs=${a===1?'ok':'brak'} certs=${b===1?'ok':'brak'}`);
+    res.json({ok:true, claimed:true, proofs:a===1, certificates:b===1});
+  });
+});
+
 app.get('/api/proofs', (req,res)=>{
   const wallet=req.query.wallet;
   const proofId=req.query.proof || req.query.hash || req.query.id;
@@ -3003,8 +3983,11 @@ app.get('/api/proofs', (req,res)=>{
     sql = `SELECT ${baseCols} FROM proofs WHERE proofHash=? OR CAST(id AS CHAR)=? OR UPPER(proofHash) LIKE ? ORDER BY timestamp DESC LIMIT 20`;
     params=[String(proofId||''), String(proofId||''), `%${String(proofId||'').toUpperCase()}%`];
   } else if(wallet && filterUser){
-    sql = `SELECT ${baseCols} FROM proofs WHERE walletAddress=? AND userId=? ORDER BY timestamp DESC LIMIT 50`;
-    params=[wallet, filterUser];
+    // OR, nie AND: portfel embedded (Privy) zmienia się przy każdym logowaniu,
+    // więc szukanie „moich dowodów" po samym adresie gubi całą historię.
+    // Dopasowanie po userId (stabilny identyfikator czytelnika) ma pierwszeństwo.
+    sql = `SELECT ${baseCols} FROM proofs WHERE userId=? OR walletAddress=? ORDER BY timestamp DESC LIMIT 50`;
+    params=[filterUser, wallet];
   } else if(wallet){
     sql = `SELECT ${baseCols} FROM proofs WHERE walletAddress=? ORDER BY timestamp DESC LIMIT 50`;
     params=[wallet];
@@ -3025,10 +4008,12 @@ app.get('/api/proofs', (req,res)=>{
     };
     if(err){
       if(String(err.message).includes('no column') || String(err.message).includes('Unknown column')){
-        const fallbackSql = wallet ? `SELECT ${baseCols} FROM proofs WHERE walletAddress=? ORDER BY timestamp DESC LIMIT 50` : `SELECT ${baseCols} FROM proofs ORDER BY timestamp DESC LIMIT 50`;
-        const fallbackParams = wallet ? [wallet] : [];
-        return db.all(fallbackSql, fallbackParams, (e2, r2)=>{
-          if(e2) return res.status(500).json({error: e2.message, sql: fallbackSql});
+        // baza bez kolumny userId — schodzimy do zapytania tylko po portfelu
+        const fbCols = baseCols.split(',').filter(c=>!/userId/i.test(c)).join(',');
+        const fbSql = wallet ? `SELECT ${fbCols} FROM proofs WHERE walletAddress=? ORDER BY timestamp DESC LIMIT 50` : `SELECT ${fbCols} FROM proofs ORDER BY timestamp DESC LIMIT 50`;
+        const fbParams = wallet ? [wallet] : [];
+        return db.all(fbSql, fbParams, (e2, r2)=>{
+          if(e2) return res.status(500).json({error: e2.message, sql: fbSql});
           res.json(r2.map(x=>({...x, detail: parseDetail(x.detail)})));
         });
       }
@@ -3043,6 +4028,8 @@ app.get('/api/proofs', (req,res)=>{
 function certBookTitle(id){ const b=books.find(x=>x.id===id); return (b&&b.title)||String(id||''); }
 function certChapterTitle(bookId, chapterId){ const b=books.find(x=>x.id===bookId); const c=b&&(b.chapters||[]).find(x=>x.id===chapterId); return (c&&(c.title||c.id))||String(chapterId||''); }
 function certVerified(p){ return p && VERIF_STATUSES.has(String(p.status||'')); }
+// Certyfikat wystawiony dla pełnego LUB częściowego zrozumienia.
+function certIssued(p){ return p && CERT_STATUSES.has(String(p.status||'')); }
 // cert za całą lekturę: wszystkie rozdziały mają zweryfikowany dowód; ID trafia do memo on-chain
 app.post('/api/books/:bookId/certificate', async (req,res)=>{
   const book=books.find(b=>b.id===req.params.bookId);
@@ -3052,13 +4039,17 @@ app.post('/api/books/:bookId/certificate', async (req,res)=>{
   const wallet=(req.body?.wallet||req.query.wallet||req.headers['x-user-id']||req.body?.userId||'').toString();
   if(!wallet) return res.status(400).json({error:'wallet required'});
   const userIdForCert = req.body?.userId || req.headers['x-user-id'] || req.headers['x-apple-user'] || null;
-  db.all(`SELECT bookId, chapterId, score, total, status, proofHash, timestamp FROM proofs WHERE walletAddress=? AND bookId=? ORDER BY timestamp DESC LIMIT 300`, [wallet, book.id], async (err, rows)=>{
+  // Zbieramy dowody po portfelu LUB po stabilnym userId — zmiana portfela nie może
+  // unieważniać wcześniej zdobytych rozdziałów.
+  const ownerWhere = userIdForCert ? '(userId=? OR walletAddress=?)' : 'walletAddress=?';
+  const ownerParams = userIdForCert ? [userIdForCert, wallet] : [wallet];
+  db.all(`SELECT bookId, chapterId, score, total, status, proofHash, timestamp FROM proofs WHERE ${ownerWhere} AND bookId=? ORDER BY timestamp DESC LIMIT 300`, [...ownerParams, book.id], async (err, rows)=>{
     if(err) return res.status(500).json({error:err.message});
     const by={}; for(const p of rows||[]) if(certVerified(p) && !by[p.chapterId]) by[p.chapterId]=p;
     const missing=chapters.filter(c=>!by[c.id]).map(c=>c.id);
     if(missing.length) return res.status(409).json({error:'Nie wszystkie rozdziały zweryfikowane.', missing});
     const certHash=crypto.createHash('sha256').update(`${wallet}|${book.id}|${chapters.map(c=>by[c.id].proofHash).join(',')}`).digest('hex').slice(0,32);
-    db.get(`SELECT * FROM certificates WHERE walletAddress=? AND bookId=? AND kind='book' ORDER BY timestamp DESC LIMIT 1`, [wallet, book.id], async (e2, existing)=>{
+    db.get(`SELECT * FROM certificates WHERE ${userIdForCert ? '(userId=? OR walletAddress=?)' : 'walletAddress=?'} AND bookId=? AND kind='book' ORDER BY timestamp DESC LIMIT 1`, userIdForCert ? [userIdForCert, wallet, book.id] : [wallet, book.id], async (e2, existing)=>{
       if(existing){
         return res.json({ok:true, existing:true, cert:{...existing, bookTitle:book.title, chapterTitle:null}});
       }
@@ -3069,14 +4060,28 @@ app.post('/api/books/:bookId/certificate', async (req,res)=>{
         const real=await tryRealSolanaReward(wallet, '0', {memoOnly:true, sessionId:`book:${book.id}`, bookId:book.id, chapterId:book.id, score:chapters.length, total:chapters.length, durationSec:0, proofHash:certHash, timestamp:ts, verificationVersion:'readproof-v1', certId:cid});
         if(real){ tx=real.signature; explorer=real.explorer; }
       }catch(e3){ /* offline — cert zapisywany bez tx */ }
-      db.run(`INSERT INTO certificates (id, kind, bookId, chapterId, walletAddress, userId, score, total, status, certHash, txSignature, explorerUrl, timestamp, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      // Awaitujemy zapis — inaczej zwracamy ID certu, którego jeszcze nie ma w bazie
+      // i natychmiastowe /verify/?id=RP-… kończy się 404.
+      const certSaved = await new Promise((resolve)=>{ try{ db.run(`INSERT INTO certificates (id, kind, bookId, chapterId, walletAddress, userId, score, total, status, certHash, txSignature, explorerUrl, timestamp, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [cid,'book', book.id, null, wallet, userIdForCert, chapters.length, chapters.length, 'Verified', certHash, tx, explorer, ts, ts],
-        (e4)=>{ if(e4) return res.status(500).json({error:e4.message}); });
-      res.json({ok:true, existing:false, cert:{id:cid, kind:'book', bookId:book.id, chapterId:null, walletAddress:wallet, userId:userIdForCert, score:chapters.length, total:chapters.length, status:'Verified', certHash, txSignature:tx, explorerUrl:explorer, timestamp:ts, bookTitle:book.title, chapterTitle:null}});
+        (e4)=>resolve(!e4)); }catch(e){ resolve(false); } });
+      if(!certSaved){
+        console.error(`[cert] insert FAIL (book) ${cid}: ${book.id} ${wallet}`);
+        return res.status(500).json({error:'certificate could not be saved'});
+      }
+      // Certyfikat za całą lekturę kotwimy na devnecie jako osobny wpis.
+      // tx z dowodu rozdziału (powyżej) jest w tym celu ignorowany — jest
+      // transakcją nagrody, a nie certyfikatu, i myliłby weryfikację.
+      await anchorCertificate({
+        id: cid, kind: 'book', bookId: book.id, chapterId: null,
+        walletAddress: wallet, score: chapters.length, total: chapters.length,
+        status: 'Verified', timestamp: ts,
+      });
+      res.json({ok:true, existing:false, cert:{id:cid, kind:'book', bookId:book.id, chapterId:null, walletAddress:wallet, userId:userIdForCert, score:chapters.length, total:chapters.length, status:'Verified', tier:'full', certHash, txSignature:tx, explorerUrl:explorer, timestamp:ts, bookTitle:book.title, chapterTitle:null}});
     });
   });
 });
-// publiczna weryfikacja certyfikatu po ID (RP-XXXX) — bez autoryzacji
+// publiczna wedyfikacja certyfikatu po ID (RP-XXXX) — bez autoryzacji
 app.get('/api/certificates/:id', (req,res)=>{
   const id=String(req.params.id||'').trim().toUpperCase();
   if(!id) return res.status(400).json({error:'id required'});
@@ -3084,8 +4089,86 @@ app.get('/api/certificates/:id', (req,res)=>{
     if(err) return res.status(500).json({error:err.message});
     if(!row) return res.status(404).json({error:'certificate not found', id});
     const publicRow = {...row, chapterId:row.kind==='test'?null:row.chapterId};
-    res.json({cert:{...publicRow, bookTitle:certBookTitle(row.bookId), chapterTitle:row.kind==='test'?'Cała książka':(row.chapterId?certChapterTitle(row.bookId,row.chapterId):null), verified:certVerified(row)||row.status==='Verified'}});
+    res.json({cert:{...publicRow, bookTitle:certBookTitle(row.bookId), chapterTitle:row.kind==='test'?'Cała książka':(row.chapterId?certChapterTitle(row.bookId,row.chapterId):null), verified:certVerified(row)||row.status==='Verified', tier:row.kind==='book'?'full':certTier(row.score,row.total), anchor:anchorView(row)}});
   });
+});
+
+// ── Odzyskanie certyfikatu prosto z devnetu, bez bazy ───────────────────────
+// To jest sedno „zawsze można odzyskać": mając tylko podpis transakcji (np. z
+// linku w explorerze albo z wydruku), odtwarzamy pełny certyfikat i sami
+// przeliczamy anchorHash. Baza może być pusta, skasowana albo podmieniona —
+// wynik tutaj zależy wyłącznie od łańcucha.
+app.get('/api/certificates/chain/:signature', async (req,res)=>{
+  const from = await readAnchorFromChain(req.params.signature, { rpc: SOLANA_RPC });
+  if(!from.ok) return res.status(404).json({error: from.error || 'anchor not found on devnet'});
+  const cert = from.cert;
+  res.json({
+    fromChain: true,
+    network: 'devnet',
+    slot: from.slot,
+    blockTime: from.blockTime ? new Date(from.blockTime*1000).toISOString() : null,
+    // blockTime to czas z samego łańcucha — niezmienny, w przeciwieństwie do
+    // createdAt z bazy, które można było w każdej chwili poprawić.
+    issuedAt: cert.issuedAt,
+    explorerUrl: from.explorerUrl,
+    memo: from.memo,
+    anchor: { version: from.version, hash: from.anchorHash, expectedHash: from.expectedHash, hashValid: from.hashValid },
+    cert: { ...cert, chapterId: cert.kind === 'test' ? null : cert.chapter,
+           bookTitle: certBookTitle(cert.book), chapterTitle: cert.kind === 'test' ? 'Cała książka' : (cert.chapter ? certChapterTitle(cert.book, cert.chapter) : null),
+           verified: true, tier: cert.kind==='book' ? 'full' : certTier(cert.score, cert.total) },
+  });
+});
+
+// Pełna weryfikacja: memo z łańcucha vs wiersz z bazy + haszowanie.
+// Odpowiada na pytanie, na które /api/certificates/:id nie umie: „czy ktoś
+// nie podmienił nam certyfikatu po wystawieniu".
+app.get('/api/certificates/:id/verify', async (req,res)=>{
+  const id=String(req.params.id||'').trim().toUpperCase();
+  if(!id) return res.status(400).json({error:'id required'});
+  const row = await new Promise((resolve)=>{ try{ db.get(`SELECT * FROM certificates WHERE UPPER(id)=?`, [id], (e,r)=>resolve(e?null:r)); }catch{ resolve(null); } });
+  if(!row) return res.status(404).json({error:'certificate not found', id});
+
+  const memo = row.anchorMemo || null;
+  const local = memo ? parseAnchorMemo(memo) : { ok:false, error:'brak memo w bazie' };
+  let chain = { ok:false, error:'brak podpisu' };
+  if(row.txSignature) chain = await readAnchorFromChain(row.txSignature, { rpc: SOLANA_RPC });
+
+  const cmp = chain.ok ? compareWithRow(chain.cert, row) : null;
+  const issues = [];
+  if(!row.txSignature) issues.push('brak podpisu — certyfikat nie był kotwiony');
+  if(!memo) issues.push('brak memo w bazie — certyfikat sprzed wdrożenia kotwicy');
+  if(memo && !local.hashValid) issues.push('memo ma błędny anchorHash — ktoś je edytował');
+  if(chain.ok && !chain.hashValid) issues.push('memo z łańcucha ma błędny anchorHash');
+  if(cmp && !cmp.matches) issues.push(`baza różni się od łańcucha: ${cmp.diffs.join(', ')}`);
+  if(chain.ok && !local.ok) issues.push('memo z bazy nie zgadza się z łańcuchem');
+
+  res.json({
+    id, network: 'devnet',
+    // Trzy niezależne fakty: jest podpis, memo jest spójne samo ze sobą,
+    // baza nie kłamie wobec łańcucha.
+    signatureOnChain: chain.ok,
+    memoSelfConsistent: memo ? !!local.hashValid : false,
+    databaseMatchesChain: cmp ? cmp.matches : null,
+    immutable: chain.ok && !!local.hashValid && (cmp ? cmp.matches : true),
+    slot: chain.slot ?? row.anchorSlot ?? null,
+    blockTime: chain.ok && chain.blockTime ? new Date(chain.blockTime*1000).toISOString() : null,
+    explorerUrl: row.explorerUrl || chain.explorerUrl || null,
+    diffs: cmp ? cmp.diffs : null,
+    issues,
+    note: 'anchorHash liczy się z pól memo. blockTime pochodzi z łańcucha, więc jest niezmienny.',
+  });
+});
+
+// Domknięcie kotwicy po awarii (brak klucza, RPC padło). Wymaga klucza
+// admina, żeby nie było darmowego endpointu do spamowania devnetu.
+app.post('/api/certificates/:id/anchor', async (req,res)=>{
+  if(String(process.env.ANCHOR_ADMIN_TOKEN||'')==='' || req.headers['x-anchor-token']!==process.env.ANCHOR_ADMIN_TOKEN)
+    return res.status(401).json({error:'anchor token required'});
+  const id=String(req.params.id||'').trim().toUpperCase();
+  const row = await new Promise((resolve)=>{ try{ db.get(`SELECT * FROM certificates WHERE UPPER(id)=?`, [id], (e,r)=>resolve(e?null:r)); }catch{ resolve(null); } });
+  if(!row) return res.status(404).json({error:'certificate not found', id});
+  const r = await anchorCertificate(row, { force: true });
+  res.status(r.ok ? 200 : 503).json(r.ok ? {ok:true, ...r} : {ok:false, error:r.error});
 });
 // lista certyfikatów użytkownika (chapter + book)
 app.get('/api/certificates', (req,res)=>{
@@ -3094,12 +4177,15 @@ app.get('/api/certificates', (req,res)=>{
   const authH=req.headers['authorization']||'';
   let fu=userId; if(!fu && authH.startsWith('Bearer ')) fu=authH.slice(7).trim();
   const where=[]; const params=[];
-  if(wallet){ where.push('walletAddress=?'); params.push(wallet); }
-  if(fu){ where.push('userId=?'); params.push(fu); }
+  // OR przy obu identyfikatorach — portfel embedded zmienia się między logowaniami,
+  // a dowody muszą zostać przy czytelniku (patrz /api/proofs).
+  if(wallet && fu){ where.push('(userId=? OR walletAddress=?)'); params.push(fu, wallet); }
+  else if(wallet){ where.push('walletAddress=?'); params.push(wallet); }
+  else if(fu){ where.push('userId=?'); params.push(fu); }
   if(!where.length) return res.json({certificates:[]});
   db.all(`SELECT * FROM certificates WHERE ${where.join(' AND ')} ORDER BY timestamp DESC LIMIT 100`, params, (err,rows)=>{
     if(err) return res.status(500).json({error:err.message});
-    res.json({certificates:(rows||[]).map(r=>{ const item={...r, chapterId:r.kind==='test'?null:r.chapterId}; return {...item, bookTitle:certBookTitle(r.bookId), chapterTitle:r.kind==='test'?'Cała książka':(r.chapterId?certChapterTitle(r.bookId,r.chapterId):null), verified:certVerified(r)||r.status==='Verified'}; })});
+    res.json({certificates:(rows||[]).map(r=>{ const item={...r, chapterId:r.kind==='test'?null:r.chapterId}; return {...item, bookTitle:certBookTitle(r.bookId), chapterTitle:r.kind==='test'?'Cała książka':(r.chapterId?certChapterTitle(r.bookId,r.chapterId):null), verified:certVerified(r)||r.status==='Verified', tier:r.kind==='book'?'full':certTier(r.score,r.total), anchor:anchorView(r)}; })});
   });
 });
 
@@ -3107,9 +4193,18 @@ app.get('/api/wallet/:address', (req,res)=>{
   res.json({address:req.params.address, balance:'12.50 USDC (Devnet)', network:'Solana Devnet', explorerBase:'https://explorer.solana.com/address/'});
 });
 
+// Generator pul. UWAGA (ryzyko szczątkowe): endpoint zwraca pełne pytania z kluczami,
+// bo aplikacja iOS (BackendService.generateChallenges) ocenia odpowiedzi LOKALNIE —
+// obcięcie klucza złamałoby jej scoring. Web nie z tego korzysta (ocenia serwer).
+// Dlatego przynajmniej ograniczamy nadużycie: limit żądań na adres IP.
+const GENERATE_BUDGET = new Map();
 app.post('/api/generate', async (req,res)=>{
   const {bookId, chapterId, count} = req.body;
   const lang=langOf(req);
+  const ip = (req.headers['x-forwarded-for']||'').split(',')[0].trim() || req.socket?.remoteAddress || 'local';
+  const used = GENERATE_BUDGET.get(ip) || 0;
+  if(used >= 30) return res.status(429).json({error:'Limit generowania pytań wyczerpany. Spróbuj za jakiś czas.'});
+  GENERATE_BUDGET.set(ip, used+1);
   const chapter=books.flatMap(b=>b.chapters).find(c=>c.id===chapterId);
   if(!chapter) return res.status(404).json({error:'chapter not found'});
   try{
@@ -3121,7 +4216,70 @@ app.post('/api/generate', async (req,res)=>{
 });
 
 // Serve full text files statically if present
-app.get('/api/books/:bookId/text', (req,res)=>{
+// Rola zalogowanego użytkownika na podstawie nagłówka tożsamości (x-user-id / x-apple-user).
+// Zwraca null, gdy brak identyfikacji — wtedy traktujemy jako brak uprawnień.
+async function userRoleFor(req){
+  const actor=String(req.headers['x-user-id']||req.headers['x-apple-user']||'').trim();
+  if(!actor) return null;
+  const row=await new Promise((resolve)=>{
+    db.get(`SELECT role FROM users WHERE walletAddress=? OR appleUserId=?`, [actor, actor], (e,r)=>{ if(e) return resolve(null); resolve(r); });
+  });
+  return row ? (row.role||'reader') : null;
+}
+async function requireAnyRole(req, roles){
+  const role=await userRoleFor(req);
+  return role && roles.includes(role);
+}
+
+// Pełny tekst książki — TYLKO dla nauczyciela/wydawcy.
+// Publicznie udostępniamy max 2000 znaków, bo treść książki jest objęta licencją,
+// a pełny tekst pozwoliłby zlać test bez przeczytania lektury.
+// ═══════════════════════════════════════════════════════════════════════════
+// Rozliczenie nagrody dla książki wydawcy.
+// Pula maleje w TEN SAMYM zapytaniu co sprawdzenie salda (warunek w UPDATE),
+// więc równoległe sesje nie wypłacą z jednej puli.
+// Statusy: confirmed = podpis w sieci, pending = zarezerwowano (brak payera), failed = brak środków.
+// ═══════════════════════════════════════════════════════════════════════════
+async function settlePublisherPayout({ bookId, chapterId, wallet, userId, score, total, reward, tx, explorer, proofHash, at }){
+  if(!bookId) return null;
+  // Książka musi należeć do wydawcy i mieć pulę.
+  const pubRow = await new Promise((resolve)=>{
+    db.get(`SELECT * FROM publisher_books WHERE publishedBookId=?`, [String(bookId)], (e,r)=>{ if(e) return resolve(null); resolve(r); });
+  });
+  if(!pubRow) return null;                                   // zwykła książka — brak puli
+  const amount = numOr(pubRow.rewardPerProof, 5);
+  const currency = pubRow.currency || 'USDC';
+  const payoutId = 'pay-' + crypto.randomBytes(5).toString('hex');
+  const createdAt = at || new Date().toISOString();
+  // Rezerwacja: UPDATE ... WHERE rewardPool >= amount — atomowe w MySQL.
+  const reserved = await new Promise((resolve)=>{
+    try{
+      db.run(`UPDATE publisher_books SET rewardPool = rewardPool - ?, updatedAt=? WHERE id=? AND rewardPool >= ?`,
+        [amount, createdAt, pubRow.id, amount], (e)=>resolve(!e));
+    }catch(e){ resolve(false); }
+  });
+  if(!reserved){
+    // Pula się wyczerpała — zapisujemy nieudaną wypłatę, żeby wydawca widział powód.
+    await new Promise((resolve)=>{
+      try{ db.run(`INSERT INTO payouts (id, bookId, walletAddress, userId, chapterId, amount, currency, status, txSignature, explorerUrl, errorMessage, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [payoutId, pubRow.id, wallet||null, userId||null, chapterId||null, amount, currency, 'failed', tx||null, explorer||null, 'reward pool depleted', createdAt], ()=>resolve()); }
+      catch(e){ resolve(); }
+    });
+    return { status:'failed', reason:'reward pool depleted', amount, currency };
+  }
+  // confirmed tylko gdy mamy prawdziwy podpis w sieci; brak payera = pending.
+  const status = tx ? 'confirmed' : 'pending';
+  await new Promise((resolve)=>{
+    try{ db.run(`INSERT INTO payouts (id, bookId, walletAddress, userId, chapterId, amount, currency, status, txSignature, explorerUrl, errorMessage, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [payoutId, pubRow.id, wallet||null, userId||null, chapterId||null, amount, currency, status, tx||null, explorer||null, tx?null:'no SOLANA_PAYER_PRIVATE_KEY — Devnet only', createdAt], ()=>resolve()); }
+    catch(e){ resolve(); }
+  });
+  console.log(`[payout] ${status} ${amount} ${currency} book=${pubRow.id} ch=${chapterId} tx=${tx||'—'}`);
+  return { status, amount, currency, txSignature: tx||null };
+}
+
+app.get('/api/books/:bookId/text', async (req,res)=>{
+  const privileged=await requireAnyRole(req, ['teacher','publisher']);
   const b=books.find(x=>x.id===req.params.bookId);
   if(!b || !b.fullTextFile) return res.status(404).json({error:'no text'});
   const file=`./texts/${b.fullTextFile}`;
@@ -3129,6 +4287,10 @@ app.get('/api/books/:bookId/text', (req,res)=>{
   const p= fs.existsSync(file) ? file : fallback;
   if(!fs.existsSync(p)) return res.status(404).json({error:'file not found', expected:b.fullTextFile});
   const txt=fs.readFileSync(p,'utf8');
+  if(!privileged){
+    return res.json({bookId:b.id, preview: txt.slice(0,2000), truncated:true,
+      note:'Full text available to teachers and publishers only. ReadProof verifies comprehension, not physical reading.'});
+  }
   res.type('text/plain').send(txt.slice(0,50000));
 });
 
@@ -3159,6 +4321,8 @@ app.get('/api/catalog/gutendex', async (req,res)=>{
 
 // Import wybranej książki z Gutendex do lokalnego katalogu (tworzy 2 rozdziały placeholder + challenges via LLM)
 app.post('/api/catalog/gutendex/import', async (req,res)=>{
+  // Tworzy globalną książkę w books[] — tylko nauczyciel/wydawca, nie anonimowy czytelnik.
+  if(!(await requireAnyRole(req, ['teacher','publisher']))) return res.status(403).json({error:'teacher or publisher role required'});
   const {gutenbergId, lang} = req.body;
   if(!gutenbergId) return res.status(400).json({error:'gutenbergId required'});
   try{
@@ -3181,6 +4345,719 @@ app.post('/api/catalog/gutendex/import', async (req,res)=>{
     fs.writeFileSync('./challenges.json', JSON.stringify({books, challengesByChapter}, null, 2));
     res.json({ok:true, book: newBook});
   }catch(e){ res.status(500).json({error:e.message});}
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PANEL WYDAWCY — API
+// Wszystkie trasy poniżej dziedziczą app.use('/api/publisher', requirePublisher,
+// pinPublisherWallet) zarejestrowane wcześniej w pliku. Tożsamość wydawcy
+// pochodzi WYŁĄCZNIE z autoryzowanego rekordu users.role='publisher' —
+// publisherWallet z body/query jest ignorowany (pinowany).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PUB_STATUSES = new Set(['draft','processing','review','published','paused','completed','error']);
+const pubId = () => 'pub-' + crypto.randomBytes(4).toString('hex');
+// Bezpieczna nazwa pliku — tylko [a-z0-9_-], bez ścieżek katalogowych.
+const pubSafe = (id) => String(id||'').replace(/[^A-Za-z0-9_-]/g,'_');
+
+function parseChapters(json){
+  if(Array.isArray(json)) return json;
+  if(typeof json==='string'){ try{ const p=JSON.parse(json); return Array.isArray(p)?p:[]; }catch(e){ return []; } }
+  return [];
+}
+// Publiczny widok książki wydawcy — bez pól wrażliwych (hash treści, ścieżka pliku).
+function pubBookView(row, extra={}){
+  const chapters = parseChapters(row.chapters);
+  return {
+    id: row.id, title: row.title, titleEn: row.titleEn||null, author: row.author,
+    description: row.description||'', isbn: row.isbn||null, language: row.language||'pl',
+    coverUrl: row.coverUrl||null, status: row.status||'draft',
+    contentLength: Number(row.contentLength||0), hasContent: !!row.bookContentHash,
+    chapters, chapterCount: chapters.length,
+    rewardPool: numOr(row.rewardPool,0), rewardPerProof: numOr(row.rewardPerProof,5), currency: row.currency||'USDC',
+    publishedBookId: row.publishedBookId||null, errorMessage: row.errorMessage||null,
+    createdAt: row.createdAt, updatedAt: row.updatedAt,
+    privacy: PRIVACY_SHORT,
+    ...extra
+  };
+}
+// Ile zatwierdzonych pytań ma rozdział.
+function approvedCount(chapterId){ return approvedPool(chapterId).length; }
+// Czy książka nadaje się do publikacji (min. 5 zatwierdzonych pytań na rozdział).
+function publishBlockers(row){
+  const chapters = parseChapters(row.chapters);
+  const out = [];
+  if(!row.bookContentHash) out.push({code:'no_content', message:'Treść książki nie została wgrana'});
+  if(!chapters.length) out.push({code:'no_chapters', message:'Brak rozdziałów'});
+  for(const c of chapters){
+    const n = approvedCount(c.id);
+    if(n < 5) out.push({code:'not_enough_questions', chapterId:c.id, chapterTitle:c.title||c.id, need:5, have:n});
+  }
+  if(numOr(row.rewardPool,0) < numOr(row.rewardPerProof,5)) out.push({code:'reward_pool_too_low', message:'Pula nagród musi pokrywać co najmniej jedną nagrodę za rozdział'});
+  return out;
+}
+const dbAll = (sql, params) => new Promise((resolve)=>{ try{ db.all(sql, params, (e,r)=>resolve(e?[]:(r||[]))); }catch(e){ resolve([]); } });
+const dbGet = (sql, params) => new Promise((resolve)=>{ try{ db.get(sql, params, (e,r)=>resolve(e?null:r)); }catch(e){ resolve(null); } });
+const dbRun = (sql, params) => new Promise((resolve)=>{ try{ db.run(sql, params, (e)=>{ if(e) console.error('[pub:db]', e.message, '| sql:', sql.slice(0,90)); resolve(!e); }); }catch(e){ console.error('[pub:db]', e.message); resolve(false); } });
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+app.get('/api/publisher/dashboard', async (req,res)=>{
+  const me = publisherOf(req);
+  const rows = await dbAll(`SELECT * FROM publisher_books WHERE ownerWallet=? ORDER BY updatedAt DESC LIMIT 100`, [me]);
+  const books = rows.map(r=>pubBookView(r));
+  const ids = books.map(b=>b.id);
+  const published = ids.filter(id=>!!(books.find(b=>b.id===id)?.publishedBookId));
+  const publishedBookIds = rows.map(r=>r.publishedBookId).filter(Boolean);
+
+  let testsCompleted=0, activeReaders=0, avgScore=null, rewardsDistributed=0, distributedPending=0;
+  const verifiedAt = new Map();
+  if(publishedBookIds.length){
+    const ph = publishedBookIds.map(()=>'?').join(',');
+    const proofs = await dbAll(`SELECT walletAddress, userId, score, total, status, timestamp FROM proofs WHERE bookId IN (${ph}) ORDER BY timestamp DESC LIMIT 1000`, publishedBookIds);
+    const verified = proofs.filter(p=>VERIF_STATUSES.has(String(p.status)) || p.status==='Partial Verified');
+    testsCompleted = verified.length;
+    const who = new Set(verified.map(p=>p.userId||p.walletAddress).filter(Boolean));
+    activeReaders = who.size;
+    const scored = verified.filter(p=>Number(p.total)>0);
+    if(scored.length) avgScore = Math.round(scored.reduce((a,p)=>a+(Number(p.score)/Number(p.total)),0)/scored.length*100);
+    // Timeline własnych książek: dzień -> liczba ukończonych testów. Bez tego wykres byłby pusty.
+    for(const p of verified){
+      const day = String(p.timestamp||'').slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(day)) verifiedAt.set(day, (verifiedAt.get(day)||0)+1);
+    }
+  }
+  const timeline = [...verifiedAt.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([day,tests])=>({day, tests}));
+  const payouts = await dbAll(`SELECT * FROM payouts WHERE bookId IN (${ids.map(()=>'?').join(',')||"''"}) ORDER BY createdAt DESC LIMIT 500`, ids.length?ids:["''"]);
+  for(const p of payouts){
+    if(p.status==='confirmed') rewardsDistributed += numOr(p.amount,0);
+    else if(p.status==='pending') distributedPending += numOr(p.amount,0);
+  }
+  // Aktywność — wyprowadzamy z prawdziwych zdarzeń, nie z fikcyjnego feedu.
+  const activity = [];
+  for(const p of payouts.slice(0,20)) activity.push({type:'reward', text:`Nagroda ${p.amount} ${p.currency} — ${p.status}`, at:p.createdAt, bookId:p.bookId});
+  const recentProofs = publishedBookIds.length
+    ? await dbAll(`SELECT bookId, chapterId, score, total, status, timestamp FROM proofs WHERE bookId IN (${publishedBookIds.map(()=>'?').join(',')}) ORDER BY timestamp DESC LIMIT 20`, publishedBookIds)
+    : [];
+  for(const p of recentProofs){
+    activity.push({type:'proof', text:`Czytelnik ukończył test — ${p.score}/${p.total} (${p.status})`, at:p.timestamp, bookId:p.bookId, chapterId:p.chapterId});
+  }
+  for(const b of books.filter(x=>x.updatedAt).slice(0,10)){
+    activity.push({type:'book', bookId:b.id, status:b.status, text:b.title, at:b.updatedAt});
+  }
+  activity.sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  res.json({
+    publisher: { wallet: me, displayName: req.publisher?.displayName||null },
+    kpis: {
+      books: books.length,
+      booksPublished: published.length,
+      activeReaders, testsCompleted,
+      rewardsDistributed: Number(rewardsDistributed.toFixed(2)),
+      rewardsPending: Number(distributedPending.toFixed(2)),
+      averageScore: avgScore,
+      timeline
+    },
+    books,
+    activity: activity.slice(0,12),
+    privacy: PRIVACY_SHORT
+  });
+});
+
+// ── Books: lista ───────────────────────────────────────────────────────────
+app.get('/api/publisher/books', async (req,res)=>{
+  const me = publisherOf(req);
+  const rows = await dbAll(`SELECT * FROM publisher_books WHERE ownerWallet=? ORDER BY updatedAt DESC LIMIT 200`, [me]);
+  const out = [];
+  for(const r of rows){
+    const chapters = parseChapters(r.chapters);
+    const withCounts = chapters.map(c=>({...c, approved: approvedCount(c.id), draft: poolForChapter(c.id).filter(c=>!isQuestionApproved(c)).length}));
+    const publishedId = r.publishedBookId;
+    let readers = 0, tests = 0;
+    if(publishedId){
+      const proofs = await dbAll(`SELECT walletAddress, userId, status FROM proofs WHERE bookId=?`, [publishedId]);
+      tests = proofs.filter(p=>VERIF_STATUSES.has(String(p.status)) || p.status==='Partial Verified').length;
+      readers = new Set(proofs.map(p=>p.userId||p.walletAddress).filter(Boolean)).size;
+    }
+    out.push(pubBookView(r, { chapters: withCounts, readers, testsCompleted: tests, publishBlockers: publishBlockers(r) }));
+  }
+  res.json({count: out.length, books: out, privacy: PRIVACY_SHORT});
+});
+
+// ── Books: utwórz (wizard krok 1) ─────────────────────────────────────────
+app.post('/api/publisher/books', async (req,res)=>{
+  const me = publisherOf(req);
+  const b = req.body||{};
+  const title = String(b.title||'').trim();
+  if(!title) return res.status(422).json({error:'Tytuł jest wymagany'});
+  if(title.length > 200) return res.status(422).json({error:'Tytuł jest za długi (max 200 znaków)'});
+  const author = String(b.author||'').trim();
+  if(!author) return res.status(422).json({error:'Autor jest wymagany'});
+  const isbn = b.isbn ? normalizeISBN(b.isbn) : null;
+  if(isbn && !isValidISBN(isbn)) return res.status(422).json({error:'Nieprawidłowy ISBN (10 lub 13 cyfr)'});
+  const coverUrl = b.coverUrl ? String(b.coverUrl).slice(0,500) : null;
+  if(coverUrl && !/^https?:\/\//i.test(coverUrl)) return res.status(422).json({error:'Adres okładki musi być URL (http/https)'});
+  const language = ['pl','en'].includes(String(b.language||'')) ? String(b.language) : 'pl';
+  const rewardPerProof = numOr(b.rewardPerProof, 5);
+  if(rewardPerProof <= 0 || rewardPerProof > 1000) return res.status(422).json({error:'Nagroda za dowód musi być z zakresu 0–1000'});
+  const id = pubId();
+  const now = new Date().toISOString();
+  const ok = await dbRun(`INSERT INTO publisher_books (id, ownerWallet, title, titleEn, author, description, isbn, language, coverUrl, status, contentLength, bookContentHash, contentFile, chapters, rewardPool, rewardPerProof, currency, publishedBookId, errorMessage, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, me, title, String(b.titleEn||'').trim()||null, author, String(b.description||'').slice(0,4000), isbn, language, coverUrl, 'draft', 0, null, null, JSON.stringify([]), 0, rewardPerProof, (b.currency==='SOL'?'SOL':'USDC'), null, null, now, now]);
+  if(!ok) return res.status(500).json({error:'Nie udało się zapisać książki'});
+  const row = await dbGet(`SELECT * FROM publisher_books WHERE id=?`, [id]);
+  console.log(`[pub] create book ${id} by ${me.slice(0,6)}.. "${title}"`);
+  res.status(201).json({ok:true, book: pubBookView(row)});
+});
+
+// ── Books: szczegóły ───────────────────────────────────────────────────────
+app.get('/api/publisher/books/:id', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
+  const chapters = parseChapters(row.chapters).map(c=>({...c, approved: approvedCount(c.id), draft: poolForChapter(c.id).filter(x=>!isQuestionApproved(x)).length}));
+  let readers=0, tests=0, avg=null;
+  if(row.publishedBookId){
+    const proofs = await dbAll(`SELECT score, total, status, userId, walletAddress, timestamp FROM proofs WHERE bookId=? ORDER BY timestamp DESC LIMIT 1000`, [row.publishedBookId]);
+    const verified = proofs.filter(p=>VERIF_STATUSES.has(String(p.status)) || p.status==='Partial Verified');
+    tests = verified.length;
+    readers = new Set(verified.map(p=>p.userId||p.walletAddress).filter(Boolean)).size;
+    const scored = verified.filter(p=>Number(p.total)>0);
+    if(scored.length) avg = Math.round(scored.reduce((a,p)=>a+Number(p.score)/Number(p.total),0)/scored.length*100);
+  }
+  const payouts = await dbAll(`SELECT status, amount, currency FROM payouts WHERE bookId=?`, [row.id]);
+  const funds = await dbAll(`SELECT * FROM campaign_funds WHERE campaignId=? ORDER BY createdAt DESC`, [row.id]);
+  res.json({book: pubBookView(row, {
+    chapters, readers, testsCompleted: tests, averageScore: avg,
+    publishBlockers: publishBlockers(row),
+    rewardSummary: {
+      total: numOr(row.rewardPool,0) + numOr(row.rewardPerProof,5)*0 + payouts.reduce((a,p)=>a+numOr(p.amount,0),0),
+      pool: numOr(row.rewardPool,0),
+      distributed: payouts.filter(p=>p.status==='confirmed').reduce((a,p)=>a+numOr(p.amount,0),0),
+      pending: payouts.filter(p=>p.status==='pending').reduce((a,p)=>a+numOr(p.amount,0),0),
+      failed: payouts.filter(p=>p.status==='failed').reduce((a,p)=>a+numOr(p.amount,0),0),
+      perProof: numOr(row.rewardPerProof,5), currency: row.currency||'USDC'
+    },
+    fundingHistory: funds.map(f=>({id:f.id, amount:numOr(f.amount,0), currency:f.currency, txSignature:f.txSignature, explorerUrl:f.explorerUrl, createdAt:f.createdAt, status: f.txSignature? 'submitted':'recorded'}))
+  }), privacy: PRIVACY_SHORT});
+});
+
+// ── Books: edycja metadanych / rozdziałów ─────────────────────────────────
+app.patch('/api/publisher/books/:id', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row, b = req.body||{};
+  if(row.status==='processing') return res.status(409).json({error:'Książka jest przetwarzana — poczekaj chwilę'});
+  const sets=[], params=[];
+  const str=(v,max)=>String(v??'').trim().slice(0,max);
+  if(b.title!==undefined){ const t=str(b.title,200); if(!t) return res.status(422).json({error:'Tytuł nie może być pusty'}); sets.push('title=?'); params.push(t); }
+  if(b.titleEn!==undefined){ sets.push('titleEn=?'); params.push(str(b.titleEn,200)||null); }
+  if(b.author!==undefined){ const a=str(b.author,200); if(!a) return res.status(422).json({error:'Autor nie może być pusty'}); sets.push('author=?'); params.push(a); }
+  if(b.description!==undefined){ sets.push('description=?'); params.push(String(b.description||'').slice(0,4000)); }
+  if(b.isbn!==undefined){ const v=b.isbn?normalizeISBN(b.isbn):null; if(v && !isValidISBN(v)) return res.status(422).json({error:'Nieprawidłowy ISBN'}); sets.push('isbn=?'); params.push(v); }
+  if(b.coverUrl!==undefined){ const v=b.coverUrl?str(b.coverUrl,500):null; if(v && !/^https?:\/\//i.test(v)) return res.status(422).json({error:'Adres okładki musi być URL'}); sets.push('coverUrl=?'); params.push(v); }
+  if(b.language!==undefined){ sets.push('language=?'); params.push(['pl','en'].includes(String(b.language))?String(b.language):'pl'); }
+  if(b.rewardPerProof!==undefined){ const v=numOr(b.rewardPerProof,NaN); if(!(v>0)||v>1000) return res.status(422).json({error:'Nagroda za dowód musi być z zakresu 0–1000'}); sets.push('rewardPerProof=?'); params.push(v); }
+  if(b.currency!==undefined){
+    const cur = str(b.currency,8).toUpperCase();
+    if(!['USDC','SOL'].includes(cur)) return res.status(422).json({error:'Waluta musi być USDC albo SOL'});
+    // Zmiana waluty przy niepustej puli rozspójniłaby historię wypłat — wtedy tylko przyszłe doładowania.
+    if(cur!==String(row.currency||'USDC').toUpperCase() && numOr(row.rewardPool,0)>0)
+      return res.status(409).json({error:'Nie można zmienić waluty przy niepustej puli nagród'});
+    sets.push('currency=?'); params.push(cur);
+  }
+  if(b.chapters!==undefined){
+    // Sanityzacja rozdziałów: title wymagany, id regenerowany wg index, enabled zamiast usuwania.
+    const inArr = Array.isArray(b.chapters) ? b.chapters : [];
+    if(inArr.length > 40) return res.status(422).json({error:'Maksymalnie 40 rozdziałów'});
+    const norm = inArr.map((c,i)=>{
+      const title = str(c?.title,200);
+      return {
+        id: `${row.id}-ch${i+1}`,
+        bookId: row.id,
+        index: i+1,
+        title: title || `Rozdział ${i+1}`,
+        summary: str(c?.summary,400),
+        contextExcerpt: str(c?.contextExcerpt,600),
+        reward: str(c?.reward,32) || `${row.currency||'USDC'}`,
+        enabled: c?.enabled!==false
+      };
+    });
+    sets.push('chapters=?'); params.push(JSON.stringify(norm));
+  }
+  if(!sets.length) return res.status(422).json({error:'Brak pól do zaktualizowania'});
+  sets.push('updatedAt=?'); params.push(new Date().toISOString());
+  params.push(row.id);
+  const ok = await dbRun(`UPDATE publisher_books SET ${sets.join(', ')} WHERE id=?`, params);
+  if(!ok) return res.status(500).json({error:'Nie udało się zapisać zmian'});
+  const fresh = await dbGet(`SELECT * FROM publisher_books WHERE id=?`, [row.id]);
+  res.json({ok:true, book: pubBookView(fresh)});
+});
+
+// ── Books: treść (wizard krok 2) ──────────────────────────────────────────
+app.post('/api/publisher/books/:id/content', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
+  const raw = String(req.body?.text || req.body?.content || '');
+  if(raw.trim().length < 500) return res.status(422).json({error:'Treść jest za krótka (minimum 500 znaków)'});
+  if(raw.length > 600000) return res.status(422).json({error:'Treść jest za długa (maksimum 600 000 znaków)'});
+
+  const hash = crypto.createHash('sha256').update(raw).digest('hex');
+  const file = `pub_${pubSafe(row.id)}.txt`;
+  try{
+    fs.mkdirSync('./texts', {recursive:true});
+    fs.writeFileSync(`./texts/${file}`, raw, 'utf8');
+  }catch(e){
+    await dbRun(`UPDATE publisher_books SET status=?, errorMessage=?, updatedAt=? WHERE id=?`, ['error', 'Nie udało się zapisać treści na dysku', new Date().toISOString(), row.id]);
+    return res.status(500).json({error:'Nie udało się zapisać treści książki'});
+  }
+  bookTexts[row.id] = raw;
+  const now = new Date().toISOString();
+  await dbRun(`UPDATE publisher_books SET contentFile=?, bookContentHash=?, contentLength=?, status=?, errorMessage=NULL, updatedAt=? WHERE id=?`, [file, hash, raw.length, 'processing', now, row.id]);
+
+  // Rozdziały: dziel po nagłówkach typu "Rozdział X" / "Chapter X", w razie braku równomiernie.
+  const detection = detectChaptersDetailed(raw, row.id);
+  const detected = detection.chapters;
+  await dbRun(`UPDATE publisher_books SET chapters=?, updatedAt=? WHERE id=?`, [JSON.stringify(detected), now, row.id]);
+
+  // Pytania generujemy w tle (LLM bywa wolny) — status książki idzie w 'processing'.
+  // Rozdziały przetwarzamy RÓWNOLEGLE: przy 10 rozdziałach sekwencyjnie czekano
+  // by kilka minut, a wydawca nie mógł w tym czasie nic zrobić.
+  (async()=>{
+    try{
+      await Promise.all(detected.map(async (c)=>{
+        const existing = challengesByChapter[c.id] || [];
+        if(existing.filter(isQuestionApproved).length >= 5) return;
+        const gen = await callOpenRouterGenerate(c, 8, row.language||'pl');
+        const clean = sanitizePool(gen).map(q=>({...q, status:'draft', chapterId:c.id, bookId:row.id}));
+        if(clean.length) challengesByChapter[c.id] = clean;
+      }));
+      persistChallenges();
+      const fresh = await dbGet(`SELECT * FROM publisher_books WHERE id=?`, [row.id]);
+      publishBlockers(fresh); // walidacja po wygenerowaniu
+      await dbRun(`UPDATE publisher_books SET status=?, errorMessage=NULL, updatedAt=? WHERE id=?`, ['review', new Date().toISOString(), row.id]);
+      console.log(`[pub] content processed ${row.id} → ${detected.length} chapters, questions generated`);
+    }catch(e){
+      await dbRun(`UPDATE publisher_books SET status=?, errorMessage=?, updatedAt=? WHERE id=?`, ['error', String(e.message||e).slice(0,400), new Date().toISOString(), row.id]);
+      console.error('[pub] content processing failed', row.id, e.message);
+    }
+  })();
+
+  res.json({ok:true, status:'processing', contentLength: raw.length, contentHash: hash.slice(0,16), chapters: detected,
+    // Skąd wzięły się granice rozdziałów. Wydawca musi to widzieć: „wykryte po
+    // nagłówkach" i „podzielone równomiernie, bo spisu nie było" to dwie różne
+    // sytuacje, a bez tego komunikat „nie wykryto rozdziałów" jest nie do zdiagnozowania.
+    detection: { mode: detection.mode, reason: detection.reason || null, count: detected.length, headerTitles: detection.headerTitles.slice(0, 20) },
+    message:'Treść przyjęta. Pytania generujemy w tle — status książki zmieni się na „do przeglądu".'});
+});
+
+// Wykrywanie rozdziałów mieszka w ./chapters.js — osobny moduł, bo ma własne
+// testy (test/chapters.test.mjs). Wersja w tym pliku gubiła m.in. przedmowę:
+// tekst przed pierwszym nagłówkiem wypadał z książki po cichu.
+app.get('/api/publisher/books/:id/content', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
+  if(!row.bookContentHash) return res.status(404).json({error:'Ta książka nie ma jeszcze treści'});
+  const txt = bookTexts[row.id] || '';
+  res.json({contentLength: Number(row.contentLength||0), contentHash: row.bookContentHash.slice(0,16),
+    preview: txt.slice(0,3000), privacy: PRIVACY_SHORT,
+    note:'Treść książki nigdy nie trafia na łańcuch bloków — tylko jej skrót SHA-256.'});
+});
+
+// ── Pytania: lista do przeglądu (z kluczem — wydawca musi widzieć poprawne) ─
+app.get('/api/publisher/books/:id/questions', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const chapters = parseChapters(owned.row.chapters);
+  const out = chapters.map(c=>{
+    const pool = poolForChapter(c.id);
+    return {
+      chapterId: c.id, chapterIndex: c.index, chapterTitle: c.title,
+      approved: pool.filter(isQuestionApproved).length,
+      draft: pool.filter(q=>qStatus(q)==='draft').length,
+      rejected: pool.filter(q=>qStatus(q)==='rejected').length,
+      questions: pool.map(q=>({
+        id: q.id, type: q.type, question: q.question,
+        options: q.options||q.statements||null,
+        correctAnswer: q.correctAnswer, correctAnswers: q.correctAnswers, correctOrder: q.correctOrder,
+        pairs: q.pairs||null, errorIndex: q.errorIndex, expectedMeaning: q.expectedMeaning||null,
+        status: qStatus(q), reviewedBy: q.reviewedBy||null, reviewedAt: q.reviewedAt||null,
+        difficulty: q.difficulty||null
+      }))
+    };
+  });
+  res.json({bookId: owned.row.id, chapters: out, privacy: PRIVACY_SHORT,
+    note:'Ocenianie odpowiedzi otwartych robi backend (Jev). Panel tylko zatwierdza pytania.'});
+});
+
+// ── Pytania: edycja ───────────────────────────────────────────────────────
+app.patch('/api/publisher/books/:id/questions/:questionId', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const chapterId = String(req.body?.chapterId||'');
+  if(!chapterId || !String(chapterId).startsWith(owned.row.id)) return res.status(422).json({error:'chapterId musi należeć do tej książki'});
+  const pool = poolForChapter(chapterId);
+  const qid = String(req.params.questionId||'');
+  const q = pool.find(x=>x.id===qid);
+  if(!q) return res.status(404).json({error:'Pytanie nie istnieje'});
+  const b = req.body||{};
+  if(b.question!==undefined){ const t=String(b.question).trim(); if(!t) return res.status(422).json({error:'Treść pytania nie może być pusta'}); q.question=t.slice(0,600); }
+  if(b.options!==undefined && Array.isArray(b.options)){
+    const opts = b.options.map(o=>String(o).trim()).filter(Boolean).slice(0,8);
+    if(opts.length < 2) return res.status(422).json({error:'Potrzebne są min. 2 odpowiedzi'});
+    q.options = opts;
+    if(Number.isInteger(q.correctAnswer) && q.correctAnswer >= opts.length) q.correctAnswer = 0;
+  }
+  if(b.correctAnswer!==undefined && ['multiple_choice','true_false','what_next'].includes(q.type)){
+    const idx = Number(b.correctAnswer);
+    if(!Number.isInteger(idx) || idx < 0 || idx >= (q.options||[]).length) return res.status(422).json({error:'Indeks poprawnej odpowiedzi jest poza zakresem'});
+    q.correctAnswer = idx;
+  }
+  if(b.correctAnswers!==undefined && q.type==='multiple_select'){
+    const arr = (Array.isArray(b.correctAnswers)?b.correctAnswers:[]).map(Number).filter(n=>Number.isInteger(n)&&n>=0&&n<(q.options||[]).length);
+    if(!arr.length) return res.status(422).json({error:'Zaznacz co najmniej jedną poprawną odpowiedź'});
+    q.correctAnswers = [...new Set(arr)].sort((a,b)=>a-b);
+  }
+  if(b.correctOrder!==undefined && ['ordering','ranking'].includes(q.type)){
+    const arr = (Array.isArray(b.correctOrder)?b.correctOrder:[]).map(Number);
+    const n = (q.items||[]).length;
+    if(arr.length !== n || new Set(arr).size !== n || arr.some(x=>!Number.isInteger(x)||x<0||x>=n)) return res.status(422).json({error:'Kolejność musi być permutacją wszystkich elementów'});
+    q.correctOrder = arr;
+  }
+  if(b.expectedMeaning!==undefined && ['open_question','why_question'].includes(q.type)){
+    const t=String(b.expectedMeaning).trim();
+    if(!t) return res.status(422).json({error:'Oczekiwane znaczenie odpowiedzi jest wymagane dla pytania otwartego'});
+    q.expectedMeaning = t.slice(0,1200);
+  }
+  q.status = 'draft'; // każda edycja wraca do przeglądu
+  q.reviewedBy = null; q.reviewedAt = null;
+  persistChallenges();
+  res.json({ok:true, question: q});
+});
+
+// ── Pytania: approve / reject ─────────────────────────────────────────────
+async function setQuestionStatus(req,res,nextStatus){
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const qid = String(req.params.questionId||'');
+  const bookId = owned.row.id;
+  // Szukamy pytania w rozdziałach tej książki — nie w całej puli (inaczej można by
+  // zatwierdzić cudze pytanie podając jego id).
+  const chapters = parseChapters(owned.row.chapters);
+  let found = null;
+  for(const c of chapters){
+    const q = poolForChapter(c.id).find(x=>x.id===qid);
+    if(q){ found = {q, chapter:c}; break; }
+  }
+  if(!found) return res.status(404).json({error:'Pytanie nie należy do tej książki'});
+  found.q.status = nextStatus;
+  found.q.reviewedBy = publisherOf(req);
+  found.q.reviewedAt = new Date().toISOString();
+  persistChallenges();
+  const blockers = publishBlockers(owned.row);
+  const fresh = await dbGet(`SELECT * FROM publisher_books WHERE id=?`, [bookId]);
+  if(fresh && fresh.status!=='published'){
+    await dbRun(`UPDATE publisher_books SET status=?, updatedAt=? WHERE id=?`, [blockers.length?'review':'review', new Date().toISOString(), bookId]);
+  }
+  console.log(`[pub] question ${nextStatus} ${qid} (${bookId}) by ${publisherOf(req).slice(0,6)}..`);
+  res.json({ok:true, questionId:qid, status:nextStatus, chapterId:found.chapter.id, publishBlockers: blockers});
+}
+app.post('/api/publisher/books/:id/questions/:questionId/approve', (req,res)=>setQuestionStatus(req,res,'approved'));
+app.post('/api/publisher/books/:id/questions/:questionId/reject',  (req,res)=>setQuestionStatus(req,res,'rejected'));
+
+// ── Pytania: regeneracja puli dla rozdziału ───────────────────────────────
+// Bez tego wydawca utknie, gdy generator zwróci za mało pytań: nie ma sposobu
+// na ponowne wygenerowanie, a bez 5 zatwierdzonych książka nie przejdzie publikacji.
+app.post('/api/publisher/books/:id/chapters/:chapterId/regenerate', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
+  const chapters = parseChapters(row.chapters);
+  const chapter = chapters.find(c=>c.id===req.params.chapterId);
+  if(!chapter) return res.status(404).json({error:'chapter not found'});
+  // Pytania, które ktoś już zatwierdził albo z którymi ktoś miał sesję, zostają.
+  const keepIds = new Set((challengesByChapter[chapter.id]||[]).filter(q=>qStatus(q)!=='draft').map(q=>q.id));
+  const keep = (challengesByChapter[chapter.id]||[]).filter(q=>keepIds.has(q.id));
+  const hasProof = (await dbAll(`SELECT id FROM proofs WHERE bookId=? AND chapterId=? LIMIT 1`, [row.publishedBookId||row.id, chapter.id])).length>0;
+  if(hasProof && keep.length) return res.status(409).json({error:'Na tym rozdziale są już zweryfikowane dowody — regeneracja nadpisałaby historię'});
+  res.status(202).json({ok:true, status:'generating', chapterId:chapter.id, kept: keep.length,
+    message:'Regeneracja ruszyła w tle. Odśwież za chwilę.'});
+  (async()=>{
+    try{
+      const gen = await callOpenRouterGenerate(chapter, 8, row.language||'pl');
+      const clean = sanitizePool(gen).map(q=>({...q, status:'draft', chapterId:chapter.id, bookId:row.id}));
+      challengesByChapter[chapter.id] = [...keep, ...clean];
+      persistChallenges();
+      console.log(`[pub] regenerate ${chapter.id} (${row.id}) → ${clean.length} nowych pytań`);
+    }catch(e){
+      challengesByChapter[chapter.id] = keep;
+      console.error('[pub] regenerate failed', chapter.id, e.message);
+    }
+  })();
+});
+
+// ── Publikacja ────────────────────────────────────────────────────────────
+app.post('/api/publisher/books/:id/publish', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
+  if(row.publishedBookId && row.status==='published') return res.status(409).json({error:'Ta książka jest już opublikowana'});
+  const blockers = publishBlockers(row);
+  if(blockers.length) return res.status(409).json({error:'Książka nie spełnia warunków publikacji', blockers});
+
+  const chapters = parseChapters(row.chapters).filter(c=>c.enabled!==false);
+  const pubBookId = row.publishedBookId || row.id;
+  // Wpisujemy do ISTNIEJĄCEGO books[] — czytelnik dostaje ten sam flow co lektury szkolne.
+  const book = {
+    id: pubBookId,
+    title: row.title, titleEn: row.titleEn||undefined, author: row.author,
+    description: row.description||'', isbn: row.isbn||undefined,
+    category: 'publisher', categoryLabel: 'Wydawca', categoryLevel: 2,
+    coverUrl: row.coverUrl||undefined,
+    sourceUrl: `https://readproof.pages.dev/verify/?id=${pubBookId}`,
+    publisherBookId: row.id,
+    rewardPerChapter: `${row.rewardPerProof} ${row.currency}`,
+    totalChapters: chapters.length,
+    fullTextFile: row.contentFile,
+    chapters: chapters.map(c=>({ id:c.id, bookId:pubBookId, index:c.index, title:c.title, titleEn:c.titleEn, summary:c.summary, contextExcerpt:c.contextExcerpt, reward:`${row.rewardPerProof} ${row.currency}` }))
+  };
+  const existing = books.findIndex(b=>b.id===pubBookId);
+  if(existing>=0) books[existing]=book; else books.push(book);
+  for(const c of chapters){
+    const pool = (challengesByChapter[c.id]||[]).filter(isQuestionApproved);
+    challengesByChapter[c.id] = pool;
+  }
+  persistChallenges();
+  const now = new Date().toISOString();
+  await dbRun(`UPDATE publisher_books SET status=?, publishedBookId=?, errorMessage=NULL, updatedAt=? WHERE id=?`, ['published', pubBookId, now, row.id]);
+  console.log(`[pub] PUBLISH ${row.id} → books[] id=${pubBookId} chapters=${chapters.length} by ${publisherOf(req).slice(0,6)}..`);
+  res.json({ok:true, status:'published', publishedBookId: pubBookId, chapters: chapters.length,
+    catalogUrl:`/book/${pubBookId}`, note:'Książka jest teraz w katalogu czytelnika.'});
+});
+
+app.post('/api/publisher/books/:id/pause', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  if(!owned.row.publishedBookId) return res.status(409).json({error:'Ta książka nie jest jeszcze opublikowana'});
+  const next = owned.row.status==='paused' ? 'published' : 'paused';
+  const now = new Date().toISOString();
+  await dbRun(`UPDATE publisher_books SET status=?, updatedAt=? WHERE id=?`, [next, now, owned.row.id]);
+  // Pauza = książka znika z katalogu czytelnika (nie kasujemy pytań ani dowodów).
+  const idx = books.findIndex(b=>b.id===owned.row.publishedBookId);
+  if(idx>=0){
+    if(next==='paused'){ books[idx]._paused = true; }
+    else { delete books[idx]._paused; }
+  }
+  res.json({ok:true, status: next});
+});
+
+// ── Czytelnicy ────────────────────────────────────────────────────────────
+app.get('/api/publisher/readers', async (req,res)=>{
+  const me = publisherOf(req);
+  const rows = await dbAll(`SELECT * FROM publisher_books WHERE ownerWallet=?`, [me]);
+  const published = rows.map(r=>({ book:r, publishedId:r.publishedBookId })).filter(x=>x.publishedId);
+  const readers = new Map();
+  for(const {book,publishedId} of published){
+    const chapters = parseChapters(book.chapters);
+    const proofs = await dbAll(`SELECT walletAddress, userId, chapterId, score, total, status, timestamp FROM proofs WHERE bookId=? ORDER BY timestamp DESC LIMIT 2000`, [publishedId]);
+    for(const p of proofs){
+      const key = p.userId || p.walletAddress;
+      if(!key) continue;
+      if(!readers.has(key)) readers.set(key, { readerId: key, books: new Set(), chaptersDone: new Set(), totalChapters: 0, scored: [], first: p.timestamp, last: p.timestamp });
+      const r = readers.get(key);
+      r.books.add(book.id);
+      if(Number(p.total)>0 && (VERIF_STATUSES.has(String(p.status)) || p.status==='Partial Verified')){
+        r.chaptersDone.add(p.chapterId);
+        r.scored.push(Number(p.score)/Number(p.total));
+      }
+      if(p.timestamp){ if(!r.first || p.timestamp < r.first) r.first = p.timestamp; if(p.timestamp > r.last) r.last = p.timestamp; }
+    }
+    for(const key of [...readers.keys()]){ const r=readers.get(key); r.totalChapters += chapters.length; }
+  }
+  const out = [...readers.values()].map(r=>({
+    readerId: r.readerId.length > 24 ? r.readerId.slice(0,8)+'…'+r.readerId.slice(-4) : r.readerId.slice(0,10),
+    books: [...r.books], chaptersDone: r.chaptersDone.size, totalChapters: r.totalChapters,
+    averageScore: r.scored.length ? Math.round(r.scored.reduce((a,b)=>a+b,0)/r.scored.length*100) : null,
+    firstSeen: r.first, lastSeen: r.last
+  })).sort((a,b)=>String(b.lastSeen||'').localeCompare(String(a.lastSeen||'')));
+  res.json({count: out.length, readers: out, privacy: PRIVACY_SHORT,
+    note:'Pokazujemy anonimowy identyfikator techniczny (readerId). ReadProof nie zbiera danych osobowych czytelników.'});
+});
+
+app.get('/api/publisher/books/:id/readers', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  if(!owned.row.publishedBookId) return res.json({count:0, readers:[], note:'Książka nie jest jeszcze opublikowana — brak danych czytelników.'});
+  const chapters = parseChapters(owned.row.chapters);
+  const proofs = await dbAll(`SELECT walletAddress, userId, chapterId, score, total, status, timestamp FROM proofs WHERE bookId=? ORDER BY timestamp DESC LIMIT 2000`, [owned.row.publishedBookId]);
+  const byReader = new Map();
+  for(const p of proofs){
+    const key = p.userId || p.walletAddress;
+    if(!key) continue;
+    if(!byReader.has(key)) byReader.set(key, { done:new Set(), scored:[], first:p.timestamp, last:p.timestamp });
+    const r = byReader.get(key);
+    if(Number(p.total)>0 && (VERIF_STATUSES.has(String(p.status))||p.status==='Partial Verified')){ r.done.add(p.chapterId); r.scored.push(Number(p.score)/Number(p.total)); }
+    if(p.timestamp){ if(!r.first || p.timestamp<r.first) r.first=p.timestamp; if(p.timestamp>r.last) r.last=p.timestamp; }
+  }
+  res.json({count: byReader.size, totalChapters: chapters.length, readers: [...byReader.values()].map(r=>({
+    readerId: r.done.size? 'anon':'', chaptersDone: r.done.size, totalChapters: chapters.length,
+    averageScore: r.scored.length? Math.round(r.scored.reduce((a,b)=>a+b,0)/r.scored.length*100):null,
+    firstSeen:r.first, lastSeen:r.last
+  }))});
+});
+
+// ── Nagrody ───────────────────────────────────────────────────────────────
+app.get('/api/publisher/rewards', async (req,res)=>{
+  const me = publisherOf(req);
+  const rows = await dbAll(`SELECT * FROM publisher_books WHERE ownerWallet=?`, [me]);
+  const ids = rows.map(r=>r.id);
+  const pools = rows.map(r=>({ bookId:r.id, title:r.title, status:r.status, pool:numOr(r.rewardPool,0), perProof:numOr(r.rewardPerProof,5), currency:r.currency||'USDC' }));
+  const payouts = ids.length ? await dbAll(`SELECT * FROM payouts WHERE bookId IN (${ids.map(()=>'?').join(',')}) ORDER BY createdAt DESC LIMIT 300`, ids) : [];
+  const dist = a => a.filter(p=>p.status==='confirmed').reduce((s,p)=>s+numOr(p.amount,0),0);
+  const pend = a => a.filter(p=>p.status==='pending').reduce((s,p)=>s+numOr(p.amount,0),0);
+  const fail = a => a.filter(p=>p.status==='failed').reduce((s,p)=>s+numOr(p.amount,0),0);
+  res.json({
+    total: pools.reduce((s,p)=>s+p.pool,0),
+    reserved: pend(payouts),
+    distributed: dist(payouts),
+    remaining: pools.reduce((s,p)=>s+p.pool,0) - dist(payouts) - pend(payouts),
+    failed: fail(payouts),
+    currency: 'USDC',
+    network: { cluster:'devnet', rpc: SOLANA_RPC, usdcMint: USDC_MINT_DEVNET, explorerBase:'https://explorer.solana.com', realPayoutsConfigured: !!SOLANA_PAYER_PRIVATE_KEY },
+    pools,
+    history: payouts.map(p=>({ id:p.id, bookId:p.bookId, amount:numOr(p.amount,0), currency:p.currency, status:p.status,
+      txSignature:p.txSignature||null, explorerUrl:p.explorerUrl||null, createdAt:p.createdAt, errorMessage:p.errorMessage||null,
+      // Krótki identyfikator zamiast pełnego adresu portfela
+      reader: p.walletAddress ? (p.walletAddress.slice(0,6)+'…'+p.walletAddress.slice(-4)) : null })),
+    privacy: PRIVACY_SHORT,
+    note:'Status „confirmed" oznacza potwierdzenie w sieci. Bez skonfigurowanego klucza payera nagrody są zapisywane jako „pending" — nigdy nie pokazujemy ich jako potwierdzone.'
+  });
+});
+
+app.get('/api/publisher/books/:id/rewards', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const payouts = await dbAll(`SELECT * FROM payouts WHERE bookId=? ORDER BY createdAt DESC LIMIT 200`, [owned.row.id]);
+  const funds = await dbAll(`SELECT * FROM campaign_funds WHERE campaignId=? ORDER BY createdAt DESC`, [owned.row.id]);
+  const dist = payouts.filter(p=>p.status==='confirmed').reduce((s,p)=>s+numOr(p.amount,0),0);
+  const pend = payouts.filter(p=>p.status==='pending').reduce((s,p)=>s+numOr(p.amount,0),0);
+  res.json({
+    pool: numOr(owned.row.rewardPool,0), perProof: numOr(owned.row.rewardPerProof,5),
+    currency: owned.row.currency||'USDC', distributed: dist, reserved: pend,
+    remaining: numOr(owned.row.rewardPool,0) - dist - pend,
+    network: { cluster:'devnet', realPayoutsConfigured: !!SOLANA_PAYER_PRIVATE_KEY, explorerBase:'https://explorer.solana.com' },
+    history: payouts.map(p=>({ id:p.id, amount:numOr(p.amount,0), status:p.status, txSignature:p.txSignature||null, createdAt:p.createdAt })),
+    fundingHistory: funds.map(f=>({ id:f.id, amount:numOr(f.amount,0), currency:f.currency, txSignature:f.txSignature, createdAt:f.createdAt }))
+  });
+});
+
+app.post('/api/publisher/books/:id/fund', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  const row = owned.row;
+  const amt = Number(req.body?.amount);
+  if(req.body?.amount===undefined || !Number.isFinite(amt)) return res.status(422).json({error:'Kwota musi być liczbą'});
+  if(amt<=0) return res.status(422).json({error:'Kwota musi być większa od zera'});
+  if(amt>100000) return res.status(422).json({error:'Maksymalnie 100 000 (Devnet)'});
+  const currency = ['USDC','SOL'].includes(String(req.body?.currency)) ? String(req.body.currency) : (row.currency||'USDC');
+  const now = new Date().toISOString();
+  const fundId = 'fund-' + crypto.randomBytes(5).toString('hex');
+  // Historia dofinansowań trzymamy w istniejącej tabeli campaign_funds (bez nowej tabeli).
+  await dbRun(`INSERT INTO campaign_funds (id, campaignId, publisherWallet, amount, currency, txSignature, explorerUrl, createdAt) VALUES (?,?,?,?,?,?,?,?)`,
+    [fundId, row.id, publisherOf(req), amt, currency, req.body?.txSignature? String(req.body.txSignature).slice(0,128):null, null, now]);
+  const newPool = numOr(row.rewardPool,0) + amt;
+  await dbRun(`UPDATE publisher_books SET rewardPool=?, status=?, updatedAt=? WHERE id=?`, [newPool, row.status==='draft'?'draft':row.status, now, row.id]);
+  const fresh = await dbGet(`SELECT * FROM publisher_books WHERE id=?`, [row.id]);
+  res.status(201).json({ok:true, funded:{ id:fundId, amount:amt, currency, txSignature:req.body?.txSignature||null },
+    rewardPool:newPool, book: pubBookView(fresh),
+    note:'Rejestrujemy deklarację dofundowania. Bez skonfigurowanego klucza payera nie ma transferu on-chain.'});
+});
+
+// ── Analytics ─────────────────────────────────────────────────────────────
+app.get('/api/publisher/analytics', async (req,res)=>{
+  const me = publisherOf(req);
+  const rows = await dbAll(`SELECT * FROM publisher_books WHERE ownerWallet=?`, [me]);
+  const published = rows.map(r=>({row:r, pid:r.publishedBookId})).filter(x=>x.pid);
+  const pids = published.map(x=>x.pid);
+  const proofs = pids.length ? await dbAll(`SELECT bookId, chapterId, score, total, status, userId, walletAddress, timestamp FROM proofs WHERE bookId IN (${pids.map(()=>'?').join(',')}) ORDER BY timestamp ASC LIMIT 5000`, pids) : [];
+  const verified = proofs.filter(p=>Number(p.total)>0 && (VERIF_STATUSES.has(String(p.status))||p.status==='Partial Verified'));
+  const readers = new Set(verified.map(p=>p.userId||p.walletAddress).filter(Boolean));
+  const scored = verified.filter(p=>Number(p.total)>0);
+  const avg = scored.length ? Math.round(scored.reduce((a,p)=>a+Number(p.score)/Number(p.total),0)/scored.length*100) : null;
+  // Czytelnicy w czasie — z rzeczywistych timestampów, nie z generatora.
+  const byDay = new Map();
+  for(const p of verified){
+    const d = String(p.timestamp||'').slice(0,10);
+    if(!d) continue;
+    if(!byDay.has(d)) byDay.set(d, { day:d, proofs:0, readers:new Set() });
+    const e = byDay.get(d); e.proofs++;
+    const k=p.userId||p.walletAddress; if(k) e.readers.add(k);
+  }
+  const timeline = [...byDay.values()].sort((a,b)=>a.day.localeCompare(b.day))
+    .map(e=>({ day:e.day, proofs:e.proofs, readers:e.readers.size }));
+  // Ukończenie rozdziałów per książka
+  const perBook = published.map(({row,pid})=>{
+    const chapters = parseChapters(row.chapters);
+    const mine = verified.filter(p=>p.bookId===pid);
+    const done = new Set(mine.map(p=>p.chapterId));
+    return { bookId:row.id, title:row.title, publishedBookId:pid, chapters:chapters.length,
+      chaptersDone: done.size, completionRate: chapters.length? Math.round(done.size/chapters.length*100):0,
+      tests: mine.length, averageScore: mine.length? Math.round(mine.reduce((a,p)=>a+Number(p.score)/Number(p.total),0)/mine.length*100):null };
+  });
+  // Nagrody rozliczone — z tabeli payouts, połączonej z pulami książek.
+  const myBookIds = rows.map(r=>r.id);
+  const myPayouts = myBookIds.length ? await dbAll(`SELECT status, amount FROM payouts WHERE bookId IN (${myBookIds.map(()=>'?').join(',')})`, myBookIds) : [];
+  const rewardsDistributed = myPayouts.filter(p=>p.status==='confirmed').reduce((a,p)=>a+numOr(p.amount,0),0);
+  res.json({
+    booksPublished: published.length,
+    activeReaders: readers.size,
+    testsCompleted: verified.length,
+    averageScore: avg,
+    completionRate: perBook.length? Math.round(perBook.reduce((a,b)=>a+b.completionRate,0)/perBook.length) : null,
+    rewardsDistributed: Number(rewardsDistributed.toFixed(2)),
+    timeline, perBook,
+    hasData: verified.length > 0,
+    privacy: PRIVACY_SHORT
+  });
+});
+
+app.get('/api/publisher/books/:id/analytics', async (req,res)=>{
+  const owned = await ownedPublisherBook(req, req.params.id);
+  if(owned.error) return failOwned(res, owned);
+  if(!owned.row.publishedBookId) return res.json({hasData:false, note:'Książka nie jest jeszcze opublikowana — brak danych.', timeline:[], perChapter:[]});
+  const chapters = parseChapters(owned.row.chapters);
+  const proofs = await dbAll(`SELECT chapterId, score, total, status, userId, walletAddress, timestamp FROM proofs WHERE bookId=? ORDER BY timestamp ASC LIMIT 5000`, [owned.row.publishedBookId]);
+  const verified = proofs.filter(p=>Number(p.total)>0 && (VERIF_STATUSES.has(String(p.status))||p.status==='Partial Verified'));
+  const perChapter = chapters.map(c=>{
+    const mine = verified.filter(p=>p.chapterId===c.id);
+    return { chapterId:c.id, title:c.title, index:c.index, tests:mine.length,
+      averageScore: mine.length? Math.round(mine.reduce((a,p)=>a+Number(p.score)/Number(p.total),0)/mine.length*100):null,
+      completedBy: new Set(mine.map(p=>p.userId||p.walletAddress).filter(Boolean)).size };
+  });
+  const byDay = new Map();
+  for(const p of verified){ const d=String(p.timestamp||'').slice(0,10); if(!d) continue; byDay.set(d,(byDay.get(d)||0)+1); }
+  res.json({
+    hasData: verified.length>0,
+    tests: verified.length,
+    averageScore: verified.length? Math.round(verified.reduce((a,p)=>a+Number(p.score)/Number(p.total),0)/verified.length*100):null,
+    completionRate: chapters.length? Math.round(perChapter.filter(c=>c.tests>0).length/chapters.length*100):null,
+    perChapter,
+    timeline: [...byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([day,proofs])=>({day,proofs})),
+    privacy: PRIVACY_SHORT
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Dashboard: poprawka — nagrody z payouts (powyżej zostawiam realne zapytanie)
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/api/publisher/settings', (req,res)=>{
+  res.json({
+    publisher: { wallet: publisherOf(req), displayName: req.publisher?.displayName||null, email: req.publisher?.email||null },
+    solana: { cluster:'devnet', realPayoutsConfigured: !!SOLANA_PAYER_PRIVATE_KEY, explorerBase:'https://explorer.solana.com', usdcMint: USDC_MINT_DEVNET },
+    questionEngine: { jev: !!TYPESAFE_API_KEY, jevThreshold: JEV_THRESHOLD, generator: anyLLM() ? OPENROUTER_MODEL : null },
+    privacy: PRIVACY_SHORT,
+    note:'Panel nie trzyma żadnych kluczy ani środków. Klucze są tylko po stronie backendu.'
+  });
 });
 
 // --- Solana Devnet docs (per https://solana.com/developers) ---
@@ -3276,4 +5153,6 @@ if (USE_TLS) {
   app.listen(PORT,'0.0.0.0',()=>console.log(`ReadProof backend :${PORT} books=${books.length} openrouter=${!!OPENROUTER_KEY} jevTypesafe=${!!TYPESAFE_API_KEY} jevThresh=${JEV_THRESHOLD} [PLAIN — dodaj certs/cert.pem + key.pem aby włączyć TLS]`));
 }
 
-setTimeout(warmAllPools, 3000);
+// SKIP_WARM=1 wyłącza generowanie pul w tle — używane przez testy, które
+// nie potrzebują zapytań LLM.
+if (process.env.SKIP_WARM !== '1') setTimeout(warmAllPools, 3000);
